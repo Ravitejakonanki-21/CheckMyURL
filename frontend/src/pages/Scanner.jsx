@@ -6,7 +6,7 @@ import { useScan } from "../context/ScanContext";
 
 // PDF deps: npm i jspdf jspdf-autotable (then restart dev server)
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 
 function Scanner() {
   const [url, setUrl] = useState("");
@@ -33,19 +33,65 @@ function Scanner() {
     setLoading(false);
   };
 
+  // Fallback function for simple PDF without tables
+  const createSimplePdf = (doc, result) => {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text("URL Safety Report", 40, 40);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    const ts = new Date().toLocaleString();
+    doc.text(`Generated: ${ts}`, 40, 60);
+    doc.text(`URL: ${String(result.url ?? "")}`, 40, 76);
+    doc.text(`Risk Score: ${String(result.riskScore ?? "")}`, 40, 92);
+    doc.text(`Classification: ${String(result.classification ?? "")}`, 40, 108);
+
+    let yPosition = 140;
+    const d = result.details || {};
+    const details = [
+      `SSL Valid: ${d.sslValid ? "Yes" : "No"}`,
+      `WHOIS Age: ${d.whoisAgeMonths ?? ""} months`,
+      `Open Ports: ${Array.isArray(d.openPorts) ? d.openPorts.join(", ") || "None" : "None"}`,
+      `Security Headers: ${Array.isArray(d.securityHeaders) ? d.securityHeaders.join(", ") || "None" : "None"}`,
+      `Keywords: ${Array.isArray(d.keywords) ? d.keywords.join(", ") || "None" : "None"}`,
+      `ML Phishing Score: ${d.mlPhishingScore ?? ""}`
+    ];
+
+    details.forEach(detail => {
+      if (yPosition < 700) { // Prevent going off page
+        doc.text(detail, 40, yPosition);
+        yPosition += 20;
+      }
+    });
+
+    // Add risk composition
+    const comp = (result.pie?.labels || ["Safe", "Suspicious", "Dangerous"])
+      .map((l, i) => `${l}: ${result.pie?.series?.[i] ?? ""}%`)
+      .join(" | ");
+
+    if (yPosition < 700) {
+      doc.text(`Risk Composition: ${comp}`, 40, yPosition + 20);
+    }
+
+    const filename = `url-safety-report-${Date.now()}.pdf`;
+    doc.save(filename);
+    console.log("Simple PDF exported successfully:", filename);
+  };
+
   const exportPdf = () => {
     try {
-      if (!result) throw new Error("No scan result available");
-      if (typeof jsPDF !== "function" && typeof jsPDF !== "object") throw new Error("jsPDF not loaded");
-      const doc = new jsPDF({ unit: "pt", format: "a4" });
-      if (typeof doc.autoTable !== "function") throw new Error('autoTable plugin not attached. `import "jspdf-autotable"` is required.');
+      if (!result) {
+        alert("No scan results available to export.");
+        return;
+      }
 
-      // Title
+      const doc = new jsPDF({ unit: "pt", format: "a4" });
+
       doc.setFont("helvetica", "bold");
       doc.setFontSize(16);
       doc.text("URL Safety Report", 40, 40);
 
-      // Meta
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
       const ts = new Date().toLocaleString();
@@ -64,7 +110,7 @@ function Scanner() {
         ["ML Phishing Score", String(d.mlPhishingScore ?? "")],
       ];
 
-      doc.autoTable({
+      autoTable(doc, {
         startY: 130,
         head: [["Field", "Value"]],
         body: rows,
@@ -77,12 +123,14 @@ function Scanner() {
       const comp = (result.pie?.labels || ["Safe", "Suspicious", "Dangerous"])
         .map((l, i) => `${l}: ${result.pie?.series?.[i] ?? ""}%`)
         .join(" | ");
-      doc.text(`Risk Composition: ${comp}`, 40, doc.lastAutoTable.finalY + 24);
+      const finalY = doc.lastAutoTable?.finalY || 130;
+      doc.text(`Risk Composition: ${comp}`, 40, finalY + 24);
 
-      doc.save("url-safety-report.pdf");
+      doc.save(`url-safety-report-${Date.now()}.pdf`);
+      console.log("PDF with tables exported successfully");
     } catch (e) {
       console.error("Export error:", e);
-      alert("PDF export failed. Check console for details.");
+      alert("PDF export failed. Please check the console for details.");
     }
   };
 
@@ -149,8 +197,11 @@ function Scanner() {
               type="button"
               onClick={exportPdf}
               disabled={!result}
-              className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-3 py-1.5 text-xs text-white hover:bg-indigo-500 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-3 py-1.5 text-xs text-white hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
               Export PDF
             </button>
           </div>
@@ -180,4 +231,5 @@ function Scanner() {
     </div>
   );
 }
+
 export default Scanner;
