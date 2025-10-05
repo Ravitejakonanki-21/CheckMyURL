@@ -12,10 +12,19 @@ function Scanner() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [expandedRows, setExpandedRows] = useState({});
   const { recordScan } = useScan();
 
   // Zero-state series used before first scan (tiny epsilon so labels can render)
   const ZERO_SERIES = [0.0001, 0.0001, 0.0001];
+
+  // Toggle row expansion
+  const toggleRowExpansion = (rowKey) => {
+    setExpandedRows(prev => ({
+      ...prev,
+      [rowKey]: !prev[rowKey]
+    }));
+  };
 
   // Backend API integration function
   const analyzeUrl = async (inputUrl) => {
@@ -38,6 +47,278 @@ function Scanner() {
       console.error('API Error:', err);
       throw err;
     }
+  };
+
+  // SSL/TLS detailed analysis component
+  const SSLDetails = ({ sslData }) => {
+    const formatDate = (dateString) => {
+      if (!dateString) return "Not available";
+      try {
+        return new Date(dateString).toLocaleDateString() + " " + new Date(dateString).toLocaleTimeString();
+      } catch {
+        return dateString;
+      }
+    };
+
+    const getDaysUntilExpiry = (expiresOn) => {
+      if (!expiresOn) return null;
+      try {
+        const expiry = new Date(expiresOn);
+        const now = new Date();
+        const diffTime = expiry - now;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays;
+      } catch {
+        return null;
+      }
+    };
+
+    const daysUntilExpiry = getDaysUntilExpiry(sslData?.expires_on);
+
+    const checks = [
+      {
+        name: "HTTPS Connection",
+        description: "SSL/TLS connection established successfully",
+        value: sslData?.https_ok,
+        status: sslData?.https_ok ? 'good' : 'bad',
+        details: sslData?.https_ok ? "Secure HTTPS connection established" : "Failed to establish HTTPS connection"
+      },
+      {
+        name: "Certificate Validity",
+        description: "Certificate is currently valid and not expired",
+        value: sslData?.expired === false && sslData?.expires_on,
+        status: sslData?.expired === false ? 'good' : sslData?.expired === true ? 'bad' : 'warning',
+        details: sslData?.expired === false ? "Certificate is currently valid" : 
+                sslData?.expired === true ? "Certificate has expired" : "Certificate validity unknown"
+      },
+      {
+        name: "Certificate Expiration",
+        description: "When the SSL certificate expires",
+        value: sslData?.expires_on,
+        status: daysUntilExpiry > 30 ? 'good' : daysUntilExpiry > 7 ? 'warning' : 'bad',
+        details: sslData?.expires_on ? 
+          `Expires: ${formatDate(sslData.expires_on)}${daysUntilExpiry !== null ? ` (${daysUntilExpiry} days remaining)` : ''}` :
+          "Expiration date not available"
+      },
+      {
+        name: "Certificate Authority",
+        description: "Who issued the SSL certificate",
+        value: sslData?.issuer_cn,
+        status: sslData?.issuer_cn ? 'good' : 'warning',
+        details: sslData?.issuer_cn ? `Issued by: ${sslData.issuer_cn}` : "Certificate authority information not available"
+      },
+      {
+        name: "Subject Common Name",
+        description: "The domain name the certificate is issued for",
+        value: sslData?.subject_cn,
+        status: sslData?.subject_cn ? 'good' : 'warning',
+        details: sslData?.subject_cn ? `Certificate issued for: ${sslData.subject_cn}` : "Subject common name not available"
+      },
+      {
+        name: "Self-Signed Check",
+        description: "Whether the certificate is self-signed (less secure)",
+        value: sslData?.self_signed_hint === false,
+        status: sslData?.self_signed_hint === false ? 'good' : sslData?.self_signed_hint === true ? 'bad' : 'warning',
+        details: sslData?.self_signed_hint === false ? "Certificate issued by trusted CA" :
+                sslData?.self_signed_hint === true ? "Self-signed certificate (security risk)" :
+                "Self-signed status unknown"
+      },
+      {
+        name: "TLS Version",
+        description: "The TLS protocol version being used",
+        value: sslData?.tls_version,
+        status: sslData?.tls_version === 'TLSv1.3' ? 'good' : 
+                sslData?.tls_version === 'TLSv1.2' ? 'good' : 
+                sslData?.tls_version ? 'warning' : 'bad',
+        details: sslData?.tls_version ? `Using ${sslData.tls_version}` : "TLS version information not available"
+      },
+      {
+        name: "Cipher Suite",
+        description: "The encryption cipher being used",
+        value: sslData?.cipher_suite,
+        status: sslData?.cipher_suite ? 'good' : 'warning',
+        details: sslData?.cipher_suite ? `Cipher: ${sslData.cipher_suite}` : "Cipher suite information not available"
+      },
+      {
+        name: "Certificate Chain",
+        description: "Whether the certificate chain is complete",
+        value: sslData?.certificate_chain_valid,
+        status: sslData?.certificate_chain_valid === true ? 'good' : 
+                sslData?.certificate_chain_valid === false ? 'warning' : 'warning',
+        details: sslData?.certificate_chain_valid === true ? "Complete certificate chain present" :
+                sslData?.certificate_chain_valid === false ? "Incomplete certificate chain" :
+                "Certificate chain status unknown"
+      },
+      {
+        name: "Hostname Match",
+        description: "Whether the certificate matches the hostname",
+        value: sslData?.hostname_match,
+        status: sslData?.hostname_match === true ? 'good' : 
+                sslData?.hostname_match === false ? 'bad' : 'warning',
+        details: sslData?.hostname_match === true ? "Certificate matches hostname" :
+                sslData?.hostname_match === false ? "Certificate does not match hostname" :
+                "Hostname verification status unknown"
+      }
+    ];
+
+    // Add SAN domains if available
+    if (sslData?.san_domains && sslData.san_domains.length > 0) {
+      checks.push({
+        name: "Subject Alternative Names",
+        description: "Additional domains covered by this certificate",
+        value: sslData.san_domains,
+        status: 'good',
+        details: `Also covers: ${sslData.san_domains.join(', ')}`
+      });
+    }
+
+    return (
+      <div className="mt-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+        <h4 className="font-medium text-sm mb-3 text-gray-900 dark:text-gray-100">SSL/TLS Security Analysis</h4>
+        <div className="space-y-2">
+          {checks.map((check, index) => (
+            <div key={index} className="flex items-center justify-between py-2 px-3 bg-white dark:bg-gray-900 rounded border">
+              <div className="flex items-center space-x-3">
+                <div className={`w-3 h-3 rounded-full ${
+                  check.status === 'good' ? 'bg-green-500' :
+                  check.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500'
+                }`}></div>
+                <div>
+                  <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{check.name}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{check.description}</div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className={`text-sm font-medium ${
+                  check.status === 'good' ? 'text-green-600 dark:text-green-400' :
+                  check.status === 'warning' ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'
+                }`}>
+                  {check.status === 'good' ? '✓' : check.status === 'warning' ? '⚠' : '✗'}
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-300 max-w-48 text-right">{check.details}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        
+        {sslData?.errors && sslData.errors.length > 0 && (
+          <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800">
+            <h5 className="font-medium text-sm text-red-800 dark:text-red-300 mb-2">SSL/TLS Errors:</h5>
+            {sslData.errors.map((error, index) => (
+              <div key={index} className="text-xs text-red-700 dark:text-red-400">• {error}</div>
+            ))}
+          </div>
+        )}
+
+        {/* Certificate Summary */}
+        {sslData?.https_ok && (
+          <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+            <h5 className="font-medium text-sm text-blue-800 dark:text-blue-300 mb-2">Certificate Summary:</h5>
+            <div className="text-xs text-blue-700 dark:text-blue-400 space-y-1">
+              {sslData.subject_cn && <div>• Subject: {sslData.subject_cn}</div>}
+              {sslData.issuer_cn && <div>• Issuer: {sslData.issuer_cn}</div>}
+              {sslData.expires_on && <div>• Expires: {formatDate(sslData.expires_on)}</div>}
+              {sslData.tls_version && <div>• Protocol: {sslData.tls_version}</div>}
+              {daysUntilExpiry !== null && (
+                <div className={`font-medium ${daysUntilExpiry > 30 ? 'text-green-600' : daysUntilExpiry > 7 ? 'text-yellow-600' : 'text-red-600'}`}>
+                  • Status: {daysUntilExpiry > 0 ? `Valid for ${daysUntilExpiry} days` : 'Expired'}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // WHOIS detailed analysis component
+  const WhoisDetails = ({ whoisData }) => {
+    const checks = [
+      {
+        name: "Domain Name",
+        description: "Verify correct spelling and TLD",
+        value: whoisData?.domain,
+        status: whoisData?.domain ? 'good' : 'bad',
+        details: whoisData?.domain ? `Domain: ${whoisData.domain}` : "Domain name not found"
+      },
+      {
+        name: "Registrar",
+        description: "Who manages the domain registration",
+        value: whoisData?.registrar,
+        status: whoisData?.registrar ? 'good' : 'bad',
+        details: whoisData?.registrar ? `Managed by: ${whoisData.registrar}` : "Registrar information not available"
+      },
+      {
+        name: "Creation Date",
+        description: "When the domain was first registered",
+        value: whoisData?.creation_date,
+        status: whoisData?.creation_date ? 'good' : 'bad',
+        details: whoisData?.creation_date ? `Registered: ${new Date(whoisData.creation_date).toLocaleDateString()}` : "Creation date not available"
+      },
+      {
+        name: "Expiration Date", 
+        description: "When the domain registration ends",
+        value: whoisData?.expiration_date,
+        status: whoisData?.expiration_date ? 'good' : 'bad',
+        details: whoisData?.expiration_date ? `Expires: ${new Date(whoisData.expiration_date).toLocaleDateString()}` : "Expiration date not available"
+      },
+      {
+        name: "Last Updated",
+        description: "Last time the domain info changed",
+        value: whoisData?.updated_date,
+        status: whoisData?.updated_date ? 'good' : 'warning',
+        details: whoisData?.updated_date ? `Updated: ${new Date(whoisData.updated_date).toLocaleDateString()}` : "Last update date not available"
+      },
+      {
+        name: "Domain Age",
+        description: "How long the domain has been registered",
+        value: whoisData?.age_days,
+        status: whoisData?.age_days > 365 ? 'good' : whoisData?.age_days > 30 ? 'warning' : 'bad',
+        details: whoisData?.age_days 
+          ? `${Math.round(whoisData.age_days / 365)} years old (${whoisData.age_days} days)`
+          : "Domain age cannot be determined"
+      }
+    ];
+
+    return (
+      <div className="mt-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+        <h4 className="font-medium text-sm mb-3 text-gray-900 dark:text-gray-100">WHOIS Checkup Details</h4>
+        <div className="space-y-2">
+          {checks.map((check, index) => (
+            <div key={index} className="flex items-center justify-between py-2 px-3 bg-white dark:bg-gray-900 rounded border">
+              <div className="flex items-center space-x-3">
+                <div className={`w-3 h-3 rounded-full ${
+                  check.status === 'good' ? 'bg-green-500' :
+                  check.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500'
+                }`}></div>
+                <div>
+                  <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{check.name}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{check.description}</div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className={`text-sm font-medium ${
+                  check.status === 'good' ? 'text-green-600 dark:text-green-400' :
+                  check.status === 'warning' ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'
+                }`}>
+                  {check.value ? '✓' : '✗'}
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-300">{check.details}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        
+        {whoisData?.errors && whoisData.errors.length > 0 && (
+          <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800">
+            <h5 className="font-medium text-sm text-red-800 dark:text-red-300 mb-2">Errors Encountered:</h5>
+            {whoisData.errors.map((error, index) => (
+              <div key={index} className="text-xs text-red-700 dark:text-red-400">• {error}</div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
   };
 
   // Transform backend response to frontend format
@@ -166,7 +447,7 @@ function Scanner() {
         sslValid: ssl.https_ok || false,
         sslExpired: ssl.expired || false,
         sslSelfSigned: ssl.self_signed_hint || false,
-        whoisAgeMonths: whoisAgeMonths, // CORRECTED CALCULATION
+        whoisAgeMonths: whoisAgeMonths,
         openPorts: [], // Your backend doesn't include port scan yet
         securityHeaders: presentHeaders,
         keywords: keywords,
@@ -176,6 +457,8 @@ function Scanner() {
         httpsRedirect: headers.https_redirect,
         domainAge: whois.age_days || 0,
         registrar: whois.registrar || "Unknown",
+        whoisData: whois, // Store full WHOIS data for detailed view
+        sslData: ssl, // Store full SSL data for detailed view
         errors: {
           ssl: ssl.errors || [],
           headers: headers.errors || [],
@@ -215,6 +498,7 @@ function Scanner() {
     setResult(null);
     setError(null);
     setLoading(false);
+    setExpandedRows({});
   };
 
   // Fallback function for simple PDF without tables
@@ -410,8 +694,49 @@ function Scanner() {
               <tr><td className="px-4 py-2">URL</td><td className="px-4 py-2">{result?.url || "-"}</td></tr>
               <tr><td className="px-4 py-2">Risk Score</td><td className="px-4 py-2">{result?.riskScore ?? "-"}</td></tr>
               <tr><td className="px-4 py-2">Classification</td><td className="px-4 py-2">{result?.classification || "-"}</td></tr>
-              <tr><td className="px-4 py-2">SSL Valid</td><td className="px-4 py-2">{result ? (result.details.sslValid ? "Yes" : "No") : "-"}</td></tr>
-              <tr><td className="px-4 py-2">WHOIS Age (months)</td><td className="px-4 py-2">{result?.details?.whoisAgeMonths ?? "-"}</td></tr>
+              
+              {/* SSL Valid with expandable details */}
+              <tr>
+                <td className="px-4 py-2">SSL Valid</td>
+                <td className="px-4 py-2">
+                  <div className="flex items-center justify-between">
+                    <span>{result ? (result.details.sslValid ? "Yes" : "No") : "-"}</span>
+                    {result?.details?.sslData && (
+                      <button
+                        onClick={() => toggleRowExpansion('ssl')}
+                        className="ml-2 text-xs text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
+                      >
+                        {expandedRows['ssl'] ? 'Hide Details' : 'View Details'}
+                      </button>
+                    )}
+                  </div>
+                  {expandedRows['ssl'] && result?.details?.sslData && (
+                    <SSLDetails sslData={result.details.sslData} />
+                  )}
+                </td>
+              </tr>
+              
+              {/* WHOIS Age with expandable details */}
+              <tr>
+                <td className="px-4 py-2">WHOIS Age (months)</td>
+                <td className="px-4 py-2">
+                  <div className="flex items-center justify-between">
+                    <span>{result?.details?.whoisAgeMonths ?? "-"}</span>
+                    {result?.details?.whoisData && (
+                      <button
+                        onClick={() => toggleRowExpansion('whois')}
+                        className="ml-2 text-xs text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
+                      >
+                        {expandedRows['whois'] ? 'Hide Details' : 'View Details'}
+                      </button>
+                    )}
+                  </div>
+                  {expandedRows['whois'] && result?.details?.whoisData && (
+                    <WhoisDetails whoisData={result.details.whoisData} />
+                  )}
+                </td>
+              </tr>
+              
               <tr><td className="px-4 py-2">Open Ports</td><td className="px-4 py-2">{result ? (result.details.openPorts.join(", ") || "None") : "-"}</td></tr>
               <tr><td className="px-4 py-2">Security Headers</td><td className="px-4 py-2">{result ? (result.details.securityHeaders.join(", ") || "None") : "-"}</td></tr>
               <tr><td className="px-4 py-2">Keywords</td><td className="px-4 py-2">{result ? (result.details.keywords.join(", ") || "None") : "-"}</td></tr>
