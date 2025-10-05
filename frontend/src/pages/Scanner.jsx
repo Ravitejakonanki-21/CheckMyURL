@@ -1,6 +1,5 @@
 import { useState } from "react";
 import PieCard from "../components/PieCard";
-import { mockScan } from "../utils/mockScan";
 import { explain } from "../utils/riskExplain";
 import { useScan } from "../context/ScanContext";
 
@@ -12,24 +11,209 @@ function Scanner() {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
   const { recordScan } = useScan();
 
   // Zero-state series used before first scan (tiny epsilon so labels can render)
   const ZERO_SERIES = [0.0001, 0.0001, 0.0001];
 
+  // Backend API integration function
+  const analyzeUrl = async (inputUrl) => {
+    try {
+      const response = await fetch('http://127.0.0.1:5000/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: inputUrl })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (err) {
+      console.error('API Error:', err);
+      throw err;
+    }
+  };
+
+  // Transform backend response to frontend format
+  const transformBackendResponse = (backendData) => {
+    const results = backendData.results || {};
+    const headers = results.headers || {};
+    const ssl = results.ssl || {};
+    const whois = results.whois || {};
+    const rules = results.rules || {};
+    const idn = results.idn || {};
+
+    // Calculate risk components based on backend data
+    let safeScore = 0;
+    let suspiciousScore = 0;
+    let dangerousScore = 0;
+
+    // Risk assessment logic based on your backend structure
+    if (ssl.https_ok && !ssl.expired && !ssl.self_signed_hint) {
+      safeScore += 30;
+    } else {
+      if (ssl.expired) dangerousScore += 25;
+      if (ssl.self_signed_hint) suspiciousScore += 15;
+      if (!ssl.https_ok) suspiciousScore += 20;
+    }
+
+    // Security headers assessment
+    const securityHeaders = headers.security_headers || {};
+    const headerCount = Object.values(securityHeaders).filter(Boolean).length;
+    if (headerCount >= 3) {
+      safeScore += 20;
+    } else if (headerCount >= 1) {
+      safeScore += 10;
+    } else {
+      suspiciousScore += 15;
+    }
+
+    // WHOIS age assessment - CORRECTED CALCULATION
+    const whoisAgeMonths = (() => {
+      if (!whois.creation_date) return 0;
+      
+      try {
+        const creationDate = new Date(whois.creation_date);
+        const currentDate = new Date();
+        
+        let months = (currentDate.getFullYear() - creationDate.getFullYear()) * 12;
+        months += currentDate.getMonth() - creationDate.getMonth();
+        
+        // Adjust for partial months
+        if (currentDate.getDate() < creationDate.getDate()) {
+          months--;
+        }
+        
+        return Math.max(0, months); // Ensure non-negative
+      } catch (error) {
+        // Fallback to days calculation if date parsing fails
+        return whois.age_days ? Math.round(whois.age_days / 30.44) : 0;
+      }
+    })();
+
+    // Age-based risk assessment
+    if (whoisAgeMonths > 12) { // > 1 year
+      safeScore += 25;
+    } else if (whoisAgeMonths > 3) { // > 3 months
+      safeScore += 10;
+    } else {
+      suspiciousScore += 20;
+    }
+
+    // Suspicious patterns
+    if (rules.has_suspicious_words || rules.has_brand_words_in_host) {
+      suspiciousScore += 25;
+    }
+
+    // IDN/Punycode risks
+    if (idn.is_idn || idn.mixed_confusable_scripts) {
+      suspiciousScore += 15;
+    }
+
+    // Normalize scores to 100%
+    const total = Math.max(safeScore + suspiciousScore + dangerousScore, 100);
+    const normalizedSafe = Math.round((safeScore / total) * 100);
+    const normalizedSuspicious = Math.round((suspiciousScore / total) * 100);
+    const normalizedDangerous = 100 - normalizedSafe - normalizedSuspicious;
+
+    // Determine classification
+    let classification = "Low Risk";
+    if (backendData.risk_score >= 70) classification = "High Risk";
+    else if (backendData.risk_score >= 40) classification = "Medium Risk";
+
+    // Extract security headers present
+    const presentHeaders = [];
+    if (securityHeaders.strict_transport_security) presentHeaders.push("HSTS");
+    if (securityHeaders.content_security_policy) presentHeaders.push("CSP");
+    if (securityHeaders.x_content_type_options) presentHeaders.push("X-Content-Type-Options");
+    if (securityHeaders.x_frame_options) presentHeaders.push("X-Frame-Options");
+    if (securityHeaders.referrer_policy) presentHeaders.push("Referrer-Policy");
+
+    // Extract suspicious keywords
+    const keywords = [];
+    if (rules.matched_suspicious && rules.matched_suspicious.length > 0) {
+      keywords.push(...rules.matched_suspicious);
+    }
+    if (rules.matched_brands && rules.matched_brands.length > 0) {
+      keywords.push(...rules.matched_brands);
+    }
+
+    // Simulate ML phishing score based on available data
+    const mlPhishingScore = Math.min(
+      Math.round(
+        (rules.has_suspicious_words ? 0.3 : 0) +
+        (rules.has_brand_words_in_host ? 0.4 : 0) +
+        (idn.is_idn ? 0.2 : 0) +
+        (!ssl.https_ok ? 0.1 : 0)
+      ) * 100, 100
+    );
+
+    return {
+      url: backendData.url,
+      riskScore: backendData.risk_score,
+      classification: classification,
+      pie: {
+        series: [normalizedSafe, normalizedSuspicious, normalizedDangerous],
+        labels: ["Safe", "Suspicious", "Dangerous"]
+      },
+      details: {
+        sslValid: ssl.https_ok || false,
+        sslExpired: ssl.expired || false,
+        sslSelfSigned: ssl.self_signed_hint || false,
+        whoisAgeMonths: whoisAgeMonths, // CORRECTED CALCULATION
+        openPorts: [], // Your backend doesn't include port scan yet
+        securityHeaders: presentHeaders,
+        keywords: keywords,
+        mlPhishingScore: mlPhishingScore,
+        httpStatus: headers.status || null,
+        redirects: headers.redirects || 0,
+        httpsRedirect: headers.https_redirect,
+        domainAge: whois.age_days || 0,
+        registrar: whois.registrar || "Unknown",
+        errors: {
+          ssl: ssl.errors || [],
+          headers: headers.errors || [],
+          whois: whois.errors || [],
+          idn: idn.errors || [],
+          rules: rules.errors || []
+        }
+      }
+    };
+  };
+
   const onScan = async () => {
-    if (!url) return;
+    if (!url.trim()) return;
+    
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 600)); // simulate async latency
-    const r = mockScan(url);
-    setResult(r);
-    recordScan(r);
-    setLoading(false);
+    setError(null);
+    
+    try {
+      // Call your Flask backend
+      const backendResponse = await analyzeUrl(url.trim());
+      
+      // Transform backend response to frontend format
+      const transformedResult = transformBackendResponse(backendResponse);
+      
+      setResult(transformedResult);
+      recordScan(transformedResult);
+    } catch (err) {
+      setError(`Analysis failed: ${err.message}. Make sure your Flask backend is running on http://127.0.0.1:5000`);
+      console.error('Scan error:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const onClear = () => {
     setUrl("");
     setResult(null);
+    setError(null);
     setLoading(false);
   };
 
@@ -146,10 +330,11 @@ function Scanner() {
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://example.com"
               className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+              onKeyPress={(e) => e.key === 'Enter' && onScan()}
             />
             <button
               onClick={onScan}
-              disabled={loading || !url}
+              disabled={loading || !url.trim()}
               className="rounded-md bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-500 disabled:opacity-50"
             >
               {loading ? "Scanning..." : "Scan"}
@@ -164,13 +349,20 @@ function Scanner() {
             </button>
           </div>
 
+          {/* Error display */}
+          {error && (
+            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+            </div>
+          )}
+
           <div className="mt-4 flex flex-wrap gap-2 text-xs">
             <span className="rounded-full bg-emerald-100 px-2 py-1 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">HTTPS/SSL</span>
             <span className="rounded-full bg-sky-100 px-2 py-1 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">WHOIS</span>
             <span className="rounded-full bg-amber-100 px-2 py-1 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">Security Headers</span>
             <span className="rounded-full bg-fuchsia-100 px-2 py-1 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-300">Keyword Analysis</span>
             <span className="rounded-full bg-rose-100 px-2 py-1 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">ML Phishing</span>
-            <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-700 dark:bg-slate-900/30 dark:text-slate-300">Open Ports</span>
+            <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-700 dark:bg-slate-900/30 dark:text-slate-300">IDN Check</span>
           </div>
         </div>
 
