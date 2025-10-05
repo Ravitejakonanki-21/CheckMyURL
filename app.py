@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS 
 import os
 import logging
 from datetime import datetime
@@ -15,6 +16,7 @@ from services.utils import timed_call
 from services.config import config  # DEBUG, CACHE_TTL, REQUEST_TIMEOUT
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 app.logger.setLevel(logging.INFO)
 
 @app.before_request
