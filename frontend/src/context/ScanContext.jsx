@@ -1,33 +1,30 @@
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useState } from 'react';
 
 const ScanContext = createContext();
 
-export const ScanProvider = ({ children }) => {
-  const [latest, setLatest] = useState(null);
-  const [history, setHistory] = useState([]);
+export function ScanProvider({ children }) {
+  const [hasScanned, setHasScanned] = useState(() => {
+    return localStorage.getItem('hasScanned') === 'true';
+  });
 
-  const recordScan = (result) => {
-    const entry = {
-      url: result.url,
-      riskScore: result.riskScore,
-      classification: result.classification,
-      tools: {
-        SSL: result.details.sslValid ? 1 : 0,
-        WHOIS: 1,
-        Headers: result.details.securityHeaders.length,
-        Keywords: result.details.keywords.length,
-        Ports: result.details.openPorts.length,
-        ML: Math.round(result.details.mlPhishingScore / 20),
-      },
-      ts: Date.now(),
-    };
-    setLatest(result);
-    setHistory((prev) => [...prev, entry].slice(-50));
+  const updateScanStatus = (value) => {
+    setHasScanned(value);
+    localStorage.setItem('hasScanned', value.toString());
   };
 
-  const value = useMemo(() => ({ latest, history, recordScan }), [latest, history]);
+  return (
+    <ScanContext.Provider value={{ hasScanned, setHasScanned: updateScanStatus }}>
+      {children}
+    </ScanContext.Provider>
+  );
+}
 
-  return <ScanContext.Provider value={value}>{children}</ScanContext.Provider>;
-};
+export function useScan() {
+  const context = useContext(ScanContext);
+  if (context === undefined) {
+    throw new Error('useScan must be used within a ScanProvider');
+  }
+  return context;
+}
 
-export const useScan = () => useContext(ScanContext);
+export { ScanContext };

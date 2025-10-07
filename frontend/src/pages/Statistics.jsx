@@ -1,117 +1,103 @@
-import { useMemo } from "react";
-import LineCard from "../components/LineCard";
-import BarCard from "../components/BarCard";
-import ToolsPanel from "../components/ToolsPanel";
-import { useScan } from "../context/ScanContext";
+import { BarChart3, TrendingUp, Activity, Globe } from 'lucide-react';
 
-function Statistics() {
-  const { history = [] } = useScan?.() ?? { history: [] };
-
-  // last 12 scans; ensure at least one point for initial render
-  const last = useMemo(() => (history.length ? history.slice(-12) : [{ riskScore: 0 }]), [history]);
-  const labels = useMemo(
-    () => (history.length ? last.map((_, i) => `#${history.length - last.length + i + 1}`) : ["1"]),
-    [last, history.length]
-  );
-
-  // Risk trend line
-  const riskSeries = useMemo(
-    () => [{ name: "Risk", data: last.map((e) => (Number.isFinite(e.riskScore) ? e.riskScore : 0)) }],
-    [last]
-  );
-  const riskOptions = useMemo(
-    () => ({
-      chart: { toolbar: { show: false }, animations: { enabled: false } },
-      stroke: { curve: "smooth", width: 3 },
-      dataLabels: { enabled: false },
-      grid: { borderColor: "#e5e7eb", strokeDashArray: 4 },
-      xaxis: { categories: labels, tickPlacement: "on" },
-      yaxis: { min: 0, max: 100, forceNiceScale: true },
-      colors: ["#6366f1"],
-    }),
-    [labels]
-  );
-
-  // Tool totals
-  const toolOrder = ["SSL", "WHOIS", "Headers", "Keywords", "Ports", "ML"];
-  const toolTotals = useMemo(() => {
-    if (!history.length) return [0, 0, 0, 0, 0, 0];
-    const acc = { SSL: 0, WHOIS: 0, Headers: 0, Keywords: 0, Ports: 0, ML: 0 };
-    history.forEach((e) => {
-      if (!e?.tools) return;
-      Object.entries(e.tools).forEach(([k, v]) => (acc[k] = (acc[k] ?? 0) + (Number(v) || 0)));
-    });
-    return toolOrder.map((k) => acc[k] ?? 0);
-  }, [history]);
-
-  const toolsSeries = useMemo(() => [{ name: "Findings", data: toolTotals }], [toolTotals]);
-  const toolsOptions = useMemo(
-    () => ({
-      chart: { toolbar: { show: false }, animations: { enabled: false } },
-      plotOptions: { bar: { borderRadius: 3, columnWidth: "40%" } },
-      xaxis: { categories: toolOrder },
-      colors: ["#22c55e"],
-      dataLabels: { enabled: false },
-      grid: { borderColor: "#e5e7eb", strokeDashArray: 4 },
-    }),
-    []
-  );
-
-  // Risk score distribution buckets
-  const bucketLabels = ["0-20", "21-40", "41-60", "61-80", "81-100"];
-  const riskDist = useMemo(() => {
-    if (!history.length) return [0, 0, 0, 0, 0];
-    const b = [0, 0, 0, 0, 0];
-    history.forEach(({ riskScore = 0 }) => {
-      const v = Number(riskScore) || 0;
-      const i = v <= 20 ? 0 : v <= 40 ? 1 : v <= 60 ? 2 : v <= 80 ? 3 : 4;
-      b[i] += 1;
-    });
-    return b;
-  }, [history]);
-
-  const riskDistSeries = useMemo(() => [{ name: "URLs", data: riskDist }], [riskDist]);
-  const riskDistOptions = useMemo(
-    () => ({
-      chart: { toolbar: { show: false }, animations: { enabled: false } },
-      plotOptions: { bar: { borderRadius: 3, columnWidth: "45%" } },
-      xaxis: { categories: bucketLabels },
-      colors: ["#ef4444"],
-      dataLabels: { enabled: false },
-      grid: { borderColor: "#e5e7eb", strokeDashArray: 4 },
-    }),
-    []
-  );
+export default function Statistics() {
+  const stats = [
+    { label: 'Total Scans', value: '1,234', icon: Activity, color: 'text-[#00d4ff]' },
+    { label: 'Active URLs', value: '856', icon: Globe, color: 'text-[#00d4ff]' },
+    { label: 'Success Rate', value: '94.2%', icon: TrendingUp, color: 'text-[#00d4ff]' },
+    { label: 'Avg Response', value: '1.2s', icon: BarChart3, color: 'text-[#00d4ff]' },
+  ];
 
   return (
-    <div className="grid gap-6 lg:grid-cols-3">
-      <div className="lg:col-span-1">
-        <ToolsPanel />
-      </div>
-      <div className="lg:col-span-2 space-y-6">
-        <LineCard
-          key={`risk-${labels.join("-")}`}  // force remount when labels change
-          title="Risk trend"
-          series={riskSeries}
-          options={riskOptions}
-          height={320}
-        />
-        <BarCard
-          key={`tools-${history.length}`}   // re-render on new scan count
-          title="Tool findings distribution"
-          series={toolsSeries}
-          options={toolsOptions}
-          height={320}
-        />
-        <BarCard
-          key={`dist-${history.length}`}    // re-render on new scan count
-          title="Risk score distribution"
-          series={riskDistSeries}
-          options={riskDistOptions}
-          height={320}
-        />
+    <div className="min-h-screen bg-white dark:bg-black transition-colors py-20 px-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center mb-16">
+          <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-4">
+            Statistics
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 text-lg">
+            Track your scanning activity and performance metrics
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+          {stats.map((stat, index) => (
+            <div
+              key={index}
+              className="bg-white dark:bg-gray-900 p-8 rounded-2xl shadow-lg dark:shadow-[#00d4ff]/10 border border-gray-200 dark:border-[#00d4ff]/30 hover:shadow-xl dark:hover:shadow-[#00d4ff]/20 transition-all duration-300"
+            >
+              <stat.icon className={`${stat.color} mb-4`} size={32} />
+              <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                {stat.value}
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">{stat.label}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-white dark:bg-gray-900 p-8 rounded-2xl shadow-lg dark:shadow-[#00d4ff]/10 border border-gray-200 dark:border-[#00d4ff]/30">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+              Recent Activity
+            </h2>
+            <div className="space-y-4">
+              {[1, 2, 3, 4, 5].map((item) => (
+                <div
+                  key={item}
+                  className="flex items-center justify-between p-4 bg-gray-50 dark:bg-black rounded-lg border border-gray-200 dark:border-[#00d4ff]/20"
+                >
+                  <div>
+                    <p className="text-gray-900 dark:text-white font-medium">
+                      example-url-{item}.com
+                    </p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Scanned 2 hours ago
+                    </p>
+                  </div>
+                  <span className="px-3 py-1 bg-green-100 dark:bg-[#00d4ff]/20 text-green-700 dark:text-[#00d4ff] rounded-full text-sm font-medium">
+                    Success
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-900 p-8 rounded-2xl shadow-lg dark:shadow-[#00d4ff]/10 border border-gray-200 dark:border-[#00d4ff]/30">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+              Performance Trends
+            </h2>
+            <div className="space-y-6">
+              <div>
+                <div className="flex justify-between mb-2">
+                  <span className="text-gray-600 dark:text-gray-400">Security Score</span>
+                  <span className="text-gray-900 dark:text-white font-semibold">92%</span>
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-3">
+                  <div className="bg-[#00d4ff] h-3 rounded-full" style={{ width: '92%' }}></div>
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between mb-2">
+                  <span className="text-gray-600 dark:text-gray-400">Performance</span>
+                  <span className="text-gray-900 dark:text-white font-semibold">87%</span>
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-3">
+                  <div className="bg-[#00d4ff] h-3 rounded-full" style={{ width: '87%' }}></div>
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between mb-2">
+                  <span className="text-gray-600 dark:text-gray-400">Reliability</span>
+                  <span className="text-gray-900 dark:text-white font-semibold">95%</span>
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-3">
+                  <div className="bg-[#00d4ff] h-3 rounded-full" style={{ width: '95%' }}></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
-export default Statistics;

@@ -1,31 +1,44 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from 'react';
 
-const ThemeContext = createContext();
+// The createContext function does not need a type parameter in JavaScript
+const ThemeContext = createContext(undefined);
 
-export const ThemeProvider = ({ children }) => {
-  const [theme, setTheme] = useState("light");
+export function ThemeProvider({ children }) {
+  // 1. Initialize state, checking localStorage
+  // The type assertion is removed, as it's not needed in JS
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem('theme');
+    // Default to 'dark' if no saved theme is found
+    return saved || 'dark';
+  });
 
+  // 2. Side effect to save theme and apply CSS class
   useEffect(() => {
-    const stored = localStorage.getItem("theme");
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const initial = stored || (prefersDark ? "dark" : "light");
-    setTheme(initial);
-  }, []);
+    localStorage.setItem('theme', theme);
+    // document.documentElement is the <html> tag
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+  }, [theme]); // Rerun effect whenever 'theme' changes
 
-  useEffect(() => {
-    if (!theme) return;
-    const root = document.documentElement;
-    if (theme === "dark") {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
-    localStorage.setItem("theme", theme);
-  }, [theme]);
+  // 3. Function to toggle the theme state
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
 
-  const toggle = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
+  // 4. Provide the state and toggle function to the component tree
+  return (
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
 
-  return <ThemeContext.Provider value={{ theme, toggle }}>{children}</ThemeContext.Provider>;
-};
-
-export const useTheme = () => useContext(ThemeContext);
+export function useTheme() {
+  // 5. Custom hook to consume the context
+  const context = useContext(ThemeContext);
+  
+  // 6. Check for valid context value (error handling)
+  if (context === undefined) {
+    throw new Error('useTheme must be used within a ThemeProvider');
+  }
+  return context;
+}
