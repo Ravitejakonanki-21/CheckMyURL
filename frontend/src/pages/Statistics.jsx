@@ -1,6 +1,6 @@
 import { BarChart3, TrendingUp, Activity, Globe } from 'lucide-react';
 
-export default function Statistics() {
+function Statistics() {
   const stats = [
     { label: 'Total Scans', value: '1,234', icon: Activity, color: 'text-[#00d4ff]' },
     { label: 'Active URLs', value: '856', icon: Globe, color: 'text-[#00d4ff]' },
@@ -101,3 +101,4 @@ export default function Statistics() {
     </div>
   );
 }
+export default Statistics;

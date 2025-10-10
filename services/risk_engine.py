@@ -1,4 +1,4 @@
-def compute_risk(results: dict) -> tuple[int, str]:
+def compute_risk(results: dict) -> tuple[int, str, list[str]]:
     score = 0
     reasons = []
 

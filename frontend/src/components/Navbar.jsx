@@ -12,7 +12,7 @@ function Navbar() {
     { path: '/', label: 'Scanner', icon: Search },
     { path: '/statistics', label: 'Statistics', icon: BarChart3 },
     { path: '/results', label: 'Results', icon: FileText },
-    { path: '/settings', label: 'Settings', icon: Settings },
+    // { path: '/settings', label: 'Settings', icon: Settings },
   ];
 
   const isActive = (path) => location.pathname === path;

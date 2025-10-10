@@ -86,6 +86,21 @@ def analyze():
     }
     cache.set(cache_key, response)
     return jsonify(response)
+@app.get("/stats")
+def get_stats():
+    # Example: replace with your database or logic
+    return jsonify({
+        "total_scans": 1234,
+        "active_urls": 856,
+        "success_rate": 94.2,
+        "avg_response": 1.2,
+        "recent_activity": [
+            {"url": "example1.com", "time": "2 hours ago", "status": "Success"},
+            {"url": "example2.com", "time": "5 hours ago", "status": "Failed"},
+            {"url": "example3.com", "time": "1 day ago", "status": "Success"},
+        ]
+    })
+
 
 if __name__ == "__main__":
     app.run(debug=config.DEBUG)
