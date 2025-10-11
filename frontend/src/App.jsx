@@ -10,7 +10,7 @@ function App() {
     <ThemeProvider>
       <ScanProvider>
         <Router>
-          <div className="min-h-screen bg-white dark:bg-black transition-colors">
+          <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors duration-200">
             <Navbar />
             <Routes>
               <Route path="/" element={<Scanner />} />
