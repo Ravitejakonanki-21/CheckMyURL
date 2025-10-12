@@ -173,7 +173,7 @@ function Login() {
         {/* Footer */}
         <div className="text-center mt-8">
           <p className="text-sm text-gray-600 mb-2">
-            Student of IBM @ 2025
+            Students of IBM @ 2025
           </p>
         </div>
       </div>
