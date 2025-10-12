@@ -381,8 +381,7 @@ function Scanner() {
             </button>
           </div>
         </div>
-
-        {/* Action Buttons */}
+         {/* Action Buttons */}
         <div className="flex items-center justify-center gap-10 mb-20">
           <button
             onClick={onScan}
@@ -399,6 +398,22 @@ function Scanner() {
           >
             Deep Analysis
           </button>
+        </div>
+        {/* Feature Tags */}
+        <div className="max-w-4xl mx-auto px-4 mb-12">
+          <div className="flex flex-wrap justify-center gap-6">
+            {[
+              { name: "SSL/TLS Check", icon: "🔒" },
+              { name: "WHOIS Lookup", icon: "🌐" },
+              { name: "ML Analysis", icon: "🤖" },
+              { name: "Keyword Detection", icon: "🔍" },
+            ].map((feature, index) => (
+              <div key={index} className="text-center px-4 py-2">
+                <div className="text-2xl mb-1">{feature.icon}</div>
+                <div className="text-sm font-medium text-gray-700 dark:text-blue-300">{feature.name}</div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Error Display */}

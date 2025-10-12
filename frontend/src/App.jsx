@@ -4,17 +4,23 @@ import { ScanProvider } from './context/ScanContext';
 import Navbar from './components/Navbar';
 import Scanner from './pages/Scanner';
 import Statistics from './pages/Statistics';
+import Login from './pages/Login';
 
 function App() {
+  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+  
+  console.log('App - Authentication status:', isAuthenticated);
+
   return (
     <ThemeProvider>
       <ScanProvider>
         <Router>
           <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors duration-200">
-            <Navbar />
+            {isAuthenticated && <Navbar />}
             <Routes>
-              <Route path="/" element={<Scanner />} />
-              <Route path="/statistics" element={<Statistics />} />
+              <Route path="/login" element={isAuthenticated ? <Scanner /> : <Login />} />
+              <Route path="/" element={isAuthenticated ? <Scanner /> : <Login />} />
+              <Route path="/statistics" element={isAuthenticated ? <Statistics /> : <Login />} />
             </Routes>
           </div>
         </Router>
