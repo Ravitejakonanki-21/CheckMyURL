@@ -29,7 +29,7 @@ function Statistics() {
       stroke: { curve: "smooth", width: 3 },
       dataLabels: { enabled: false },
       grid: { 
-        borderColor: 'var(--grid-color)',
+        borderColor: '#1e40af',
         strokeDashArray: 4,
         xaxis: { lines: { show: true } },
         yaxis: { lines: { show: true } }
@@ -38,7 +38,7 @@ function Statistics() {
         categories: labels, 
         tickPlacement: "on",
         labels: { 
-          style: { colors: 'var(--text-secondary)' }
+          style: { colors: '#60a5fa' }
         }
       },
       yaxis: { 
@@ -46,10 +46,10 @@ function Statistics() {
         max: 100, 
         forceNiceScale: true,
         labels: { 
-          style: { colors: 'var(--text-secondary)' }
+          style: { colors: '#60a5fa' }
         }
       },
-      colors: ["#06b6d4"], // Cyan for light mode, will be overridden via CSS variables
+      colors: ["#06b6d4"],
       tooltip: {
         theme: 'dark',
         style: {
@@ -90,18 +90,18 @@ function Statistics() {
       xaxis: { 
         categories: toolOrder,
         labels: { 
-          style: { colors: 'var(--text-secondary)' }
+          style: { colors: '#60a5fa' }
         }
       },
       yaxis: {
         labels: { 
-          style: { colors: 'var(--text-secondary)' }
+          style: { colors: '#60a5fa' }
         }
       },
-      colors: ["#3b82f6"], // Blue
+      colors: ["#3b82f6"],
       dataLabels: { enabled: false },
       grid: { 
-        borderColor: 'var(--grid-color)',
+        borderColor: '#1e40af',
         strokeDashArray: 4 
       },
       tooltip: {
@@ -145,18 +145,18 @@ function Statistics() {
       xaxis: { 
         categories: bucketLabels,
         labels: { 
-          style: { colors: 'var(--text-secondary)' }
+          style: { colors: '#60a5fa' }
         }
       },
       yaxis: {
         labels: { 
-          style: { colors: 'var(--text-secondary)' }
+          style: { colors: '#60a5fa' }
         }
       },
-      colors: ["#22c55e", "#84cc16", "#eab308", "#f97316", "#ef4444"], // Gradient from green to red
+      colors: ["#22c55e", "#84cc16", "#eab308", "#f97316", "#ef4444"],
       dataLabels: { enabled: false },
       grid: { 
-        borderColor: 'var(--grid-color)',
+        borderColor: '#1e40af',
         strokeDashArray: 4 
       },
       legend: { show: false },
@@ -179,18 +179,18 @@ function Statistics() {
   const safeCount = history.filter(e => (e.riskScore || 0) < 40).length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-blue-100 dark:from-gray-950 dark:via-black dark:to-blue-950/30 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-blue-100 dark:from-black dark:via-black dark:to-blue-950/20 p-6">
       {/* Header Section */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <svg className="w-8 h-8 text-blue-600 dark:text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
           </svg>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Security <span className="text-blue-600 dark:text-cyan-400">Analytics</span>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-cyan-400">
+            Security <span className="text-blue-600 dark:text-cyan-300">Analytics</span>
           </h1>
         </div>
-        <p className="text-gray-600 dark:text-gray-400">Comprehensive insights into your URL security scans</p>
+        <p className="text-gray-600 dark:text-cyan-200/80">Comprehensive insights into your URL security scans</p>
       </div>
 
       {/* Stats Grid */}
@@ -258,13 +258,13 @@ function Statistics() {
         {/* Charts - Right Column */}
         <div className="lg:col-span-2 space-y-6">
           {/* Risk Trend Line Chart */}
-          <div className="bg-white/80 dark:bg-black/40 backdrop-blur-xl border border-blue-200 dark:border-cyan-500/30 rounded-xl shadow-lg dark:shadow-cyan-500/10 overflow-hidden hover:shadow-xl dark:hover:shadow-cyan-500/20 transition-all duration-300">
-            <div className="p-5 border-b border-blue-200 dark:border-cyan-500/30">
+          <div className="bg-white/80 dark:bg-black/90 backdrop-blur-xl border border-blue-200 dark:border-cyan-500/50 rounded-xl shadow-lg dark:shadow-cyan-500/20 overflow-hidden hover:shadow-xl dark:hover:shadow-cyan-500/30 transition-all duration-300">
+            <div className="p-5 border-b border-blue-200 dark:border-cyan-500/50">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-cyan-400 dark:bg-cyan-400 animate-pulse"></div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Risk Trend</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-cyan-400">Risk Trend</h3>
               </div>
-              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Last {last.length} scans</p>
+              <p className="text-xs text-gray-600 dark:text-cyan-300/80 mt-1">Last {last.length} scans</p>
             </div>
             <div className="p-5">
               <LineCard
@@ -278,13 +278,13 @@ function Statistics() {
           </div>
 
           {/* Tool Findings Bar Chart */}
-          <div className="bg-white/80 dark:bg-black/40 backdrop-blur-xl border border-blue-200 dark:border-cyan-500/30 rounded-xl shadow-lg dark:shadow-cyan-500/10 overflow-hidden hover:shadow-xl dark:hover:shadow-cyan-500/20 transition-all duration-300">
-            <div className="p-5 border-b border-blue-200 dark:border-cyan-500/30">
+          <div className="bg-white/80 dark:bg-black/90 backdrop-blur-xl border border-blue-200 dark:border-cyan-500/50 rounded-xl shadow-lg dark:shadow-cyan-500/20 overflow-hidden hover:shadow-xl dark:hover:shadow-cyan-500/30 transition-all duration-300">
+            <div className="p-5 border-b border-blue-200 dark:border-cyan-500/50">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-blue-500 dark:bg-cyan-400 animate-pulse"></div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Tool Findings Distribution</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-cyan-400">Tool Findings Distribution</h3>
               </div>
-              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Cumulative findings across all scans</p>
+              <p className="text-xs text-gray-600 dark:text-cyan-300/80 mt-1">Cumulative findings across all scans</p>
             </div>
             <div className="p-5">
               <BarCard
@@ -298,13 +298,13 @@ function Statistics() {
           </div>
 
           {/* Risk Distribution Bar Chart */}
-          <div className="bg-white/80 dark:bg-black/40 backdrop-blur-xl border border-blue-200 dark:border-cyan-500/30 rounded-xl shadow-lg dark:shadow-cyan-500/10 overflow-hidden hover:shadow-xl dark:hover:shadow-cyan-500/20 transition-all duration-300">
-            <div className="p-5 border-b border-blue-200 dark:border-cyan-500/30">
+          <div className="bg-white/80 dark:bg-black/90 backdrop-blur-xl border border-blue-200 dark:border-cyan-500/50 rounded-xl shadow-lg dark:shadow-cyan-500/20 overflow-hidden hover:shadow-xl dark:hover:shadow-cyan-500/30 transition-all duration-300">
+            <div className="p-5 border-b border-blue-200 dark:border-cyan-500/50">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-red-500 dark:bg-cyan-400 animate-pulse"></div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Risk Score Distribution</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-cyan-400">Risk Score Distribution</h3>
               </div>
-              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">URLs categorized by risk level</p>
+              <p className="text-xs text-gray-600 dark:text-cyan-300/80 mt-1">URLs categorized by risk level</p>
             </div>
             <div className="p-5">
               <BarCard
