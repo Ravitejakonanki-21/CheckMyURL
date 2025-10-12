@@ -424,7 +424,7 @@ function Scanner() {
   );
 }
 
-// Pie Chart Component
+// Pie Chart Component with Animations
 const PieChart = ({ data }) => {
   const { series, labels, colors } = data;
   const total = series.reduce((sum, value) => sum + value, 0);
@@ -439,17 +439,28 @@ const PieChart = ({ data }) => {
 
   return (
     <div className="flex flex-col items-center">
-      {/* Pie Chart Visualization */}
+      {/* Animated Pie Chart Visualization */}
       <div className="relative w-48 h-48 mb-6">
+        {/* Outer ring with pulse animation */}
+        <div className="absolute inset-0 rounded-full border-4 border-gray-200 dark:border-gray-700 animate-pulse" />
+        
+        {/* Main pie chart with animation */}
         <div 
-          className="w-full h-full rounded-full border-4 border-gray-200 dark:border-gray-700"
+          className="w-full h-full rounded-full border-4 border-gray-200 dark:border-gray-700 transition-all duration-1000 ease-out"
           style={{
-            background: `conic-gradient(${gradients})`
+            background: `conic-gradient(${gradients})`,
+            transform: 'scale(0)',
+            animation: 'pieGrow 0.8s ease-out forwards 0.3s'
           }}
         />
         
-        {/* Center text */}
-        <div className="absolute inset-0 flex items-center justify-center">
+        {/* Center text with fade-in animation */}
+        <div 
+          className="absolute inset-0 flex items-center justify-center opacity-0"
+          style={{
+            animation: 'fadeIn 0.5s ease-out forwards 1.1s'
+          }}
+        >
           <div className="text-center">
             <div className="text-2xl font-bold text-gray-900 dark:text-white">
               {total}%
@@ -461,25 +472,68 @@ const PieChart = ({ data }) => {
         </div>
       </div>
 
-      {/* Legend */}
+      {/* Animated Legend */}
       <div className="space-y-3 w-full">
         {series.map((value, index) => (
-          <div key={index} className="flex items-center justify-between">
+          <div 
+            key={index} 
+            className="flex items-center justify-between opacity-0 transform -translate-x-4"
+            style={{
+              animation: `slideIn 0.4s ease-out forwards ${0.5 + index * 0.1}s`
+            }}
+          >
             <div className="flex items-center space-x-3">
               <div 
-                className="w-4 h-4 rounded-full"
-                style={{ backgroundColor: colors[index] }}
+                className="w-4 h-4 rounded-full transition-all duration-300 hover:scale-110 hover:shadow-lg"
+                style={{ 
+                  backgroundColor: colors[index],
+                  boxShadow: `0 0 8px ${colors[index]}40`
+                }}
               />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200 hover:text-gray-900 dark:hover:text-white">
                 {labels[index]}
               </span>
             </div>
-            <span className="text-sm font-semibold text-gray-900 dark:text-white">
+            <span className="text-sm font-semibold text-gray-900 dark:text-white transition-all duration-300 hover:scale-110">
               {value}%
             </span>
           </div>
         ))}
       </div>
+
+      {/* CSS Animations */}
+      <style jsx>{`
+        @keyframes pieGrow {
+          from {
+            transform: scale(0);
+            opacity: 0;
+          }
+          to {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        
+        @keyframes slideIn {
+          from {
+            opacity: 0;
+            transform: translateX(-16px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+      `}</style>
     </div>
   );
 };
@@ -604,9 +658,9 @@ function ResultsPage({ result, onNewScan, expandedRows, setExpandedRows }) {
 
         {/* Risk Overview Cards */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Pie Chart Card */}
+          {/* Pie Chart Card with Animation */}
           <div className="lg:col-span-1">
-            <div className="bg-white dark:bg-black rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <div className="bg-white dark:bg-black rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-all duration-300 hover:border-cyan-200 dark:hover:border-cyan-500/50">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 Risk Composition
               </h3>
@@ -616,7 +670,7 @@ function ResultsPage({ result, onNewScan, expandedRows, setExpandedRows }) {
 
           {/* Risk Explanation Card */}
           <div className="lg:col-span-2">
-            <div className="bg-blue-50 dark:bg-black rounded-lg border border-blue-100 dark:border-gray-700 p-6 h-full">
+            <div className="bg-blue-50 dark:bg-black rounded-lg border border-blue-100 dark:border-gray-700 p-6 h-full hover:shadow-lg transition-all duration-300 hover:border-blue-200 dark:hover:border-blue-500/50">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Risk Analysis</h3>
               <div className="text-gray-700 dark:text-gray-300 leading-relaxed">
                 {explain(result)}
@@ -626,7 +680,7 @@ function ResultsPage({ result, onNewScan, expandedRows, setExpandedRows }) {
         </div>
 
         {/* Detailed Results */}
-        <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-black">
+        <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-black hover:shadow-lg transition-all duration-300">
           <div className="bg-black-50 dark:bg-gray-750 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Scan Details</h3>
           </div>
@@ -662,7 +716,7 @@ function ResultsPage({ result, onNewScan, expandedRows, setExpandedRows }) {
                       {result.details.sslData && (
                         <button
                           onClick={() => toggleRowExpansion('ssl')}
-                          className="ml-2 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                          className="ml-2 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors duration-200"
                         >
                           {expandedRows['ssl'] ? 'Hide Details' : 'View Details'}
                         </button>
@@ -683,7 +737,7 @@ function ResultsPage({ result, onNewScan, expandedRows, setExpandedRows }) {
                       {result.details.whoisData && (
                         <button
                           onClick={() => toggleRowExpansion('whois')}
-                          className="ml-2 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                          className="ml-2 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors duration-200"
                         >
                           {expandedRows['whois'] ? 'Hide Details' : 'View Details'}
                         </button>
