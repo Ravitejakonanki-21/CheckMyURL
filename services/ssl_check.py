@@ -1,14 +1,709 @@
+import re
 import ssl
 import socket
 from datetime import datetime, timezone
 import ipaddress
 from urllib.parse import urlparse
 
+# Try to import cryptography library for enhanced analysis
+try:
+    from cryptography import x509
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa, ec, dsa
+    CRYPTOGRAPHY_AVAILABLE = True
+except ImportError:
+    CRYPTOGRAPHY_AVAILABLE = False
+
+# Try to import requests for HTTPS testing
+try:
+    import requests
+    REQUESTS_AVAILABLE = True
+except ImportError:
+    REQUESTS_AVAILABLE = False
+
 
 def check_ssl(hostname: str, port: int = 443, timeout: float = 5.0):
     """
-    Enhanced SSL certificate validation with comprehensive security checks
+    Main SSL check function with backward compatibility
+    Returns enhanced SSL data if cryptography is available, otherwise basic SSL data
     """
+    print(f"🔍 DEBUG: check_ssl called for {hostname}")
+    
+    if CRYPTOGRAPHY_AVAILABLE and REQUESTS_AVAILABLE:
+        # Use enhanced SSL check if libraries are available
+        enhanced_result = enhanced_ssl_check(hostname, port)
+        
+        # Transform to backward-compatible format
+        return {
+            "https_ok": enhanced_result.get("https_ok", False),
+            "expires_on": enhanced_result.get("expires_on"),
+            "expired": enhanced_result.get("expired"),
+            "issuer_cn": enhanced_result.get("issuer_cn"),
+            "subject_cn": enhanced_result.get("subject_cn"),
+            "self_signed_hint": enhanced_result.get("self_signed"),
+            "certificate_chain_valid": enhanced_result.get("certificate_chain_complete", False),
+            "tls_version": enhanced_result.get("tls_version"),
+            "cipher_suite": enhanced_result.get("cipher_suite"),
+            "certificate_valid_days": enhanced_result.get("days_until_expiry"),
+            "san_domains": enhanced_result.get("san_domains", []),
+            "certificate_transparency": None,
+            "weak_signature": None,
+            "hostname_match": enhanced_result.get("hostname_match"),
+            "errors": enhanced_result.get("errors", []),
+            
+            # Add enhanced data as extras
+            "enhanced_data": enhanced_result
+        }
+    else:
+        # Fallback to basic SSL check
+        return _basic_ssl_check(hostname, port, timeout)
+
+
+def enhanced_ssl_check(hostname: str, port: int = 443):
+    """
+    Professional SSL check with real certificate data extraction
+    """
+    print(f"🔍 DEBUG: enhanced_ssl_check called for {hostname}")
+    
+    result = {
+        "hostname": hostname,
+        "port": port,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        
+        # Connection Status
+        "https_ok": False,
+        "ssl_handshake_successful": False,
+        
+        # Certificate Validity
+        "certificate_valid": False,
+        "expired": None,
+        "expires_on": None,
+        "not_before": None,
+        "days_until_expiry": None,
+        "certificate_valid_days": None,
+        
+        # Certificate Identity
+        "subject_cn": None,
+        "subject_org": None,
+        "issuer_cn": None,
+        "issuer_org": None,
+        "serial_number": None,
+        
+        # Trust & Security
+        "self_signed": None,
+        "ca_trusted": False,
+        "certificate_chain_complete": False,
+        "chain_length": 0,
+        
+        # Technical Details
+        "tls_version": None,
+        "cipher_suite": None,
+        "key_algorithm": None,
+        "key_size": None,
+        "signature_algorithm": None,
+        
+        # Domain Coverage
+        "hostname_match": False,
+        "san_domains": [],
+        "wildcard_cert": False,
+        
+        # Security Assessment
+        "security_grade": None,
+        "vulnerability_flags": [],
+        "trust_score": None,
+        
+        # Raw Data
+        "certificate_pem": None,
+        "full_chain": [],
+        "errors": []
+    }
+    
+    try:
+        # Step 1: Test HTTPS connectivity
+        result.update(_test_https_connection(hostname))
+        
+        # Step 2: Get SSL certificate data
+        cert_data = _get_certificate_details(hostname, port)
+        result.update(cert_data)
+        
+        # Step 3: SSL analysis complete
+        print("🔍 SSL analysis complete")
+        
+    except Exception as e:
+        result["errors"].append(f"ssl_check_error: {str(e)}")
+    
+    return result
+
+
+def _test_https_connection(hostname):
+    """Test basic HTTPS connectivity with proper error handling"""
+    print(f"🔍 DEBUG: Testing HTTPS connection for {hostname}")
+    
+    data = {"https_ok": False, "http_redirect": False, "errors": []}
+    
+    if not REQUESTS_AVAILABLE:
+        data["errors"].append("requests_library_not_available")
+        return data
+    
+    try:
+        # Validate hostname first
+        normalized_hostname = _normalize_hostname(hostname)
+        if not normalized_hostname:
+            data["errors"].append("invalid_hostname_format")
+            return data
+        
+        # Test HTTPS connection with proper timeout and error handling
+        response = requests.get(
+            f"https://{normalized_hostname}", 
+            timeout=10, 
+            verify=True,
+            allow_redirects=True
+        )
+        
+        data["https_ok"] = response.status_code < 400
+        data["http_status"] = response.status_code
+        print(f"✅ HTTPS connection successful: {response.status_code}")
+        
+        # Check if HTTP redirects to HTTPS
+        try:
+            http_response = requests.get(
+                f"http://{normalized_hostname}", 
+                timeout=5, 
+                allow_redirects=False
+            )
+            if http_response.status_code in [301, 302, 307, 308]:
+                location = http_response.headers.get('Location', '')
+                data["http_redirect"] = location.startswith('https://')
+        except Exception:
+            # HTTP redirect check is optional, don't fail the main check
+            pass
+            
+    except requests.exceptions.SSLError as e:
+        data["errors"].append(f"ssl_verification_failed: {str(e)}")
+        data["https_ok"] = False
+        print(f"❌ SSL Error: {e}")
+        
+    except requests.exceptions.ConnectionError as e:
+        data["errors"].append(f"connection_failed: {str(e)}")
+        data["https_ok"] = False
+        print(f"❌ Connection Error: {e}")
+        
+    except requests.exceptions.Timeout:
+        data["errors"].append("connection_timeout")
+        data["https_ok"] = False
+        print("❌ Connection Timeout")
+        
+    except Exception as e:
+        data["errors"].append(f"https_test_error: {str(e)}")
+        data["https_ok"] = False
+        print(f"❌ HTTPS Test Error: {e}")
+    
+    return data
+
+
+def _get_certificate_details(hostname, port):
+    """
+    Extract certificate details that match OpenSSL results
+    """
+    print(f"🔍 DEBUG: Getting certificate details for {hostname}:{port}")
+    
+    data = {
+        "ssl_handshake_successful": False,
+        "certificate_valid": False,
+        "errors": []
+    }
+    
+    try:
+        # Normalize hostname
+        normalized_hostname = _normalize_hostname(hostname)
+        if not normalized_hostname:
+            data["errors"].append("invalid_hostname_format")
+            return data
+        
+        # PHASE 1: Get certificate data without verification
+        context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE  # Allow any certificate to get data
+        
+        print(f"🔍 Connecting to {normalized_hostname}:{port}")
+        
+        with socket.create_connection((normalized_hostname, port), timeout=10) as sock:
+            with context.wrap_socket(sock, server_hostname=normalized_hostname) as ssock:
+                data["ssl_handshake_successful"] = True
+                print("✅ SSL Handshake successful")
+                
+                # Get connection info safely
+                data["tls_version"] = ssock.version() if hasattr(ssock, 'version') else None
+                print(f"✅ TLS Version: {data['tls_version']}")
+                
+                try:
+                    cipher_info = ssock.cipher()
+                    if cipher_info and len(cipher_info) >= 3:
+                        data["cipher_suite"] = cipher_info[0]  
+                        data["tls_protocol"] = cipher_info[1]  
+                        data["cipher_key_size"] = cipher_info[2]  
+                        print(f"✅ Cipher Suite: {data['cipher_suite']}")
+                except Exception as e:
+                    print(f"⚠️ Cipher info error: {e}")
+                
+                # Get certificate data using multiple methods
+                try:
+                    cert = None
+                    
+                    # Method 1: Standard approach
+                    try:
+                        cert = ssock.getpeercert(binary_form=False)
+                        if cert:
+                            print("✅ Certificate data retrieved (standard method)")
+                    except Exception as e1:
+                        print(f"⚠️ Standard method failed: {e1}")
+                    
+                    # Method 2: Cryptography fallback
+                    if not cert:
+                        try:
+                            cert_der = ssock.getpeercert(binary_form=True)
+                            if cert_der and CRYPTOGRAPHY_AVAILABLE:
+                                from cryptography import x509
+                                from cryptography.hazmat.backends import default_backend
+                                
+                                x509_cert = x509.load_der_x509_certificate(cert_der, default_backend())
+                                
+                                # Convert to standard Python SSL format
+                                subject_items = []
+                                for attr in x509_cert.subject:
+                                    subject_items.append((attr.oid._name, attr.value))
+                                
+                                issuer_items = []
+                                for attr in x509_cert.issuer:
+                                    issuer_items.append((attr.oid._name, attr.value))
+                                
+                                cert = {
+                                    'subject': tuple([tuple(item) for item in subject_items]),
+                                    'issuer': tuple([tuple(item) for item in issuer_items]),
+                                    'notAfter': x509_cert.not_valid_after.strftime("%b %d %H:%M:%S %Y GMT"),
+                                    'notBefore': x509_cert.not_valid_before.strftime("%b %d %H:%M:%S %Y GMT"),
+                                    'serialNumber': str(x509_cert.serial_number),
+                                    'version': x509_cert.version.value
+                                }
+                                
+                                # Add SAN domains
+                                try:
+                                    san_ext = x509_cert.extensions.get_extension_for_oid(x509.oid.ExtensionOID.SUBJECT_ALTERNATIVE_NAME)
+                                    san_list = []
+                                    for name in san_ext.value:
+                                        if isinstance(name, x509.DNSName):
+                                            san_list.append(('DNS', name.value))
+                                    if san_list:
+                                        cert['subjectAltName'] = tuple(san_list)
+                                except:
+                                    pass
+                                    
+                                print("✅ Certificate data retrieved (cryptography method)")
+                        except Exception as e2:
+                            print(f"⚠️ Cryptography method failed: {e2}")
+                    
+                    if cert:
+                        print(f"🔍 Certificate has keys: {list(cert.keys()) if isinstance(cert, dict) else 'Invalid format'}")
+                        # Process certificate data
+                        cert_info = _process_certificate_data(cert, normalized_hostname)
+                        data.update(cert_info)
+                        data["certificate_valid"] = True
+                        
+                        # Enhanced analysis with IMPROVED key algorithm detection
+                        try:
+                            cert_der = ssock.getpeercert(binary_form=True)
+                            if cert_der and CRYPTOGRAPHY_AVAILABLE:
+                                print("✅ Enhanced analysis starting...")
+                                enhanced_data = _analyze_with_cryptography_improved(cert_der, normalized_hostname)
+                                data.update(enhanced_data)
+                                
+                        except Exception as e:
+                            print(f"⚠️ Enhanced analysis failed: {e}")
+                            data["errors"].append(f"enhanced_analysis_failed: {str(e)}")
+                    else:
+                        print("❌ All certificate methods failed")
+                        data["errors"].append("no_certificate_data_available")
+                        
+                except Exception as e:
+                    print(f"❌ Certificate parsing failed: {e}")
+                    data["errors"].append(f"certificate_parsing_failed: {str(e)}")
+                
+        # PHASE 2: Test hostname verification separately
+        try:
+            verify_context = ssl.create_default_context()
+            verify_context.check_hostname = True
+            verify_context.verify_mode = ssl.CERT_REQUIRED
+            
+            with socket.create_connection((normalized_hostname, port), timeout=5) as verify_sock:
+                with verify_context.wrap_socket(verify_sock, server_hostname=normalized_hostname) as verify_ssock:
+                    # If this succeeds, hostname verification passed
+                    data["hostname_match"] = True
+                    data["ca_trusted"] = True
+                    data["certificate_chain_complete"] = True
+                    data["chain_length"] = 3  # Estimate for trusted certificates
+                    print("✅ Hostname verification passed")
+                    
+        except ssl.SSLCertVerificationError as e:
+            print(f"⚠️ Certificate verification failed: {e}")
+            data["hostname_match"] = False
+            data["ca_trusted"] = False
+            if "self signed" in str(e).lower():
+                data["self_signed"] = True
+        except Exception as e:
+            print(f"⚠️ Verification test failed: {e}")
+            # Don't override hostname_match if it was set by certificate analysis
+            if "hostname_match" not in data:
+                data["hostname_match"] = False
+            
+    except Exception as e:
+        print(f"❌ SSL connection failed: {e}")
+        data["errors"].append(f"ssl_connection_failed: {str(e)}")
+    
+    print(f"🔍 Final data: certificate_valid: {data.get('certificate_valid')}")
+    return data
+
+
+def _process_certificate_data(cert, hostname):
+    """Process certificate info to match OpenSSL output"""
+    print("🔍 Processing certificate data...")
+    
+    data = {}
+    
+    if not cert or not isinstance(cert, dict):
+        return data
+    
+    try:
+        # Extract subject and issuer safely
+        subject_info = {}
+        issuer_info = {}
+        
+        if "subject" in cert and cert["subject"]:
+            try:
+                subject_info = dict(x[0] for x in cert["subject"] if len(x) >= 2)
+            except Exception:
+                pass
+                
+        if "issuer" in cert and cert["issuer"]:
+            try:
+                issuer_info = dict(x[0] for x in cert["issuer"] if len(x) >= 2)
+            except Exception:
+                pass
+        
+        # Extract certificate details
+        data["subject_cn"] = subject_info.get("commonName")  
+        data["subject_org"] = subject_info.get("organizationName")
+        data["issuer_cn"] = issuer_info.get("commonName")  
+        data["issuer_org"] = issuer_info.get("organizationName")  
+        
+        print(f"✅ Subject CN: {data['subject_cn']}")
+        print(f"✅ Issuer CN: {data['issuer_cn']}")
+        
+        # Self-signed detection
+        data["self_signed"] = _is_self_signed(subject_info, issuer_info)
+        
+        # Process dates
+        _process_certificate_dates(cert, data)
+        
+        # Process SAN domains
+        _process_san_domains(cert, data)
+        
+        # Hostname verification using corrected logic
+        data["hostname_match"] = _verify_hostname_match(
+            hostname, 
+            data.get("subject_cn"), 
+            data.get("san_domains", [])
+        )
+        
+        print(f"✅ Hostname match: {data['hostname_match']}")
+        
+    except Exception as e:
+        print(f"❌ Certificate processing error: {e}")
+        data.setdefault("errors", []).append(f"cert_processing_error: {str(e)}")
+    
+    return data
+
+
+def _process_certificate_dates(cert, data):
+    """Process dates to match OpenSSL output"""
+    try:
+        not_after = cert.get("notAfter")  
+        not_before = cert.get("notBefore")  
+        
+        if not_after:
+            try:
+                # Parse the exact format from SSL
+                exp_date = datetime.strptime(not_after, "%b %d %H:%M:%S %Y %Z")
+                exp_date = exp_date.replace(tzinfo=timezone.utc)
+                
+                data["expires_on"] = exp_date.isoformat() 
+                
+                now = datetime.now(timezone.utc)
+                data["expired"] = exp_date < now  
+                
+                # Calculate days until expiration
+                days_until_expiry = (exp_date - now).days
+                data["days_until_expiry"] = days_until_expiry
+                data["certificate_valid_days"] = days_until_expiry
+                
+                print(f"✅ Certificate expires: {exp_date} ({days_until_expiry} days)")
+                
+            except ValueError:
+                # Try alternative format
+                try:
+                    exp_date = datetime.strptime(not_after, "%b %d %H:%M:%S %Y GMT")
+                    exp_date = exp_date.replace(tzinfo=timezone.utc)
+                    data["expires_on"] = exp_date.isoformat()
+                    now = datetime.now(timezone.utc)
+                    data["expired"] = exp_date < now
+                    data["days_until_expiry"] = (exp_date - now).days
+                    data["certificate_valid_days"] = (exp_date - now).days
+                    print(f"✅ Certificate expires (alt format): {exp_date}")
+                except ValueError:
+                    print("⚠️ Date parsing failed")
+                    data.setdefault("errors", []).append("date_parsing_failed")
+        
+        if not_before:
+            try:
+                start_date = datetime.strptime(not_before, "%b %d %H:%M:%S %Y %Z")
+                start_date = start_date.replace(tzinfo=timezone.utc)
+                data["not_before"] = start_date.isoformat()
+            except ValueError:
+                try:
+                    start_date = datetime.strptime(not_before, "%b %d %H:%M:%S %Y GMT")
+                    start_date = start_date.replace(tzinfo=timezone.utc)
+                    data["not_before"] = start_date.isoformat()
+                except ValueError:
+                    pass
+                    
+    except Exception as e:
+        print(f"⚠️ Date processing error: {e}")
+
+
+def _process_san_domains(cert, data):
+    """Process SAN domains with safe error handling"""
+    san_domains = []
+    
+    try:
+        san_list = cert.get("subjectAltName", [])
+        if san_list and isinstance(san_list, (list, tuple)):
+            for san_entry in san_list:
+                try:
+                    if isinstance(san_entry, (list, tuple)) and len(san_entry) >= 2:
+                        if san_entry[0] == "DNS":
+                            domain = san_entry[1]
+                            if domain and isinstance(domain, str):
+                                san_domains.append(domain)
+                                # Check for wildcard
+                                if domain.startswith('*.'):
+                                    data["wildcard_cert"] = True
+                except Exception:
+                    continue
+        
+        print(f"✅ SAN domains: {len(san_domains)} found")
+                    
+    except Exception:
+        # SAN processing is optional
+        pass
+    
+    data["san_domains"] = san_domains
+
+
+def _verify_hostname_match(hostname, subject_cn, san_domains):
+    """Proper hostname verification like OpenSSL"""
+    if not hostname:
+        return False
+    
+    try:
+        hostname = hostname.lower().strip()
+        
+        # Check against Common Name (*.google.com should match google.com)
+        if subject_cn:
+            if _match_hostname_pattern(hostname, subject_cn.lower().strip()):
+                print(f"✅ Hostname {hostname} matches CN {subject_cn}")
+                return True
+        
+        # Check against SAN domains
+        if san_domains and isinstance(san_domains, list):
+            for san_domain in san_domains:
+                if san_domain and isinstance(san_domain, str):
+                    if _match_hostname_pattern(hostname, san_domain.lower().strip()):
+                        print(f"✅ Hostname {hostname} matches SAN {san_domain}")
+                        return True
+                        
+    except Exception as e:
+        print(f"⚠️ Hostname verification error: {e}")
+    
+    print(f"❌ Hostname {hostname} does not match certificate")
+    return False
+
+
+def _match_hostname_pattern(hostname, pattern):
+    """Proper wildcard matching like OpenSSL"""
+    try:
+        if hostname == pattern:
+            return True
+        
+        # Handle wildcard certificates (*.google.com matches google.com)
+        if pattern.startswith('*.'):
+            base_domain = pattern[2:]  # Remove *.
+            if base_domain:
+                # google.com matches *.google.com
+                if hostname == base_domain:
+                    return True
+                # sub.google.com matches *.google.com  
+                if hostname.endswith('.' + base_domain):
+                    return True
+                    
+    except Exception:
+        pass
+    
+    return False
+
+
+def _is_self_signed(subject_info, issuer_info):
+    """Proper self-signed detection"""
+    if not subject_info or not issuer_info:
+        return None
+    
+    try:
+        subject_cn = subject_info.get("commonName", "").lower().strip()
+        issuer_cn = issuer_info.get("commonName", "").lower().strip()
+        
+        # For Google: subject=*.google.com, issuer=WE2
+        # These are different, so NOT self-signed
+        if subject_cn and issuer_cn:
+            is_self_signed = subject_cn == issuer_cn
+            print(f"✅ Self-signed check: {subject_cn} == {issuer_cn} -> {is_self_signed}")
+            return is_self_signed
+                
+    except Exception as e:
+        print(f"⚠️ Self-signed detection error: {e}")
+    
+    return False
+
+
+def _analyze_with_cryptography_improved(cert_der, hostname):
+    """IMPROVED: Safe cryptography-based certificate analysis with proper key algorithm detection"""
+    data = {}
+    
+    if not CRYPTOGRAPHY_AVAILABLE or not cert_der:
+        print("⚠️ Cryptography not available or no certificate data")
+        return data
+    
+    try:
+        cert = x509.load_der_x509_certificate(cert_der, default_backend())
+        
+        # Certificate validity period
+        not_before = cert.not_valid_before
+        not_after = cert.not_valid_after
+        now = datetime.now(timezone.utc)
+        
+        data.update({
+            "not_before": not_before.isoformat(),
+            "expires_on": not_after.isoformat(),
+            "expired": not_after < now,
+            "days_until_expiry": (not_after - now).days,
+            "certificate_valid": not_before <= now <= not_after
+        })
+        
+        print(f"✅ Enhanced: Certificate valid from {not_before} to {not_after}")
+        
+        # Serial number
+        data["serial_number"] = str(cert.serial_number)
+        
+        # IMPROVED: Key algorithm detection with detailed analysis
+        try:
+            public_key = cert.public_key()
+            key_type = type(public_key).__name__.replace('PublicKey', '')
+            print(f"🔍 DEBUG: Raw key type detected: {type(public_key).__name__}")
+            
+            # Enhanced key algorithm detection
+            if isinstance(public_key, rsa.RSAPublicKey):
+                data["key_algorithm"] = "RSA"
+                data["key_size"] = public_key.key_size
+                print(f"✅ RSA Key detected: {public_key.key_size} bits")
+                
+            elif isinstance(public_key, ec.EllipticCurvePublicKey):
+                data["key_algorithm"] = "EC"  # Elliptic Curve
+                data["key_size"] = public_key.curve.key_size
+                
+                # Get specific curve name
+                curve_name = type(public_key.curve).__name__
+                if hasattr(public_key.curve, 'name'):
+                    curve_name = public_key.curve.name
+                
+                data["key_curve"] = curve_name
+                print(f"✅ Elliptic Curve Key detected: {curve_name} ({public_key.curve.key_size} bits)")
+                
+            elif isinstance(public_key, dsa.DSAPublicKey):
+                data["key_algorithm"] = "DSA"
+                data["key_size"] = public_key.key_size
+                print(f"✅ DSA Key detected: {public_key.key_size} bits")
+                
+            else:
+                # Fallback for other key types
+                data["key_algorithm"] = key_type
+                if hasattr(public_key, 'key_size'):
+                    data["key_size"] = public_key.key_size
+                print(f"✅ Other key type detected: {key_type}")
+            
+            # Debug output for verification
+            if data.get("key_algorithm") and data.get("key_size"):
+                print(f"✅ Enhanced: Key algorithm {data['key_algorithm']} ({data['key_size']} bits)")
+            else:
+                print(f"⚠️ Key algorithm detection incomplete: {data.get('key_algorithm', 'unknown')}")
+                
+        except Exception as key_error:
+            print(f"⚠️ Key algorithm detection failed: {key_error}")
+            data["key_algorithm"] = "Unknown"
+            data["errors"] = data.get("errors", []) + [f"key_detection_error: {str(key_error)}"]
+        
+        # Signature algorithm
+        try:
+            sig_algo = cert.signature_algorithm_oid._name
+            data["signature_algorithm"] = sig_algo
+            print(f"✅ Signature algorithm: {sig_algo}")
+        except Exception as sig_error:
+            print(f"⚠️ Signature algorithm detection failed: {sig_error}")
+        
+        # Enhanced SAN processing
+        try:
+            san_ext = cert.extensions.get_extension_for_oid(x509.oid.ExtensionOID.SUBJECT_ALTERNATIVE_NAME)
+            san_list = []
+            for name in san_ext.value:
+                if isinstance(name, x509.DNSName):
+                    san_list.append(name.value)
+            if san_list:
+                data["san_domains"] = san_list
+                data["wildcard_cert"] = any(domain.startswith('*.') for domain in san_list)
+                print(f"✅ Enhanced SAN processing: {len(san_list)} domains found")
+        except x509.ExtensionNotFound:
+            print("⚠️ No SAN extension found")
+        except Exception as san_error:
+            print(f"⚠️ SAN processing failed: {san_error}")
+        
+        # Certificate in PEM format
+        try:
+            pem_data = cert.public_bytes(serialization.Encoding.PEM)
+            data["certificate_pem"] = pem_data.decode('utf-8')
+            print("✅ Certificate PEM data extracted")
+        except Exception as pem_error:
+            print(f"⚠️ PEM extraction failed: {pem_error}")
+            
+    except Exception as e:
+        print(f"❌ Enhanced analysis error: {e}")
+        data["errors"] = data.get("errors", []) + [f"enhanced_analysis_error: {str(e)}"]
+    
+    return data
+
+
+def _basic_ssl_check(hostname: str, port: int = 443, timeout: float = 5.0):
+    """
+    Basic SSL check fallback without cryptography library
+    """
+    print(f"🔍 DEBUG: Using basic SSL check for {hostname}")
+    
     out = {
         "https_ok": False,
         "expires_on": None,
@@ -34,17 +729,10 @@ def check_ssl(hostname: str, port: int = 443, timeout: float = 5.0):
             out["errors"].append("invalid_hostname: Invalid hostname format")
             return out
             
-        # Create enhanced SSL context with security best practices
+        # Create SSL context
         ctx = ssl.create_default_context()
         ctx.check_hostname = True
         ctx.verify_mode = ssl.CERT_REQUIRED
-        
-        # Disable weak protocols (force TLS 1.2+)
-        ctx.minimum_version = ssl.TLSVersion.TLSv1_2
-        ctx.maximum_version = ssl.TLSVersion.TLSv1_3
-        
-        # Enhanced cipher configuration
-        ctx.set_ciphers('ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20:!aNULL:!MD5:!DSS')
         
         with socket.create_connection((hostname, port), timeout=timeout) as sock:
             with ctx.wrap_socket(sock, server_hostname=hostname) as ssock:
@@ -57,15 +745,12 @@ def check_ssl(hostname: str, port: int = 443, timeout: float = 5.0):
                 
                 # Get peer certificate
                 cert = ssock.getpeercert()
-                cert_der = ssock.getpeercert(binary_form=True)
                 
-                # Certificate chain validation
-                cert_chain = ssock.getpeercert_chain()
-                out["certificate_chain_valid"] = len(cert_chain) > 1 if cert_chain else False
+                # Process basic certificate info
+                if cert:
+                    cert_info = _process_certificate_data(cert, hostname)
+                    out.update(cert_info)
                 
-        # Process certificate details
-        _process_certificate_details(cert, cert_der, hostname, out)
-        
     except ssl.SSLCertVerificationError as e:
         error_msg = str(e).lower()
         if "self signed" in error_msg:
@@ -98,152 +783,44 @@ def check_ssl(hostname: str, port: int = 443, timeout: float = 5.0):
     return out
 
 
-def _normalize_hostname(hostname: str) -> str:
-    """Normalize and validate hostname"""
-    if not hostname:
+def _normalize_hostname(hostname: str):
+    """Safe hostname normalization"""
+    if not hostname or not isinstance(hostname, str):
         return None
-        
-    # Handle URLs by extracting hostname
-    if "://" in hostname:
-        try:
-            parsed = urlparse(hostname)
-            hostname = parsed.hostname or parsed.netloc
-        except:
-            return None
     
-    # Remove port if present
-    hostname = hostname.split(':')[0]
-    
-    # Basic validation
-    if not hostname or len(hostname) > 253:
-        return None
-        
-    # Check if it's an IP address
     try:
-        ipaddress.ip_address(hostname)
-        return hostname  # Valid IP address
-    except ValueError:
-        pass  # Not an IP, continue with hostname validation
-    
-    # Basic hostname validation
-    if hostname.startswith('.') or hostname.endswith('.') or '..' in hostname:
-        return None
+        hostname = hostname.strip()
         
-    return hostname.lower()
-
-
-def _process_certificate_details(cert, cert_der, hostname, out):
-    """Process and extract detailed certificate information"""
-    if not cert:
-        return
-        
-    try:
-        # Extract subject and issuer information
-        subject = dict(x[0] for x in cert.get("subject", []))
-        issuer = dict(x[0] for x in cert.get("issuer", []))
-        
-        out["subject_cn"] = subject.get("commonName")
-        out["issuer_cn"] = issuer.get("commonName")
-        
-        # Enhanced self-signed detection
-        out["self_signed_hint"] = _is_self_signed(subject, issuer)
-        
-        # Certificate expiration handling with timezone awareness
-        not_after = cert.get("notAfter")
-        not_before = cert.get("notBefore")
-        
-        if not_after:
+        # Handle URLs by extracting hostname
+        if "://" in hostname:
             try:
-                # Handle different date formats
-                exp = datetime.strptime(not_after, "%b %d %H:%M:%S %Y %Z")
-                exp = exp.replace(tzinfo=timezone.utc)
-                out["expires_on"] = exp.isoformat()
-                
-                now = datetime.now(timezone.utc)
-                out["expired"] = exp < now
-                
-                # Calculate days until expiration
-                days_until_expiry = (exp - now).days
-                out["certificate_valid_days"] = days_until_expiry
-                
-            except ValueError as e:
-                out["errors"].append(f"date_parsing_error: {e}")
+                parsed = urlparse(hostname)
+                hostname = parsed.hostname or parsed.netloc
+            except Exception:
+                return None
         
-        # Extract Subject Alternative Names (SAN)
-        san_list = []
-        for subject_alt_name in cert.get("subjectAltName", []):
-            if subject_alt_name[0] == "DNS":
-                san_list.append(subject_alt_name[1])
-        out["san_domains"] = san_list
+        if not hostname:
+            return None
         
-        # Hostname verification
-        out["hostname_match"] = _verify_hostname_match(hostname, out["subject_cn"], san_list)
+        # Remove port if present
+        hostname = hostname.split(':')[0].strip()
         
-        # Check for weak signature algorithms (if certificate data available)
-        if cert_der:
-            signature_info = _check_signature_algorithm(cert_der)
-            out["weak_signature"] = signature_info
-            
-    except Exception as e:
-        out["errors"].append(f"cert_processing_error: {e}")
-
-
-def _is_self_signed(subject, issuer):
-    """Enhanced self-signed certificate detection"""
-    if not subject or not issuer:
-        return None
+        # Basic validation
+        if not hostname or len(hostname) > 253:
+            return None
         
-    # Compare common name
-    subject_cn = subject.get("commonName", "").lower()
-    issuer_cn = issuer.get("commonName", "").lower()
-    
-    # Compare organization
-    subject_org = subject.get("organizationName", "").lower()
-    issuer_org = issuer.get("organizationName", "").lower()
-    
-    # Self-signed if CN and org match
-    return (subject_cn == issuer_cn and subject_org == issuer_org) if subject_cn else None
-
-
-def _verify_hostname_match(hostname, subject_cn, san_domains):
-    """Verify if hostname matches certificate CN or SAN"""
-    if not hostname:
-        return None
+        # Check if it's an IP address
+        try:
+            ipaddress.ip_address(hostname)
+            return hostname  # Valid IP address
+        except ValueError:
+            pass  # Not an IP, continue with hostname validation
         
-    hostname = hostname.lower()
-    
-    # Check against Common Name
-    if subject_cn and _match_hostname_pattern(hostname, subject_cn.lower()):
-        return True
+        # Basic hostname validation
+        if hostname.startswith('.') or hostname.endswith('.') or '..' in hostname:
+            return None
         
-    # Check against SAN domains
-    for san_domain in san_domains:
-        if _match_hostname_pattern(hostname, san_domain.lower()):
-            return True
-            
-    return False
-
-
-def _match_hostname_pattern(hostname, pattern):
-    """Match hostname against certificate pattern (supports wildcards)"""
-    if hostname == pattern:
-        return True
+        return hostname.lower()
         
-    # Handle wildcard certificates (*.example.com)
-    if pattern.startswith('*.'):
-        pattern_domain = pattern[2:]
-        # Match subdomain.example.com against *.example.com
-        if '.' in hostname and hostname.split('.', 1)[1] == pattern_domain:
-            return True
-            
-    return False
-
-
-def _check_signature_algorithm(cert_der):
-    """Check for weak signature algorithms"""
-    try:
-        # This would require additional parsing of DER certificate
-        # For now, we'll return None and could be enhanced with cryptography library
-        return None
-    except:
+    except Exception:
         return None
