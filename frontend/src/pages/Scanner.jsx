@@ -459,6 +459,55 @@ function Scanner() {
   );
 }
 
+// PEM Modal Component - NEW
+const PEMModal = ({ isOpen, onClose, pemData }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-900 rounded-lg max-w-4xl max-h-[90vh] w-full mx-4 flex flex-col">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            Raw Certificate Data (PEM)
+          </h3>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
+        <div className="flex-1 overflow-auto p-4">
+          <div className="bg-black dark:bg-gray-800 rounded p-4 relative">
+            <pre className="text-sm text-green-400 font-mono overflow-x-auto whitespace-pre-wrap break-all">
+              {pemData}
+            </pre>
+            <button 
+              onClick={() => navigator.clipboard?.writeText(pemData)}
+              className="absolute top-2 right-2 text-green-400 hover:text-green-200 text-xs px-3 py-1 bg-black/50 rounded border border-green-500"
+              title="Copy PEM Certificate"
+            >
+              📋 Copy PEM
+            </button>
+          </div>
+        </div>
+        
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // CALCULATE INDIVIDUAL SECURITY SCORES WITHOUT TRUST SCORE
 const calculateSecurityScores = (result) => {
   const scores = {
@@ -904,7 +953,7 @@ function ResultsPage({ result, onNewScan, expandedRows, setExpandedRows }) {
                   </td>
                 </tr>
                 
-                {/* ENHANCED SSL/TLS SECURITY ROW (NO TRUST SCORE) */}
+                {/* ENHANCED SSL/TLS SECURITY ROW */}
                 <tr className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-150">
                   <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-gray-200">SSL/TLS Security</td>
                   <td className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300">
@@ -927,7 +976,7 @@ function ResultsPage({ result, onNewScan, expandedRows, setExpandedRows }) {
                       )}
                     </div>
                     {expandedRows['ssl'] && result.details.sslData && (
-                      <EnhancedSSLDetails sslData={result.details.sslData} />
+                      <EnhancedSSLDetails sslData={result.details.sslData} securityScores={securityScores} lastUpdated={lastUpdated} />
                     )}
                   </td>
                   <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
@@ -1333,8 +1382,8 @@ function ResultsPage({ result, onNewScan, expandedRows, setExpandedRows }) {
   );
 }
 
-// ENHANCED SSL DETAILS COMPONENT WITH TECHNICAL DETAILS SECTION
-const EnhancedSSLDetails = ({ sslData }) => {
+// ENHANCED SSL DETAILS COMPONENT WITH 4-COLUMN LAYOUT (CHANGED FROM 3 TO 4)
+const EnhancedSSLDetails = ({ sslData, securityScores, lastUpdated }) => {
   const formatDate = (dateString) => {
     if (!dateString) return "Not available";
     try {
@@ -1433,166 +1482,293 @@ const EnhancedSSLDetails = ({ sslData }) => {
 
   return (
     <div className="mt-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 rounded-lg">
-      <h4 className="font-medium text-sm mb-3 text-gray-900 dark:text-blue-300">
-        🔒 Enhanced SSL/TLS Security Analysis
-      </h4>
-      
-      <div className="space-y-2">
-        {enhancedChecks.map((check, index) => (
-          <div key={index} className="flex items-center justify-between py-2 px-3 bg-white dark:bg-black rounded border border-gray-200 dark:border-gray-600">
-            <div className="flex items-center space-x-3">
-              <div className={`w-3 h-3 rounded-full ${
-                check.status === 'good' ? 'bg-green-500' :
-                check.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500'
-              }`}></div>
-              <div>
-                <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{check.name}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">{check.description}</div>
+      {/* FOUR COLUMN LAYOUT - CHANGED FROM 3 TO 4 */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        
+        {/* COLUMN 1: Enhanced SSL/TLS Security Analysis */}
+        <div className="space-y-3">
+          <h4 className="font-medium text-sm mb-3 text-gray-900 dark:text-blue-300 border-b border-blue-200 dark:border-blue-500/30 pb-2">
+            🔒 Enhanced SSL/TLS Security Analysis
+          </h4>
+          
+          <div className="space-y-2">
+            {enhancedChecks.map((check, index) => (
+              <div key={index} className="flex items-center justify-between py-2 px-3 bg-white dark:bg-black rounded border border-gray-200 dark:border-gray-600">
+                <div className="flex items-center space-x-3">
+                  <div className={`w-3 h-3 rounded-full ${
+                    check.status === 'good' ? 'bg-green-500' :
+                    check.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500'
+                  }`}></div>
+                  <div>
+                    <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{check.name}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{check.description}</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className={`text-sm font-medium ${
+                    check.status === 'good' ? 'text-green-600 dark:text-green-400' :
+                    check.status === 'warning' ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'
+                  }`}>
+                    {check.status === 'good' ? '✓' : check.status === 'warning' ? '⚠' : '✗'}
+                  </div>
+                  <div className="text-xs text-gray-600 dark:text-gray-300 max-w-48 text-right">{check.details}</div>
+                </div>
               </div>
+            ))}
+          </div>
+          
+          {sslData?.errors && sslData.errors.length > 0 && (
+            <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800">
+              <h5 className="font-medium text-sm text-red-800 dark:text-red-300 mb-2">SSL/TLS Errors:</h5>
+              {sslData.errors.map((error, index) => (
+                <div key={index} className="text-xs text-red-700 dark:text-red-400">• {error}</div>
+              ))}
             </div>
-            <div className="text-right">
-              <div className={`text-sm font-medium ${
-                check.status === 'good' ? 'text-green-600 dark:text-green-400' :
-                check.status === 'warning' ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'
-              }`}>
-                {check.status === 'good' ? '✓' : check.status === 'warning' ? '⚠' : '✗'}
+          )}
+        </div>
+
+        {/* COLUMN 2: Advanced Technical Details Part 1 */}
+        <div className="space-y-3">
+          <TechnicalSSLDetailsColumn1 sslData={sslData} securityScores={securityScores} lastUpdated={lastUpdated} />
+        </div>
+
+        {/* COLUMN 3: Advanced Technical Details Part 2 */}
+        <div className="space-y-3">
+          <TechnicalSSLDetailsColumn2 sslData={sslData} />
+        </div>
+        
+        {/* COLUMN 4: Summary Details - NEW COLUMN */}
+        <div className="space-y-4">
+          <h5 className="font-medium text-sm text-gray-900 dark:text-gray-100 mb-3 flex items-center border-b border-blue-200 dark:border-blue-500/30 pb-2">
+            📊 Summary Details
+          </h5>
+          
+          <div className="space-y-3">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded p-3">
+              <div className="text-xs font-semibold text-gray-900 dark:text-gray-100 uppercase mb-1">Details:</div>
+              <div className="text-sm text-gray-700 dark:text-gray-300">Professional SSL/TLS certificate validation</div>
+            </div>
+            
+            <div className="bg-gray-50 dark:bg-gray-800 rounded p-3">
+              <div className="text-xs font-semibold text-gray-900 dark:text-gray-100 uppercase mb-1">Total Score:</div>
+              <div className="text-sm font-bold text-green-600 dark:text-green-400">{securityScores?.ssl || 100}</div>
+            </div>
+            
+            <div className="bg-gray-50 dark:bg-gray-800 rounded p-3">
+              <div className="text-xs font-semibold text-gray-900 dark:text-gray-100 uppercase mb-1">Weight:</div>
+              <div className="text-sm text-gray-700 dark:text-gray-300">{securityScores?.weights?.ssl || 30}%</div>
+            </div>
+            
+            <div className="bg-gray-50 dark:bg-gray-800 rounded p-3">
+              <div className="text-xs font-semibold text-gray-900 dark:text-gray-100 uppercase mb-1">Last Updated:</div>
+              <div className="text-sm text-gray-700 dark:text-gray-300">{lastUpdated}</div>
+            </div>
+            
+            <div className="bg-gray-50 dark:bg-gray-800 rounded p-3">
+              <div className="text-xs font-semibold text-gray-900 dark:text-gray-100 uppercase mb-1">Quick Actions:</div>
+              <div className="flex items-center space-x-2 mt-1">
+                <button 
+                  onClick={() => navigator.clipboard?.writeText("SSL Certificate Details")}
+                  className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 text-sm"
+                  title="Copy Details"
+                >
+                  ⧉
+                </button>
+                <button 
+                  onClick={() => window.open('https://developer.mozilla.org/en-US/docs/Web/Security/Transport_Layer_Security', '_blank')}
+                  className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200 text-sm"
+                  title="Learn More"
+                >
+                  ↗
+                </button>
+                <button 
+                  className="text-orange-600 hover:text-orange-800 dark:text-orange-400 dark:hover:text-orange-200 text-sm"
+                  title="Report False Positive"
+                >
+                  ⚠
+                </button>
               </div>
-              <div className="text-xs text-gray-600 dark:text-gray-300 max-w-48 text-right">{check.details}</div>
             </div>
           </div>
-        ))}
-      </div>
-      
-      {sslData?.errors && sslData.errors.length > 0 && (
-        <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800">
-          <h5 className="font-medium text-sm text-red-800 dark:text-red-300 mb-2">SSL/TLS Errors:</h5>
-          {sslData.errors.map((error, index) => (
-            <div key={index} className="text-xs text-red-700 dark:text-red-400">• {error}</div>
-          ))}
         </div>
-      )}
-
-      {/* NEW: Technical Details Section */}
-      <TechnicalSSLDetails sslData={sslData} />
+      </div>
     </div>
   );
 };
 
-// NEW: TECHNICAL SSL DETAILS COMPONENT
-const TechnicalSSLDetails = ({ sslData }) => {
-  const [showPEM, setShowPEM] = useState(false);
-
-  const technicalData = [
+// TECHNICAL SSL DETAILS COLUMN 1 - KEEP SAME
+const TechnicalSSLDetailsColumn1 = ({ sslData, securityScores, lastUpdated }) => {
+  const technicalData1 = [
     {
       name: "Certificate Issue Date",
-      value: sslData?.not_before ? new Date(sslData.not_before).toLocaleString() : null,
-      description: "When the certificate became valid (Not Before)",
-      technical: true
+      value: sslData?.not_before ? new Date(sslData.not_before).toLocaleString() : "Not available",
+      description: "When the certificate became valid (Not Before)"
     },
     {
       name: "Certificate Expiry Date", 
-      value: sslData?.expires_on ? new Date(sslData.expires_on).toLocaleString() : null,
-      description: "When the certificate expires (Not After)",
-      technical: true
+      value: sslData?.expires_on ? new Date(sslData.expires_on).toLocaleString() : "Not available",
+      description: "When the certificate expires (Not After)"
     },
     {
       name: "Certificate Validity Period",
       value: sslData?.not_before && sslData?.expires_on ? 
-        `${Math.round((new Date(sslData.expires_on) - new Date(sslData.not_before)) / (1000 * 60 * 60 * 24))} days` : null,
-      description: "Total certificate validity period",
-      technical: true
+        `${Math.round((new Date(sslData.expires_on) - new Date(sslData.not_before)) / (1000 * 60 * 60 * 24))} days` : "Not available",
+      description: "Total certificate validity period"
     },
     {
       name: "Certificate Subject",
-      value: sslData?.subject_cn,
-      description: "Subject Common Name (CN) from certificate",
-      technical: true
+      value: sslData?.subject_cn || "Not available",
+      description: "Subject Common Name (CN) from certificate"
     },
     {
       name: "Certificate Issuer", 
-      value: sslData?.issuer_cn,
-      description: "Certificate Authority that signed this certificate",
-      technical: true
+      value: sslData?.issuer_cn || "Not available",
+      description: "Certificate Authority that signed this certificate"
     },
     {
       name: "Subject Organization",
-      value: sslData?.subject_org,
-      description: "Organization listed in certificate subject",
-      technical: true
+      value: sslData?.subject_org || "Not available",
+      description: "Organization listed in certificate subject"
     },
     {
       name: "Issuer Organization",
-      value: sslData?.issuer_org, 
-      description: "Certificate Authority organization name",
-      technical: true
+      value: sslData?.issuer_org || "Not available", 
+      description: "Certificate Authority organization name"
     },
     {
       name: "Serial Number",
-      value: sslData?.serial_number,
-      description: "Unique certificate serial number",
-      technical: true
-    },
-    {
-      name: "Signature Algorithm",
-      value: sslData?.signature_algorithm,
-      description: "Algorithm used to sign the certificate",
-      technical: true
-    },
-    {
-      name: "Certificate Chain Length",
-      value: sslData?.chain_length,
-      description: "Number of certificates in the trust chain",
-      technical: true
-    },
-    {
-      name: "Key Curve",
-      value: sslData?.key_curve,
-      description: "Elliptic curve name (for EC keys)",
-      technical: true
+      value: sslData?.serial_number || "Not available",
+      description: "Unique certificate serial number"
     }
   ];
 
   return (
-    <div className="mt-4 border-t border-gray-200 dark:border-gray-600 pt-4">
+    <div className="space-y-3">
       <div className="flex items-center justify-between mb-3">
-        <h5 className="font-medium text-sm text-gray-900 dark:text-gray-100 flex items-center">
+        <h5 className="font-medium text-sm text-gray-900 dark:text-gray-100 flex items-center border-b border-blue-200 dark:border-blue-500/30 pb-2 w-full">
           🔍 Advanced Technical Details
           <span className="ml-2 text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">
-            For Developers & Security Professionals
+            Part 1
           </span>
         </h5>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {technicalData.map((item, index) => (
-          item.value && (
-            <div key={index} className="bg-gray-50 dark:bg-gray-800 rounded border p-3">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="font-medium text-xs text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-1">
-                    {item.name}
-                  </div>
-                  <div className="text-sm text-gray-700 dark:text-gray-300 font-mono break-all">
-                    {item.value}
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    {item.description}
-                  </div>
+      <div className="space-y-2">
+        {technicalData1.map((item, index) => (
+          <div key={index} className="bg-gray-50 dark:bg-gray-800 rounded border p-3">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="font-medium text-xs text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-1">
+                  {item.name}
                 </div>
-                <button 
-                  onClick={() => navigator.clipboard?.writeText(String(item.value))}
-                  className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 ml-2 text-xs"
-                  title="Copy Value"
-                >
-                  ⧉
-                </button>
+                <div className="text-sm text-gray-700 dark:text-gray-300 font-mono break-all">
+                  {item.value}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  {item.description}
+                </div>
               </div>
+              <button 
+                onClick={() => navigator.clipboard?.writeText(String(item.value))}
+                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 ml-2 text-xs"
+                title="Copy Value"
+              >
+                ⧉
+              </button>
             </div>
-          )
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// TECHNICAL SSL DETAILS COLUMN 2 WITH PEM MODAL - CHANGED TO USE MODAL
+const TechnicalSSLDetailsColumn2 = ({ sslData }) => {
+  const [showPEMModal, setShowPEMModal] = useState(false); // ADD THIS
+
+  const technicalData2 = [
+    {
+      name: "Signature Algorithm",
+      value: sslData?.signature_algorithm || "Not available",
+      description: "Algorithm used to sign the certificate"
+    },
+    {
+      name: "Certificate Chain Length",
+      value: sslData?.chain_length || "Not available",
+      description: "Number of certificates in the trust chain"
+    },
+    {
+      name: "Key Curve",
+      value: sslData?.key_curve || "Not available",
+      description: "Elliptic curve name (for EC keys)"
+    },
+    {
+      name: "Cipher Suite",
+      value: sslData?.cipher_suite || "Not available",
+      description: "Encryption algorithm suite being used"
+    },
+    {
+      name: "Wildcard Certificate",
+      value: sslData?.wildcard_cert ? "Yes" : "No",
+      description: "Whether this is a wildcard certificate"
+    },
+    {
+      name: "Certificate Version",
+      value: sslData?.version ? `v${sslData.version}` : "Not available",
+      description: "X.509 certificate version"
+    },
+    {
+      name: "Extensions Present",
+      value: sslData?.extensions_count || "Not available",
+      description: "Number of certificate extensions"
+    },
+    {
+      name: "Certificate Fingerprint",
+      value: sslData?.fingerprint_sha256 ? `${sslData.fingerprint_sha256.substring(0, 16)}...` : "Not available",
+      description: "SHA-256 fingerprint of the certificate"
+    }
+  ];
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between mb-3">
+        <h5 className="font-medium text-sm text-gray-900 dark:text-gray-100 flex items-center border-b border-blue-200 dark:border-blue-500/30 pb-2 w-full">
+          🔍 Advanced Technical Details
+          <span className="ml-2 text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">
+            Part 2
+          </span>
+        </h5>
+      </div>
+      
+      <div className="space-y-2">
+        {technicalData2.map((item, index) => (
+          <div key={index} className="bg-gray-50 dark:bg-gray-800 rounded border p-3">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="font-medium text-xs text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-1">
+                  {item.name}
+                </div>
+                <div className="text-sm text-gray-700 dark:text-gray-300 font-mono break-all">
+                  {item.value}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  {item.description}
+                </div>
+              </div>
+              <button 
+                onClick={() => navigator.clipboard?.writeText(String(item.value))}
+                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 ml-2 text-xs"
+                title="Copy Value"
+              >
+                ⧉
+              </button>
+            </div>
+          </div>
         ))}
       </div>
 
-      {/* Certificate PEM Section */}
+      {/* CHANGE: REPLACE INLINE PEM SECTION WITH MODAL */}
       {sslData?.certificate_pem && (
         <div className="mt-4 border-t border-gray-200 dark:border-gray-600 pt-4">
           <div className="flex items-center justify-between mb-2">
@@ -1600,34 +1776,29 @@ const TechnicalSSLDetails = ({ sslData }) => {
               Raw Certificate Data (PEM)
             </h6>
             <button
-              onClick={() => setShowPEM(!showPEM)}
+              onClick={() => setShowPEMModal(true)}
               className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 px-2 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900"
             >
-              {showPEM ? 'Hide PEM ▼' : 'Show PEM ▶'}
+              Show PEM 📄
             </button>
           </div>
           
-          {showPEM && (
-            <div className="bg-black dark:bg-gray-900 rounded p-3 relative">
-              <pre className="text-xs text-green-400 font-mono overflow-x-auto whitespace-pre-wrap break-all">
-                {sslData.certificate_pem}
-              </pre>
-              <button 
-                onClick={() => navigator.clipboard?.writeText(sslData.certificate_pem)}
-                className="absolute top-2 right-2 text-green-400 hover:text-green-200 text-xs px-2 py-1 bg-black/50 rounded"
-                title="Copy PEM Certificate"
-              >
-                ⧉ Copy PEM
-              </button>
-            </div>
-          )}
+          <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded p-2">
+            Certificate data available in PEM format. Click "Show PEM" to view in modal.
+          </div>
+
+          <PEMModal 
+            isOpen={showPEMModal}
+            onClose={() => setShowPEMModal(false)}
+            pemData={sslData.certificate_pem}
+          />
         </div>
       )}
     </div>
   );
 };
 
-// INTERACTIVE PIE CHART WITH MOVEMENT ANIMATIONS
+// INTERACTIVE PIE CHART WITH MOVEMENT ANIMATIONS - KEEP SAME
 const InteractivePieChart = ({ data }) => {
   const { series, labels, colors } = data;
   const [hoveredIndex, setHoveredIndex] = useState(null);
@@ -1703,6 +1874,31 @@ const InteractivePieChart = ({ data }) => {
               }).join(', ')})`,
             }}
           >
+            {/* Center circle with dynamic content */}
+            <div className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ${
+              hoveredIndex !== null ? 'transform scale-75' : ''
+            }`}>
+                           <div className="bg-white dark:bg-gray-900 rounded-full w-16 h-16 flex items-center justify-center shadow-lg border-2 border-gray-200 dark:border-gray-700">
+                <div className="text-center">
+                  {hoveredIndex !== null ? (
+                    <>
+                      <div className={`text-xs font-bold transition-colors duration-300`} style={{ color: colors[hoveredIndex] }}>
+                        {labels[hoveredIndex]}
+                      </div>
+                      <div className="text-lg font-bold text-gray-900 dark:text-white">
+                        {series[hoveredIndex]}%
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-xs font-medium text-gray-600 dark:text-gray-400">Risk</div>
+                      <div className="text-sm font-bold text-gray-900 dark:text-white">100%</div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+            
             {/* Invisible hover zones for each segment */}
             {series.map((value, index) => {
               const startAngle = series.slice(0, index).reduce((sum, val) => sum + val, 0) * 3.6;
@@ -1720,118 +1916,50 @@ const InteractivePieChart = ({ data }) => {
                 />
               );
             })}
-            
-            {/* Center Label with animation */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className={`text-center transition-all duration-300 ${
-                hoveredIndex !== null ? 'transform scale-110' : ''
-              }`}>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {hoveredIndex !== null ? series[hoveredIndex] : '100'}%
-                </div>
-                <div className="text-xs text-gray-500 dark:text-black">
-                  {hoveredIndex !== null ? labels[hoveredIndex] : 'Total'}
-                </div>
-              </div>
-            </div>
           </div>
-          
-          {/* Hover Tooltip with animation */}
-          {hoveredIndex !== null && (
-            <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-black dark:bg-white text-white dark:text-black px-3 py-1 rounded-lg text-sm font-medium shadow-lg z-10 animate-bounce">
-              {labels[hoveredIndex]}: {series[hoveredIndex]}%
-              <div className="absolute bottom-[-4px] left-1/2 transform -translate-x-1/2 w-2 h-2 bg-black dark:bg-white rotate-45"></div>
-            </div>
-          )}
         </div>
       </div>
     </div>
   );
 };
 
-// WHOIS DETAILS COMPONENT (keeping the existing one)
+// WHOIS DETAILS COMPONENT - KEEP SAME
 const WhoisDetails = ({ whoisData }) => {
-  const checks = [
-    {
-      name: "Domain Name",
-      description: "Verify correct spelling and TLD",
-      value: whoisData?.domain,
-      status: whoisData?.domain ? 'good' : 'bad',
-      details: whoisData?.domain ? `Domain: ${whoisData.domain}` : "Domain name not found"
-    },
-    {
-      name: "Registrar",
-      description: "Who manages the domain registration",
-      value: whoisData?.registrar,
-      status: whoisData?.registrar ? 'good' : 'bad',
-      details: whoisData?.registrar ? `Managed by: ${whoisData.registrar}` : "Registrar information not available"
-    },
-    {
-      name: "Creation Date",
-      description: "When the domain was first registered",
-      value: whoisData?.creation_date,
-      status: whoisData?.creation_date ? 'good' : 'bad',
-      details: whoisData?.creation_date ? `Registered: ${new Date(whoisData.creation_date).toLocaleDateString()}` : "Creation date not available"
-    },
-    {
-      name: "Expiration Date", 
-      description: "When the domain registration ends",
-      value: whoisData?.expiration_date,
-      status: whoisData?.expiration_date ? 'good' : 'bad',
-      details: whoisData?.expiration_date ? `Expires: ${new Date(whoisData.expiration_date).toLocaleDateString()}` : "Expiration date not available"
-    },
-    {
-      name: "Last Updated",
-      description: "Last time the domain info changed",
-      value: whoisData?.updated_date,
-      status: whoisData?.updated_date ? 'good' : 'warning',
-      details: whoisData?.updated_date ? `Updated: ${new Date(whoisData.updated_date).toLocaleDateString()}` : "Last update date not available"
-    },
-    {
-      name: "Domain Age",
-      description: "How long the domain has been registered",
-      value: whoisData?.age_days,
-      status: whoisData?.age_days > 365 ? 'good' : whoisData?.age_days > 30 ? 'warning' : 'bad',
-      details: whoisData?.age_days 
-        ? `${Math.round(whoisData.age_days / 365)} years old (${whoisData.age_days} days)`
-        : "Domain age cannot be determined"
+  const formatDate = (dateString) => {
+    if (!dateString) return "Not available";
+    try {
+      return new Date(dateString).toLocaleDateString();
+    } catch {
+      return dateString;
     }
-  ];
+  };
 
   return (
-    <div className="mt-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 rounded-lg">
-      <h4 className="font-medium text-sm mb-3 text-gray-900 dark:text-blue-300">WHOIS Checkup Details</h4>
-      <div className="space-y-2">
-        {checks.map((check, index) => (
-          <div key={index} className="flex items-center justify-between py-2 px-3 bg-white dark:bg-black rounded border border-gray-200 dark:border-gray-600">
-            <div className="flex items-center space-x-3">
-              <div className={`w-3 h-3 rounded-full ${
-                check.status === 'good' ? 'bg-green-500' :
-                check.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500'
-              }`}></div>
-              <div>
-                <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{check.name}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">{check.description}</div>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className={`text-sm font-medium ${
-                check.status === 'good' ? 'text-green-600 dark:text-green-400' :
-                check.status === 'warning' ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'
-              }`}>
-                {check.value ? '✓' : '✗'}
-              </div>
-              <div className="text-xs text-gray-600 dark:text-gray-300">{check.details}</div>
-            </div>
-          </div>
-        ))}
+    <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-500/30 rounded-lg">
+      <h4 className="font-medium text-sm mb-2 text-gray-900 dark:text-green-300">WHOIS Information</h4>
+      <div className="grid grid-cols-2 gap-4 text-xs">
+        <div>
+          <div className="font-medium text-gray-700 dark:text-gray-300">Creation Date:</div>
+          <div className="text-gray-600 dark:text-gray-400">{formatDate(whoisData.creation_date)}</div>
+        </div>
+        <div>
+          <div className="font-medium text-gray-700 dark:text-gray-300">Expiration Date:</div>
+          <div className="text-gray-600 dark:text-gray-400">{formatDate(whoisData.expiration_date)}</div>
+        </div>
+        <div>
+          <div className="font-medium text-gray-700 dark:text-gray-300">Registrar:</div>
+          <div className="text-gray-600 dark:text-gray-400">{whoisData.registrar || "Not available"}</div>
+        </div>
+        <div>
+          <div className="font-medium text-gray-700 dark:text-gray-300">Status:</div>
+          <div className="text-gray-600 dark:text-gray-400">{whoisData.status || "Not available"}</div>
+        </div>
       </div>
-      
-      {whoisData?.errors && whoisData.errors.length > 0 && (
-        <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800">
-          <h5 className="font-medium text-sm text-red-800 dark:text-red-300 mb-2">Errors Encountered:</h5>
+      {whoisData.errors && whoisData.errors.length > 0 && (
+        <div className="mt-2 text-xs text-red-600 dark:text-red-400">
+          <div className="font-medium">Errors:</div>
           {whoisData.errors.map((error, index) => (
-            <div key={index} className="text-xs text-red-700 dark:text-red-400">• {error}</div>
+            <div key={index}>• {error}</div>
           ))}
         </div>
       )}
