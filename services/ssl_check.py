@@ -62,7 +62,7 @@ def check_ssl(hostname: str, port: int = 443, timeout: float = 5.0):
 
 def enhanced_ssl_check(hostname: str, port: int = 443):
     """
-    Professional SSL check with real certificate data extraction
+    Professional SSL check with complete certificate data extraction - TECHNICAL DETAILS READY
     """
     print(f"🔍 DEBUG: enhanced_ssl_check called for {hostname}")
     
@@ -83,7 +83,7 @@ def enhanced_ssl_check(hostname: str, port: int = 443):
         "days_until_expiry": None,
         "certificate_valid_days": None,
         
-        # Certificate Identity
+        # Certificate Identity - ENHANCED FOR TECHNICAL DETAILS
         "subject_cn": None,
         "subject_org": None,
         "issuer_cn": None,
@@ -96,11 +96,12 @@ def enhanced_ssl_check(hostname: str, port: int = 443):
         "certificate_chain_complete": False,
         "chain_length": 0,
         
-        # Technical Details
+        # Technical Details - ENHANCED
         "tls_version": None,
         "cipher_suite": None,
         "key_algorithm": None,
         "key_size": None,
+        "key_curve": None,  # NEW: For EC keys
         "signature_algorithm": None,
         
         # Domain Coverage
@@ -108,12 +109,7 @@ def enhanced_ssl_check(hostname: str, port: int = 443):
         "san_domains": [],
         "wildcard_cert": False,
         
-        # Security Assessment
-        "security_grade": None,
-        "vulnerability_flags": [],
-        "trust_score": None,
-        
-        # Raw Data
+        # Raw Data - ENHANCED FOR TECHNICAL SECTION
         "certificate_pem": None,
         "full_chain": [],
         "errors": []
@@ -123,15 +119,15 @@ def enhanced_ssl_check(hostname: str, port: int = 443):
         # Step 1: Test HTTPS connectivity
         result.update(_test_https_connection(hostname))
         
-        # Step 2: Get SSL certificate data
-        cert_data = _get_certificate_details(hostname, port)
+        # Step 2: Get complete SSL certificate data with technical details
+        cert_data = _get_complete_certificate_details(hostname, port)
         result.update(cert_data)
         
-        # Step 3: SSL analysis complete
-        print("🔍 SSL analysis complete")
+        print("🔍 Enhanced SSL analysis complete with technical details")
         
     except Exception as e:
         result["errors"].append(f"ssl_check_error: {str(e)}")
+        print(f"❌ SSL check error: {e}")
     
     return result
 
@@ -202,11 +198,11 @@ def _test_https_connection(hostname):
     return data
 
 
-def _get_certificate_details(hostname, port):
+def _get_complete_certificate_details(hostname, port):
     """
-    Extract certificate details that match OpenSSL results
+    COMPLETE certificate extraction with all technical details for frontend display
     """
-    print(f"🔍 DEBUG: Getting certificate details for {hostname}:{port}")
+    print(f"🔍 DEBUG: Getting COMPLETE certificate details for {hostname}:{port}")
     
     data = {
         "ssl_handshake_successful": False,
@@ -233,8 +229,8 @@ def _get_certificate_details(hostname, port):
                 data["ssl_handshake_successful"] = True
                 print("✅ SSL Handshake successful")
                 
-                # Get connection info safely
-                data["tls_version"] = ssock.version() if hasattr(ssock, 'version') else None
+                # Get connection info
+                data["tls_version"] = ssock.version()
                 print(f"✅ TLS Version: {data['tls_version']}")
                 
                 try:
@@ -247,89 +243,45 @@ def _get_certificate_details(hostname, port):
                 except Exception as e:
                     print(f"⚠️ Cipher info error: {e}")
                 
-                # Get certificate data using multiple methods
+                # Get RAW certificate data for complete analysis
+                cert_der = None
+                cert_dict = None
+                
                 try:
-                    cert = None
+                    # Method 1: Get dictionary format
+                    cert_dict = ssock.getpeercert(binary_form=False)
+                    if cert_dict:
+                        print("✅ Certificate dictionary retrieved")
                     
-                    # Method 1: Standard approach
-                    try:
-                        cert = ssock.getpeercert(binary_form=False)
-                        if cert:
-                            print("✅ Certificate data retrieved (standard method)")
-                    except Exception as e1:
-                        print(f"⚠️ Standard method failed: {e1}")
-                    
-                    # Method 2: Cryptography fallback
-                    if not cert:
-                        try:
-                            cert_der = ssock.getpeercert(binary_form=True)
-                            if cert_der and CRYPTOGRAPHY_AVAILABLE:
-                                from cryptography import x509
-                                from cryptography.hazmat.backends import default_backend
-                                
-                                x509_cert = x509.load_der_x509_certificate(cert_der, default_backend())
-                                
-                                # Convert to standard Python SSL format
-                                subject_items = []
-                                for attr in x509_cert.subject:
-                                    subject_items.append((attr.oid._name, attr.value))
-                                
-                                issuer_items = []
-                                for attr in x509_cert.issuer:
-                                    issuer_items.append((attr.oid._name, attr.value))
-                                
-                                cert = {
-                                    'subject': tuple([tuple(item) for item in subject_items]),
-                                    'issuer': tuple([tuple(item) for item in issuer_items]),
-                                    'notAfter': x509_cert.not_valid_after.strftime("%b %d %H:%M:%S %Y GMT"),
-                                    'notBefore': x509_cert.not_valid_before.strftime("%b %d %H:%M:%S %Y GMT"),
-                                    'serialNumber': str(x509_cert.serial_number),
-                                    'version': x509_cert.version.value
-                                }
-                                
-                                # Add SAN domains
-                                try:
-                                    san_ext = x509_cert.extensions.get_extension_for_oid(x509.oid.ExtensionOID.SUBJECT_ALTERNATIVE_NAME)
-                                    san_list = []
-                                    for name in san_ext.value:
-                                        if isinstance(name, x509.DNSName):
-                                            san_list.append(('DNS', name.value))
-                                    if san_list:
-                                        cert['subjectAltName'] = tuple(san_list)
-                                except:
-                                    pass
-                                    
-                                print("✅ Certificate data retrieved (cryptography method)")
-                        except Exception as e2:
-                            print(f"⚠️ Cryptography method failed: {e2}")
-                    
-                    if cert:
-                        print(f"🔍 Certificate has keys: {list(cert.keys()) if isinstance(cert, dict) else 'Invalid format'}")
-                        # Process certificate data
-                        cert_info = _process_certificate_data(cert, normalized_hostname)
-                        data.update(cert_info)
-                        data["certificate_valid"] = True
-                        
-                        # Enhanced analysis with IMPROVED key algorithm detection
-                        try:
-                            cert_der = ssock.getpeercert(binary_form=True)
-                            if cert_der and CRYPTOGRAPHY_AVAILABLE:
-                                print("✅ Enhanced analysis starting...")
-                                enhanced_data = _analyze_with_cryptography_improved(cert_der, normalized_hostname)
-                                data.update(enhanced_data)
-                                
-                        except Exception as e:
-                            print(f"⚠️ Enhanced analysis failed: {e}")
-                            data["errors"].append(f"enhanced_analysis_failed: {str(e)}")
-                    else:
-                        print("❌ All certificate methods failed")
-                        data["errors"].append("no_certificate_data_available")
+                    # Method 2: Get DER format for advanced analysis
+                    cert_der = ssock.getpeercert(binary_form=True)
+                    if cert_der:
+                        print("✅ Certificate DER data retrieved")
                         
                 except Exception as e:
-                    print(f"❌ Certificate parsing failed: {e}")
-                    data["errors"].append(f"certificate_parsing_failed: {str(e)}")
+                    print(f"⚠️ Certificate retrieval error: {e}")
                 
-        # PHASE 2: Test hostname verification separately
+                # PHASE 2: Process ALL certificate data
+                if cert_dict or cert_der:
+                    # Process standard certificate info
+                    if cert_dict:
+                        cert_info = _process_certificate_data(cert_dict, normalized_hostname)
+                        data.update(cert_info)
+                    
+                    # Process advanced technical details
+                    if cert_der and CRYPTOGRAPHY_AVAILABLE:
+                        print("🔍 Processing advanced technical details...")
+                        technical_data = _extract_all_technical_details(cert_der, normalized_hostname)
+                        data.update(technical_data)
+                        data["certificate_valid"] = True
+                        print("✅ All technical details extracted")
+                    else:
+                        data["certificate_valid"] = bool(cert_dict)
+                else:
+                    print("❌ No certificate data retrieved")
+                    data["errors"].append("no_certificate_data_available")
+                
+        # PHASE 3: Test hostname verification
         try:
             verify_context = ssl.create_default_context()
             verify_context.check_hostname = True
@@ -337,7 +289,6 @@ def _get_certificate_details(hostname, port):
             
             with socket.create_connection((normalized_hostname, port), timeout=5) as verify_sock:
                 with verify_context.wrap_socket(verify_sock, server_hostname=normalized_hostname) as verify_ssock:
-                    # If this succeeds, hostname verification passed
                     data["hostname_match"] = True
                     data["ca_trusted"] = True
                     data["certificate_chain_complete"] = True
@@ -352,7 +303,6 @@ def _get_certificate_details(hostname, port):
                 data["self_signed"] = True
         except Exception as e:
             print(f"⚠️ Verification test failed: {e}")
-            # Don't override hostname_match if it was set by certificate analysis
             if "hostname_match" not in data:
                 data["hostname_match"] = False
             
@@ -360,13 +310,13 @@ def _get_certificate_details(hostname, port):
         print(f"❌ SSL connection failed: {e}")
         data["errors"].append(f"ssl_connection_failed: {str(e)}")
     
-    print(f"🔍 Final data: certificate_valid: {data.get('certificate_valid')}")
+    print(f"🔍 Final certificate analysis complete: certificate_valid: {data.get('certificate_valid')}")
     return data
 
 
 def _process_certificate_data(cert, hostname):
-    """Process certificate info to match OpenSSL output"""
-    print("🔍 Processing certificate data...")
+    """Process standard certificate info from SSL dict format"""
+    print("🔍 Processing standard certificate data...")
     
     data = {}
     
@@ -374,23 +324,29 @@ def _process_certificate_data(cert, hostname):
         return data
     
     try:
-        # Extract subject and issuer safely
+        # FIXED: Extract subject and issuer with proper parsing
         subject_info = {}
         issuer_info = {}
         
         if "subject" in cert and cert["subject"]:
             try:
-                subject_info = dict(x[0] for x in cert["subject"] if len(x) >= 2)
-            except Exception:
-                pass
+                for item in cert["subject"]:
+                    if isinstance(item, (tuple, list)) and len(item) >= 2:
+                        key, value = item[0], item[1]
+                        subject_info[key] = value
+            except Exception as e:
+                print(f"⚠️ Subject parsing error: {e}")
                 
         if "issuer" in cert and cert["issuer"]:
             try:
-                issuer_info = dict(x[0] for x in cert["issuer"] if len(x) >= 2)
-            except Exception:
-                pass
+                for item in cert["issuer"]:
+                    if isinstance(item, (tuple, list)) and len(item) >= 2:
+                        key, value = item[0], item[1]
+                        issuer_info[key] = value
+            except Exception as e:
+                print(f"⚠️ Issuer parsing error: {e}")
         
-        # Extract certificate details
+        # Extract certificate identity details
         data["subject_cn"] = subject_info.get("commonName")  
         data["subject_org"] = subject_info.get("organizationName")
         data["issuer_cn"] = issuer_info.get("commonName")  
@@ -398,17 +354,19 @@ def _process_certificate_data(cert, hostname):
         
         print(f"✅ Subject CN: {data['subject_cn']}")
         print(f"✅ Issuer CN: {data['issuer_cn']}")
+        print(f"✅ Subject Org: {data['subject_org']}")
+        print(f"✅ Issuer Org: {data['issuer_org']}")
         
         # Self-signed detection
         data["self_signed"] = _is_self_signed(subject_info, issuer_info)
         
-        # Process dates
+        # Process certificate dates
         _process_certificate_dates(cert, data)
         
         # Process SAN domains
         _process_san_domains(cert, data)
         
-        # Hostname verification using corrected logic
+        # Hostname verification
         data["hostname_match"] = _verify_hostname_match(
             hostname, 
             data.get("subject_cn"), 
@@ -424,8 +382,159 @@ def _process_certificate_data(cert, hostname):
     return data
 
 
+def _extract_all_technical_details(cert_der, hostname):
+    """
+    COMPLETE technical details extraction using cryptography library
+    This provides ALL data needed for the Technical Details frontend section
+    """
+    data = {}
+    
+    if not CRYPTOGRAPHY_AVAILABLE or not cert_der:
+        print("⚠️ Cryptography not available or no certificate data")
+        return data
+    
+    try:
+        cert = x509.load_der_x509_certificate(cert_der, default_backend())
+        print("✅ Certificate loaded for technical analysis")
+        
+        # DATES - Fixed timezone handling
+        try:
+            not_before = cert.not_valid_before_utc if hasattr(cert, 'not_valid_before_utc') else cert.not_valid_before.replace(tzinfo=timezone.utc)
+            not_after = cert.not_valid_after_utc if hasattr(cert, 'not_valid_after_utc') else cert.not_valid_after.replace(tzinfo=timezone.utc)
+            now = datetime.now(timezone.utc)
+            
+            data.update({
+                "not_before": not_before.isoformat(),
+                "expires_on": not_after.isoformat(),
+                "expired": not_after < now,
+                "days_until_expiry": (not_after - now).days,
+                "certificate_valid": not_before <= now <= not_after
+            })
+            
+            print(f"✅ Technical dates: {not_before} to {not_after}")
+        except Exception as e:
+            print(f"⚠️ Date processing error: {e}")
+        
+        # SERIAL NUMBER
+        try:
+            data["serial_number"] = str(cert.serial_number)
+            print(f"✅ Serial number: {data['serial_number'][:20]}...")
+        except Exception as e:
+            print(f"⚠️ Serial number error: {e}")
+        
+        # KEY ALGORITHM & TECHNICAL SPECS - COMPLETE
+        try:
+            public_key = cert.public_key()
+            print(f"🔍 Key type detected: {type(public_key).__name__}")
+            
+            if isinstance(public_key, rsa.RSAPublicKey):
+                data["key_algorithm"] = "RSA"
+                data["key_size"] = public_key.key_size
+                print(f"✅ RSA Key: {public_key.key_size} bits")
+                
+            elif isinstance(public_key, ec.EllipticCurvePublicKey):
+                data["key_algorithm"] = "EC"  # Elliptic Curve
+                data["key_size"] = public_key.curve.key_size
+                
+                # EXTRACT CURVE NAME for technical details
+                curve_name = type(public_key.curve).__name__
+                if hasattr(public_key.curve, 'name'):
+                    curve_name = public_key.curve.name
+                
+                data["key_curve"] = curve_name
+                print(f"✅ EC Key: {curve_name} ({public_key.curve.key_size} bits)")
+                
+            elif isinstance(public_key, dsa.DSAPublicKey):
+                data["key_algorithm"] = "DSA"
+                data["key_size"] = public_key.key_size
+                print(f"✅ DSA Key: {public_key.key_size} bits")
+                
+            else:
+                # Handle other key types
+                key_type = type(public_key).__name__.replace('PublicKey', '')
+                data["key_algorithm"] = key_type
+                if hasattr(public_key, 'key_size'):
+                    data["key_size"] = public_key.key_size
+                print(f"✅ Other key type: {key_type}")
+                
+        except Exception as key_error:
+            print(f"⚠️ Key analysis error: {key_error}")
+            data["key_algorithm"] = "Unknown"
+        
+        # SIGNATURE ALGORITHM
+        try:
+            sig_algo = cert.signature_algorithm_oid._name
+            data["signature_algorithm"] = sig_algo
+            print(f"✅ Signature algorithm: {sig_algo}")
+        except Exception as sig_error:
+            print(f"⚠️ Signature algorithm error: {sig_error}")
+        
+        # SUBJECT & ISSUER - Complete extraction
+        try:
+            # Extract complete subject information
+            subject_parts = {}
+            for attr in cert.subject:
+                attr_name = attr.oid._name if hasattr(attr.oid, '_name') else str(attr.oid)
+                subject_parts[attr_name] = attr.value
+            
+            # Override/supplement with cryptography data
+            if "commonName" in subject_parts:
+                data["subject_cn"] = subject_parts["commonName"]
+            if "organizationName" in subject_parts:
+                data["subject_org"] = subject_parts["organizationName"]
+            
+            # Extract complete issuer information  
+            issuer_parts = {}
+            for attr in cert.issuer:
+                attr_name = attr.oid._name if hasattr(attr.oid, '_name') else str(attr.oid)
+                issuer_parts[attr_name] = attr.value
+            
+            if "commonName" in issuer_parts:
+                data["issuer_cn"] = issuer_parts["commonName"]
+            if "organizationName" in issuer_parts:
+                data["issuer_org"] = issuer_parts["organizationName"]
+            
+            print(f"✅ Technical subject: {data.get('subject_cn')} ({data.get('subject_org')})")
+            print(f"✅ Technical issuer: {data.get('issuer_cn')} ({data.get('issuer_org')})")
+            
+        except Exception as e:
+            print(f"⚠️ Subject/Issuer extraction error: {e}")
+        
+        # SAN DOMAINS - Enhanced processing
+        try:
+            san_ext = cert.extensions.get_extension_for_oid(x509.oid.ExtensionOID.SUBJECT_ALTERNATIVE_NAME)
+            san_list = []
+            for name in san_ext.value:
+                if isinstance(name, x509.DNSName):
+                    san_list.append(name.value)
+            if san_list:
+                data["san_domains"] = san_list
+                data["wildcard_cert"] = any(domain.startswith('*.') for domain in san_list)
+                print(f"✅ Technical SAN: {len(san_list)} domains")
+        except x509.ExtensionNotFound:
+            print("⚠️ No SAN extension found")
+        except Exception as san_error:
+            print(f"⚠️ SAN processing error: {san_error}")
+        
+        # CERTIFICATE PEM - For technical display
+        try:
+            pem_data = cert.public_bytes(serialization.Encoding.PEM)
+            data["certificate_pem"] = pem_data.decode('utf-8')
+            print("✅ Certificate PEM data extracted for technical section")
+        except Exception as pem_error:
+            print(f"⚠️ PEM extraction error: {pem_error}")
+            
+        print("✅ All technical details extraction complete")
+            
+    except Exception as e:
+        print(f"❌ Technical analysis error: {e}")
+        data["errors"] = data.get("errors", []) + [f"technical_analysis_error: {str(e)}"]
+    
+    return data
+
+
 def _process_certificate_dates(cert, data):
-    """Process dates to match OpenSSL output"""
+    """Process certificate dates from SSL dict format"""
     try:
         not_after = cert.get("notAfter")  
         not_before = cert.get("notBefore")  
@@ -517,7 +626,7 @@ def _verify_hostname_match(hostname, subject_cn, san_domains):
     try:
         hostname = hostname.lower().strip()
         
-        # Check against Common Name (*.google.com should match google.com)
+        # Check against Common Name
         if subject_cn:
             if _match_hostname_pattern(hostname, subject_cn.lower().strip()):
                 print(f"✅ Hostname {hostname} matches CN {subject_cn}")
@@ -544,7 +653,7 @@ def _match_hostname_pattern(hostname, pattern):
         if hostname == pattern:
             return True
         
-        # Handle wildcard certificates (*.google.com matches google.com)
+        # Handle wildcard certificates
         if pattern.startswith('*.'):
             base_domain = pattern[2:]  # Remove *.
             if base_domain:
@@ -570,8 +679,6 @@ def _is_self_signed(subject_info, issuer_info):
         subject_cn = subject_info.get("commonName", "").lower().strip()
         issuer_cn = issuer_info.get("commonName", "").lower().strip()
         
-        # For Google: subject=*.google.com, issuer=WE2
-        # These are different, so NOT self-signed
         if subject_cn and issuer_cn:
             is_self_signed = subject_cn == issuer_cn
             print(f"✅ Self-signed check: {subject_cn} == {issuer_cn} -> {is_self_signed}")
@@ -581,121 +688,6 @@ def _is_self_signed(subject_info, issuer_info):
         print(f"⚠️ Self-signed detection error: {e}")
     
     return False
-
-
-def _analyze_with_cryptography_improved(cert_der, hostname):
-    """IMPROVED: Safe cryptography-based certificate analysis with proper key algorithm detection"""
-    data = {}
-    
-    if not CRYPTOGRAPHY_AVAILABLE or not cert_der:
-        print("⚠️ Cryptography not available or no certificate data")
-        return data
-    
-    try:
-        cert = x509.load_der_x509_certificate(cert_der, default_backend())
-        
-        # Certificate validity period
-        not_before = cert.not_valid_before
-        not_after = cert.not_valid_after
-        now = datetime.now(timezone.utc)
-        
-        data.update({
-            "not_before": not_before.isoformat(),
-            "expires_on": not_after.isoformat(),
-            "expired": not_after < now,
-            "days_until_expiry": (not_after - now).days,
-            "certificate_valid": not_before <= now <= not_after
-        })
-        
-        print(f"✅ Enhanced: Certificate valid from {not_before} to {not_after}")
-        
-        # Serial number
-        data["serial_number"] = str(cert.serial_number)
-        
-        # IMPROVED: Key algorithm detection with detailed analysis
-        try:
-            public_key = cert.public_key()
-            key_type = type(public_key).__name__.replace('PublicKey', '')
-            print(f"🔍 DEBUG: Raw key type detected: {type(public_key).__name__}")
-            
-            # Enhanced key algorithm detection
-            if isinstance(public_key, rsa.RSAPublicKey):
-                data["key_algorithm"] = "RSA"
-                data["key_size"] = public_key.key_size
-                print(f"✅ RSA Key detected: {public_key.key_size} bits")
-                
-            elif isinstance(public_key, ec.EllipticCurvePublicKey):
-                data["key_algorithm"] = "EC"  # Elliptic Curve
-                data["key_size"] = public_key.curve.key_size
-                
-                # Get specific curve name
-                curve_name = type(public_key.curve).__name__
-                if hasattr(public_key.curve, 'name'):
-                    curve_name = public_key.curve.name
-                
-                data["key_curve"] = curve_name
-                print(f"✅ Elliptic Curve Key detected: {curve_name} ({public_key.curve.key_size} bits)")
-                
-            elif isinstance(public_key, dsa.DSAPublicKey):
-                data["key_algorithm"] = "DSA"
-                data["key_size"] = public_key.key_size
-                print(f"✅ DSA Key detected: {public_key.key_size} bits")
-                
-            else:
-                # Fallback for other key types
-                data["key_algorithm"] = key_type
-                if hasattr(public_key, 'key_size'):
-                    data["key_size"] = public_key.key_size
-                print(f"✅ Other key type detected: {key_type}")
-            
-            # Debug output for verification
-            if data.get("key_algorithm") and data.get("key_size"):
-                print(f"✅ Enhanced: Key algorithm {data['key_algorithm']} ({data['key_size']} bits)")
-            else:
-                print(f"⚠️ Key algorithm detection incomplete: {data.get('key_algorithm', 'unknown')}")
-                
-        except Exception as key_error:
-            print(f"⚠️ Key algorithm detection failed: {key_error}")
-            data["key_algorithm"] = "Unknown"
-            data["errors"] = data.get("errors", []) + [f"key_detection_error: {str(key_error)}"]
-        
-        # Signature algorithm
-        try:
-            sig_algo = cert.signature_algorithm_oid._name
-            data["signature_algorithm"] = sig_algo
-            print(f"✅ Signature algorithm: {sig_algo}")
-        except Exception as sig_error:
-            print(f"⚠️ Signature algorithm detection failed: {sig_error}")
-        
-        # Enhanced SAN processing
-        try:
-            san_ext = cert.extensions.get_extension_for_oid(x509.oid.ExtensionOID.SUBJECT_ALTERNATIVE_NAME)
-            san_list = []
-            for name in san_ext.value:
-                if isinstance(name, x509.DNSName):
-                    san_list.append(name.value)
-            if san_list:
-                data["san_domains"] = san_list
-                data["wildcard_cert"] = any(domain.startswith('*.') for domain in san_list)
-                print(f"✅ Enhanced SAN processing: {len(san_list)} domains found")
-        except x509.ExtensionNotFound:
-            print("⚠️ No SAN extension found")
-        except Exception as san_error:
-            print(f"⚠️ SAN processing failed: {san_error}")
-        
-        # Certificate in PEM format
-        try:
-            pem_data = cert.public_bytes(serialization.Encoding.PEM)
-            data["certificate_pem"] = pem_data.decode('utf-8')
-            print("✅ Certificate PEM data extracted")
-        except Exception as pem_error:
-            print(f"⚠️ PEM extraction failed: {pem_error}")
-            
-    except Exception as e:
-        print(f"❌ Enhanced analysis error: {e}")
-        data["errors"] = data.get("errors", []) + [f"enhanced_analysis_error: {str(e)}"]
-    
-    return data
 
 
 def _basic_ssl_check(hostname: str, port: int = 443, timeout: float = 5.0):

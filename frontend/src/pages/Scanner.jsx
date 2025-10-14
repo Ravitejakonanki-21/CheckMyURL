@@ -922,7 +922,7 @@ function ResultsPage({ result, onNewScan, expandedRows, setExpandedRows }) {
                           onClick={() => toggleRowExpansion('ssl')}
                           className="ml-2 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors duration-200 px-2 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900"
                         >
-                          {expandedRows['ssl'] ? 'Hide Details ▼' : 'View Details ▶'}
+                          {expandedRows['ssl'] ? 'Hide Details ▼' : 'View Enhanced Details ▶'}
                         </button>
                       )}
                     </div>
@@ -1333,7 +1333,7 @@ function ResultsPage({ result, onNewScan, expandedRows, setExpandedRows }) {
   );
 }
 
-// ENHANCED SSL DETAILS COMPONENT (TRUST SCORE REMOVED)
+// ENHANCED SSL DETAILS COMPONENT WITH TECHNICAL DETAILS SECTION
 const EnhancedSSLDetails = ({ sslData }) => {
   const formatDate = (dateString) => {
     if (!dateString) return "Not available";
@@ -1469,6 +1469,158 @@ const EnhancedSSLDetails = ({ sslData }) => {
           {sslData.errors.map((error, index) => (
             <div key={index} className="text-xs text-red-700 dark:text-red-400">• {error}</div>
           ))}
+        </div>
+      )}
+
+      {/* NEW: Technical Details Section */}
+      <TechnicalSSLDetails sslData={sslData} />
+    </div>
+  );
+};
+
+// NEW: TECHNICAL SSL DETAILS COMPONENT
+const TechnicalSSLDetails = ({ sslData }) => {
+  const [showPEM, setShowPEM] = useState(false);
+
+  const technicalData = [
+    {
+      name: "Certificate Issue Date",
+      value: sslData?.not_before ? new Date(sslData.not_before).toLocaleString() : null,
+      description: "When the certificate became valid (Not Before)",
+      technical: true
+    },
+    {
+      name: "Certificate Expiry Date", 
+      value: sslData?.expires_on ? new Date(sslData.expires_on).toLocaleString() : null,
+      description: "When the certificate expires (Not After)",
+      technical: true
+    },
+    {
+      name: "Certificate Validity Period",
+      value: sslData?.not_before && sslData?.expires_on ? 
+        `${Math.round((new Date(sslData.expires_on) - new Date(sslData.not_before)) / (1000 * 60 * 60 * 24))} days` : null,
+      description: "Total certificate validity period",
+      technical: true
+    },
+    {
+      name: "Certificate Subject",
+      value: sslData?.subject_cn,
+      description: "Subject Common Name (CN) from certificate",
+      technical: true
+    },
+    {
+      name: "Certificate Issuer", 
+      value: sslData?.issuer_cn,
+      description: "Certificate Authority that signed this certificate",
+      technical: true
+    },
+    {
+      name: "Subject Organization",
+      value: sslData?.subject_org,
+      description: "Organization listed in certificate subject",
+      technical: true
+    },
+    {
+      name: "Issuer Organization",
+      value: sslData?.issuer_org, 
+      description: "Certificate Authority organization name",
+      technical: true
+    },
+    {
+      name: "Serial Number",
+      value: sslData?.serial_number,
+      description: "Unique certificate serial number",
+      technical: true
+    },
+    {
+      name: "Signature Algorithm",
+      value: sslData?.signature_algorithm,
+      description: "Algorithm used to sign the certificate",
+      technical: true
+    },
+    {
+      name: "Certificate Chain Length",
+      value: sslData?.chain_length,
+      description: "Number of certificates in the trust chain",
+      technical: true
+    },
+    {
+      name: "Key Curve",
+      value: sslData?.key_curve,
+      description: "Elliptic curve name (for EC keys)",
+      technical: true
+    }
+  ];
+
+  return (
+    <div className="mt-4 border-t border-gray-200 dark:border-gray-600 pt-4">
+      <div className="flex items-center justify-between mb-3">
+        <h5 className="font-medium text-sm text-gray-900 dark:text-gray-100 flex items-center">
+          🔍 Advanced Technical Details
+          <span className="ml-2 text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">
+            For Developers & Security Professionals
+          </span>
+        </h5>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {technicalData.map((item, index) => (
+          item.value && (
+            <div key={index} className="bg-gray-50 dark:bg-gray-800 rounded border p-3">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="font-medium text-xs text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-1">
+                    {item.name}
+                  </div>
+                  <div className="text-sm text-gray-700 dark:text-gray-300 font-mono break-all">
+                    {item.value}
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    {item.description}
+                  </div>
+                </div>
+                <button 
+                  onClick={() => navigator.clipboard?.writeText(String(item.value))}
+                  className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 ml-2 text-xs"
+                  title="Copy Value"
+                >
+                  ⧉
+                </button>
+              </div>
+            </div>
+          )
+        ))}
+      </div>
+
+      {/* Certificate PEM Section */}
+      {sslData?.certificate_pem && (
+        <div className="mt-4 border-t border-gray-200 dark:border-gray-600 pt-4">
+          <div className="flex items-center justify-between mb-2">
+            <h6 className="font-medium text-xs text-gray-900 dark:text-gray-100 uppercase tracking-wide">
+              Raw Certificate Data (PEM)
+            </h6>
+            <button
+              onClick={() => setShowPEM(!showPEM)}
+              className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 px-2 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900"
+            >
+              {showPEM ? 'Hide PEM ▼' : 'Show PEM ▶'}
+            </button>
+          </div>
+          
+          {showPEM && (
+            <div className="bg-black dark:bg-gray-900 rounded p-3 relative">
+              <pre className="text-xs text-green-400 font-mono overflow-x-auto whitespace-pre-wrap break-all">
+                {sslData.certificate_pem}
+              </pre>
+              <button 
+                onClick={() => navigator.clipboard?.writeText(sslData.certificate_pem)}
+                className="absolute top-2 right-2 text-green-400 hover:text-green-200 text-xs px-2 py-1 bg-black/50 rounded"
+                title="Copy PEM Certificate"
+              >
+                ⧉ Copy PEM
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
