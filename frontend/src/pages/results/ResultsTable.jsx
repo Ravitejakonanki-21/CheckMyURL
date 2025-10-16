@@ -5,10 +5,31 @@ import { copyToClipboard, openLearnMore, reportFalsePositive } from "../../utils
 
 function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setExpandedRows }) {
   const toggleRowExpansion = (key) => setExpandedRows(prev => ({ ...prev, [key]: !prev[key] }));
+  const [copiedStates, setCopiedStates] = useState({});
 
-  const copyAllResults = (btn) => {
+  const handleCopy = (text, field) => {
+    copyToClipboard(text);
+    setCopiedStates(prev => ({ ...prev, [field]: true }));
+    setTimeout(() => {
+      setCopiedStates(prev => ({ ...prev, [field]: false }));
+    }, 2000);
+  };
+
+  const handleLearnMore = (type, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openLearnMore(type);
+  };
+
+  const handleReportFalsePositive = (field, value, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    reportFalsePositive(field, value);
+  };
+
+  const copyAllResults = () => {
     const d = result.details, ssl = d.sslData;
-    copyToClipboard([
+    const text = [
       `URL: ${result.url}`, `Risk Score: ${result.riskScore}%`, `Classification: ${result.classification}`,
       `SSL/TLS: ${d.sslValid?'Valid':'Invalid'} (Score: ${securityScores.ssl})`,
       ssl.tls_version?`TLS Version: ${ssl.tls_version}`:'', ssl.cipher_suite?`Cipher Suite: ${ssl.cipher_suite}`:'',
@@ -18,13 +39,15 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
       `Keywords: ${d.keywords.join(", ")||"None"} (Score: ${securityScores.keywords})`,
       `ML Score: ${d.mlPhishingScore}% risk (Score: ${securityScores.mlPhishing})`,
       `Overall Score: ${securityScores.overall}%`
-    ].filter(Boolean).join('\n'), btn);
+    ].filter(Boolean).join('\n');
+    handleCopy(text, 'all');
   };
 
   return (
     <div className="w-full px-6 pb-8">
-      <div className="border border-gray-300 dark:border-gray-700 rounded-2xl overflow-hidden bg-white dark:bg-gray-900 shadow-lg">
-        <div className="bg-gray-50 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-700 px-6 py-4">
+      <div className="border border-gray-300 dark:border-gray-700 rounded-2xl overflow-hidden bg-white dark:bg-black shadow-lg">
+        {/* Main Header - Transparent */}
+        <div className="bg-transparent border-b border-gray-300 dark:border-gray-700 px-6 py-4">
           <div className="flex items-center space-x-2">
             <svg className="w-6 h-6 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -34,59 +57,67 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Complete security assessment with professional SSL analysis, domain validation, and threat detection</p>
         </div>
         
+        {/* Table */}
         <div className="overflow-auto">
           <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-800">
+            {/* Table Header - Transparent */}
+            <thead className="bg-transparent">
               <tr>
-                <th className="px-4 py-4 text-left text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-600">Field</th>
-                <th className="px-4 py-4 text-left text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-600">Value</th>
-                <th className="px-4 py-4 text-left text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-600">Details</th>
-                <th className="px-4 py-4 text-center text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-600">
+                <th className="px-4 py-4 text-left text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">Field</th>
+                <th className="px-4 py-4 text-left text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">Value</th>
+                <th className="px-4 py-4 text-left text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">Details</th>
+                <th className="px-4 py-4 text-center text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">
                   Total Score: {securityScores.overall}%
                 </th>
-                <th className="px-4 py-4 text-center text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-600">Weight</th>
-                <th className="px-4 py-4 text-center text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-600">Last Updated</th>
+                <th className="px-4 py-4 text-center text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">Weight</th>
+                <th className="px-4 py-4 text-center text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">Last Updated</th>
                 <th className="px-4 py-4 text-center text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                   Quick Actions
                   <button 
-                    onClick={(e) => copyAllResults(e.target)}
-                    className="ml-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
+                    onClick={copyAllResults}
+                    className="ml-2 w-12 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 transition-colors duration-200"
                     title="Copy All Results"
                   >
-                    <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
+                    {copiedStates.all ? (
+                      <span className="text-green-600 dark:text-green-400 text-xs font-medium">Copied!</span>
+                    ) : (
+                      <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    )}
                   </button>
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-300 dark:divide-gray-700">
+            <tbody className="bg-white dark:bg-black divide-y divide-gray-300 dark:divide-gray-700">
               
-              {/* URL ROW */}
-              <tr className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-150">
-                <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-gray-200 border-r border-gray-300 dark:border-gray-600">URL</td>
-                <td className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-600">{result.url}</td>
-                <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-600">Scanned domain with enhanced analysis</td>
-                <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-600">—</td>
-                <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-600">—</td>
-                <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-600">{lastUpdated}</td>
+              <tr className="hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors duration-150">
+                <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-gray-200 border-r border-gray-300 dark:border-gray-700">URL</td>
+                <td className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">{result.url}</td>
+                <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">Scanned domain with enhanced analysis</td>
+                <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">—</td>
+                <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">—</td>
+                <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">{lastUpdated}</td>
                 <td className="px-4 py-4 text-center">
                   <button 
-                    onClick={(e) => copyToClipboard(result.url, e.target)}
-                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 mx-1"
+                    onClick={() => handleCopy(result.url, 'url')}
+                    className="w-12 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 mx-1 transition-colors duration-200"
                     title="Copy URL"
                   >
-                    <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
+                    {copiedStates.url ? (
+                      <span className="text-green-600 dark:text-green-400 text-xs font-medium">Copied!</span>
+                    ) : (
+                      <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    )}
                   </button>
                 </td>
               </tr>
 
-              {/* RISK SCORE ROW */}
-              <tr className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-150">
-                <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-gray-200 border-r border-gray-300 dark:border-gray-600">Risk Score</td>
-                <td className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-600">
+              <tr className="hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors duration-150">
+                <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-gray-200 border-r border-gray-300 dark:border-gray-700">Risk Score</td>
+                <td className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
                   <span className={`font-bold ${
                     result.riskScore >= 70 ? 'text-red-600 dark:text-red-400' : 
                     result.riskScore >= 40 ? 'text-yellow-600 dark:text-yellow-400' : 
@@ -95,27 +126,30 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                     {result.riskScore}%
                   </span>
                 </td>
-                <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-600">Overall security risk assessment</td>
-                <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-600">—</td>
-                <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-600">—</td>
-                <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-600">{lastUpdated}</td>
+                <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">Overall security risk assessment</td>
+                <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">—</td>
+                <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">—</td>
+                <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">{lastUpdated}</td>
                 <td className="px-4 py-4 text-center">
                   <button 
-                    onClick={(e) => copyToClipboard(`Risk Score: ${result.riskScore}%`, e.target)}
-                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 mx-1"
+                    onClick={() => handleCopy(`Risk Score: ${result.riskScore}%`, 'riskScore')}
+                    className="w-12 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 mx-1 transition-colors duration-200"
                     title="Copy Risk Score"
                   >
-                    <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
+                    {copiedStates.riskScore ? (
+                      <span className="text-green-600 dark:text-green-400 text-xs font-medium">Copied!</span>
+                    ) : (
+                      <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    )}
                   </button>
                 </td>
               </tr>
               
-              {/* ENHANCED SSL/TLS SECURITY ROW */}
-              <tr className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-150">
-                <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-gray-200 border-r border-gray-300 dark:border-gray-600">SSL/TLS Security</td>
-                <td className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-600">
+              <tr className="hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors duration-150">
+                <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-gray-200 border-r border-gray-300 dark:border-gray-700">SSL/TLS Security</td>
+                <td className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       <span className={`px-3 py-1 rounded text-xs font-medium ${
@@ -135,10 +169,10 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                     )}
                   </div>
                 </td>
-                <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-600">
+                <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">
                   Professional SSL/TLS certificate validation
                 </td>
-                <td className="px-4 py-4 text-center border-r border-gray-300 dark:border-gray-600">
+                <td className="px-4 py-4 text-center border-r border-gray-300 dark:border-gray-700">
                   <div className={`text-lg font-bold ${
                     securityScores.ssl >= 80 ? 'text-green-600 dark:text-green-400' : 
                     securityScores.ssl >= 60 ? 'text-yellow-600 dark:text-yellow-400' : 
@@ -147,23 +181,27 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                     {securityScores.ssl}
                   </div>
                 </td>
-                <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-600">
+                <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
                   {securityScores.weights.ssl}%
                 </td>
-                <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-600">{lastUpdated}</td>
+                <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">{lastUpdated}</td>
                 <td className="px-4 py-4 text-center">
                   <button 
-                    onClick={(e) => copyToClipboard(`SSL: ${result.details.sslValid ? 'Valid' : 'Invalid'}`, e.target)}
-                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 mx-1"
+                    onClick={() => handleCopy(`SSL: ${result.details.sslValid ? 'Valid' : 'Invalid'}`, 'ssl')}
+                    className="w-12 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 mx-1 transition-colors duration-200"
                     title="Copy SSL Status"
                   >
-                    <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
+                    {copiedStates.ssl ? (
+                      <span className="text-green-600 dark:text-green-400 text-xs font-medium">Copied!</span>
+                    ) : (
+                      <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    )}
                   </button>
                   <button 
-                    onClick={(e) => openLearnMore('ssl', e.target)}
-                    className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200 mx-1"
+                    onClick={(e) => handleLearnMore('ssl', e)}
+                    className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200 mx-1 transition-colors duration-200"
                     title="Learn More"
                   >
                     <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -171,8 +209,8 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                     </svg>
                   </button>
                   <button 
-                    onClick={(e) => reportFalsePositive('SSL/TLS Security', result.details.sslValid ? 'Valid' : 'Invalid', e.target)}
-                    className="text-orange-600 hover:text-orange-800 dark:text-orange-400 dark:hover:text-orange-200 mx-1"
+                    onClick={(e) => handleReportFalsePositive('SSL/TLS Security', result.details.sslValid ? 'Valid' : 'Invalid', e)}
+                    className="text-orange-600 hover:text-orange-800 dark:text-orange-400 dark:hover:text-orange-200 mx-1 transition-colors duration-200"
                     title="Report False Positive"
                   >
                     <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -182,19 +220,17 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                 </td>
               </tr>
               
-              {/* SSL ENHANCED DETAILS - SHOW WHEN EXPANDED */}
               {expandedRows['ssl'] && result.details.sslData && (
                 <tr>
-                  <td colSpan="7" className="px-0 py-0 border-t border-gray-200 dark:border-gray-600">
+                  <td colSpan="7" className="px-0 py-0 border-t border-gray-200 dark:border-gray-700">
                     <EnhancedSSLDetails sslData={result.details.sslData} securityScores={securityScores} lastUpdated={lastUpdated} />
                   </td>
                 </tr>
               )}
               
-              {/* DOMAIN AGE ROW */}
-              <tr className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-150">
-                <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-gray-200 border-r border-gray-300 dark:border-gray-600">Domain Age</td>
-                <td className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-600">
+              <tr className="hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors duration-150">
+                <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-gray-200 border-r border-gray-300 dark:border-gray-700">Domain Age</td>
+                <td className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
                   <div className="flex items-center justify-between">
                     <span className={`font-medium px-2 py-1 rounded text-xs ${
                       result.details.whoisAgeMonths > 12 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 
@@ -213,8 +249,8 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                     )}
                   </div>
                 </td>
-                <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-600">Domain registration history and age</td>
-                <td className="px-4 py-4 text-center border-r border-gray-300 dark:border-gray-600">
+                <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">Domain registration history and age</td>
+                <td className="px-4 py-4 text-center border-r border-gray-300 dark:border-gray-700">
                   <div className={`text-lg font-bold ${
                     securityScores.domainAge >= 80 ? 'text-green-600 dark:text-green-400' : 
                     securityScores.domainAge >= 60 ? 'text-yellow-600 dark:text-yellow-400' : 
@@ -223,23 +259,27 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                     {securityScores.domainAge}
                   </div>
                 </td>
-                <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-600">
+                <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
                   {securityScores.weights.domainAge}%
                 </td>
-                <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-600">{lastUpdated}</td>
+                <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">{lastUpdated}</td>
                 <td className="px-4 py-4 text-center">
                   <button 
-                    onClick={(e) => copyToClipboard(`Domain Age: ${result.details.whoisAgeMonths} months`, e.target)}
-                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 mx-1"
+                    onClick={() => handleCopy(`Domain Age: ${result.details.whoisAgeMonths} months`, 'domainAge')}
+                    className="w-12 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 mx-1 transition-colors duration-200"
                     title="Copy Domain Age"
                   >
-                    <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
+                    {copiedStates.domainAge ? (
+                      <span className="text-green-600 dark:text-green-400 text-xs font-medium">Copied!</span>
+                    ) : (
+                      <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    )}
                   </button>
                   <button 
-                    onClick={(e) => openLearnMore('domain', e.target)}
-                    className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200 mx-1"
+                    onClick={(e) => handleLearnMore('domain', e)}
+                    className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200 mx-1 transition-colors duration-200"
                     title="Learn More"
                   >
                     <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -247,8 +287,8 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                     </svg>
                   </button>
                   <button 
-                    onClick={(e) => reportFalsePositive('Domain Age', `${result.details.whoisAgeMonths} months`, e.target)}
-                    className="text-orange-600 hover:text-orange-800 dark:text-orange-400 dark:hover:text-orange-200 mx-1"
+                    onClick={(e) => handleReportFalsePositive('Domain Age', `${result.details.whoisAgeMonths} months`, e)}
+                    className="text-orange-600 hover:text-orange-800 dark:text-orange-400 dark:hover:text-orange-200 mx-1 transition-colors duration-200"
                     title="Report False Positive"
                   >
                     <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -258,16 +298,13 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                 </td>
               </tr>
               
-              {/* WHOIS DETAILS - SHOW WHEN EXPANDED */}
               {expandedRows['whois'] && result.details.whoisData && (
                 <tr>
-                  <td colSpan="7" className="px-6 py-0 border-t border-gray-200 dark:border-gray-600">
+                  <td colSpan="7" className="px-6 py-0 border-t border-gray-200 dark:border-gray-700">
                     <WhoisDetails whoisData={result.details.whoisData} />
                   </td>
                 </tr>
               )}
-
-              {/* Add other rows as needed... */}
               
             </tbody>
           </table>
