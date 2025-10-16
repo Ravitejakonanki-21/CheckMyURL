@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS 
+from flask_cors import CORS
 import os
 import logging
 from datetime import datetime
@@ -86,6 +86,16 @@ def analyze():
     }
     cache.set(cache_key, response)
     return jsonify(response)
+
+# NEW: Route for standalone WHOIS check
+@app.post("/whois_check")
+def whois_check_endpoint():
+    data = request.get_json(force=True) or {}
+    url = (data.get("url") or "").strip()
+    if not url:
+        return jsonify({"errors": ["url required"]}), 400
+    whois_info = check_whois(url)
+    return jsonify(whois_info)
 
 if __name__ == "__main__":
     app.run(debug=config.DEBUG)
