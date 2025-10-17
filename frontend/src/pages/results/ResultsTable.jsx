@@ -31,12 +31,12 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
     const d = result.details, ssl = d.sslData;
     const text = [
       `URL: ${result.url}`, `Risk Score: ${result.riskScore}%`, `Classification: ${result.classification}`,
-      `SSL/TLS: ${d.sslValid?'Valid':'Invalid'} (Score: ${securityScores.ssl})`,
-      ssl.tls_version?`TLS Version: ${ssl.tls_version}`:'', ssl.cipher_suite?`Cipher Suite: ${ssl.cipher_suite}`:'',
+      `SSL/TLS: ${d.sslValid ? 'Valid' : 'Invalid'} (Score: ${securityScores.ssl})`,
+      ssl.tls_version ? `TLS Version: ${ssl.tls_version}` : '', ssl.cipher_suite ? `Cipher Suite: ${ssl.cipher_suite}` : '',
       `Domain Age: ${d.whoisAgeMonths} months (Score: ${securityScores.domainAge})`,
-      `Open Ports: ${d.openPorts.join(", ")||"None"} (Score: ${securityScores.ports})`,
-      `Security Headers: ${d.securityHeaders.join(", ")||"None"} (Score: ${securityScores.headers})`,
-      `Keywords: ${d.keywords.join(", ")||"None"} (Score: ${securityScores.keywords})`,
+      `Open Ports: ${d.openPorts.join(", ") || "None"} (Score: ${securityScores.ports})`,
+      `Security Headers: ${d.securityHeaders.join(", ") || "None"} (Score: ${securityScores.headers})`,
+      `Keywords: ${d.keywords.join(", ") || "None"} (Score: ${securityScores.keywords})`,
       `ML Score: ${d.mlPhishingScore}% risk (Score: ${securityScores.mlPhishing})`,
       `Overall Score: ${securityScores.overall}%`
     ].filter(Boolean).join('\n');
@@ -46,7 +46,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
   return (
     <div className="w-full px-6 pb-8">
       <div className="border border-gray-300 dark:border-gray-700 rounded-2xl overflow-hidden bg-white dark:bg-black shadow-lg">
-        {/* Main Header - Transparent */}
+        {/* Main Header */}
         <div className="bg-transparent border-b border-gray-300 dark:border-gray-700 px-6 py-4">
           <div className="flex items-center space-x-2">
             <svg className="w-6 h-6 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -54,13 +54,15 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
             </svg>
             <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Enhanced Security Analysis</h3>
           </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Complete security assessment with professional SSL analysis, domain validation, and threat detection</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            Complete security assessment with professional SSL analysis, domain validation, and threat detection
+          </p>
         </div>
-        
+
         {/* Table */}
         <div className="overflow-auto">
           <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
-            {/* Table Header - Transparent */}
+            {/* Table Header */}
             <thead className="bg-transparent">
               <tr>
                 <th className="px-4 py-4 text-left text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">Field</th>
@@ -89,8 +91,10 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                 </th>
               </tr>
             </thead>
+
             <tbody className="bg-white dark:bg-black divide-y divide-gray-300 dark:divide-gray-700">
-              
+
+              {/* URL Row */}
               <tr className="hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors duration-150">
                 <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-gray-200 border-r border-gray-300 dark:border-gray-700">URL</td>
                 <td className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">{result.url}</td>
@@ -115,6 +119,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                 </td>
               </tr>
 
+              {/* Risk Score Row */}
               <tr className="hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors duration-150">
                 <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-gray-200 border-r border-gray-300 dark:border-gray-700">Risk Score</td>
                 <td className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
@@ -146,7 +151,8 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                   </button>
                 </td>
               </tr>
-              
+
+              {/* SSL/TLS Security Row */}
               <tr className="hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors duration-150">
                 <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-gray-200 border-r border-gray-300 dark:border-gray-700">SSL/TLS Security</td>
                 <td className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
@@ -219,15 +225,21 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                   </button>
                 </td>
               </tr>
-              
+
               {expandedRows['ssl'] && result.details.sslData && (
                 <tr>
                   <td colSpan="7" className="px-0 py-0 border-t border-gray-200 dark:border-gray-700">
-                    <EnhancedSSLDetails sslData={result.details.sslData} securityScores={securityScores} lastUpdated={lastUpdated} />
+<EnhancedSSLDetails 
+  sslData={result.details.sslData} 
+  securityScores={securityScores} 
+  lastUpdated={lastUpdated} 
+  onHide={() => toggleRowExpansion('ssl')}  
+/>
                   </td>
                 </tr>
               )}
-              
+
+              {/* Domain Age Row */}
               <tr className="hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors duration-150">
                 <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-gray-200 border-r border-gray-300 dark:border-gray-700">Domain Age</td>
                 <td className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
@@ -297,7 +309,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                   </button>
                 </td>
               </tr>
-              
+
               {expandedRows['whois'] && result.details.whoisData && (
                 <tr>
                   <td colSpan="7" className="px-6 py-0 border-t border-gray-200 dark:border-gray-700">
@@ -305,7 +317,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                   </td>
                 </tr>
               )}
-              
+
             </tbody>
           </table>
         </div>

@@ -1,4 +1,8 @@
+import { useState } from "react";
+
 const TechnicalSSLDetailsColumn1 = ({ sslData, securityScores, lastUpdated }) => {
+  const [copiedIndex, setCopiedIndex] = useState(null);
+
   const formatDate = d => d ? new Date(d).toLocaleString() : "Not available";
   const validityPeriod = sslData?.not_before && sslData?.expires_on ? 
     `${Math.round((new Date(sslData.expires_on)-new Date(sslData.not_before))/(1000*60*60*24))} days` : "Not available";
@@ -25,7 +29,7 @@ const TechnicalSSLDetailsColumn1 = ({ sslData, securityScores, lastUpdated }) =>
       </h5>
       <div className="space-y-2">
         {technicalData1.map((item,index)=>
-          <div key={index} className="bg-gray-50 dark:bg-gray-800 rounded border border-gray-300 dark:border-gray-600 p-3 flex items-start justify-between">
+          <div key={index} className="bg-gray-50 dark:bg-black rounded border border-gray-300 dark:border-gray-600 p-3 flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center mb-1">
                 <div className="text-gray-600 dark:text-gray-400 mr-2">{item.icon}</div>
@@ -34,8 +38,20 @@ const TechnicalSSLDetailsColumn1 = ({ sslData, securityScores, lastUpdated }) =>
               <div className="text-sm text-gray-700 dark:text-gray-300 font-mono break-all">{item.value}</div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{item.description}</div>
             </div>
-            <button onClick={()=>navigator.clipboard?.writeText(String(item.value))} title="Copy Value" className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 ml-2 text-xs">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            <button
+              onClick={() => {
+                navigator.clipboard?.writeText(String(item.value));
+                setCopiedIndex(index);
+                setTimeout(() => setCopiedIndex(null), 2000);
+              }}
+              title="Copy Value"
+              className="ml-2 text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
+            >
+              {copiedIndex === index ? "Copied!" : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                </svg>
+              )}
             </button>
           </div>
         )}
