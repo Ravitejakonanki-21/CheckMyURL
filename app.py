@@ -94,8 +94,29 @@ def whois_check_endpoint():
     url = (data.get("url") or "").strip()
     if not url:
         return jsonify({"errors": ["url required"]}), 400
-    whois_info = check_whois(url)
-    return jsonify(whois_info)
+    
+    try:
+        whois_info = check_whois(url)
+        return jsonify(whois_info)
+    except Exception as e:
+        app.logger.error(f"WHOIS check failed for {url}: {str(e)}")
+        return jsonify({
+            "errors": [f"WHOIS lookup failed: {str(e)}"],
+            "domain": url,
+            "risk_score": 0,
+            "classification": "Error",
+            "risk_factors": []
+        }), 500
+
+# Health check endpoint
+@app.get("/health")
+def health_check():
+    return jsonify({"status": "healthy", "timestamp": datetime.utcnow().isoformat() + "Z"})
+
+# Serve static files
+@app.route('/<path:path>')
+def serve_static(path):
+    return send_from_directory(os.path.join(app.root_path, "static"), path)
 
 if __name__ == "__main__":
-    app.run(debug=config.DEBUG)
+    app.run(debug=config.DEBUG, host='0.0.0.0', port=5000)

@@ -1,11 +1,36 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import EnhancedSSLDetails from "./SSLDetails.jsx";
 import WhoisDetails from "./WhoisDetails.jsx";
 import { copyToClipboard, openLearnMore, reportFalsePositive } from "../../utils/quickActions.js";
+import { checkWhois } from "../../services/whoisService.js";
 
 function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setExpandedRows }) {
   const toggleRowExpansion = (key) => setExpandedRows(prev => ({ ...prev, [key]: !prev[key] }));
   const [copiedStates, setCopiedStates] = useState({});
+  const [whoisData, setWhoisData] = useState(null);
+  const [loadingWhois, setLoadingWhois] = useState(false);
+  const [whoisError, setWhoisError] = useState(null);
+
+  // Fetch WHOIS data when whois row is expanded
+  useEffect(() => {
+    const fetchWhoisData = async () => {
+      if (expandedRows['whois'] && !whoisData && !loadingWhois) {
+        setLoadingWhois(true);
+        setWhoisError(null);
+        try {
+          const data = await checkWhois(result.url);
+          setWhoisData(data);
+        } catch (error) {
+          console.error('Failed to fetch WHOIS data:', error);
+          setWhoisError(error.message || 'Failed to fetch domain information');
+        } finally {
+          setLoadingWhois(false);
+        }
+      }
+    };
+
+    fetchWhoisData();
+  }, [expandedRows['whois'], result.url, whoisData, loadingWhois]);
 
   const handleCopy = (text, field) => {
     copyToClipboard(text);
@@ -41,6 +66,11 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
       `Overall Score: ${securityScores.overall}%`
     ].filter(Boolean).join('\n');
     handleCopy(text, 'all');
+  };
+
+  // Function to handle WHOIS hide/show that syncs with Domain Age row
+  const handleWhoisToggle = () => {
+    toggleRowExpansion('whois');
   };
 
   return (
@@ -229,52 +259,67 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
               {expandedRows['ssl'] && result.details.sslData && (
                 <tr>
                   <td colSpan="7" className="px-0 py-0 border-t border-gray-200 dark:border-gray-700">
-<EnhancedSSLDetails 
-  sslData={result.details.sslData} 
-  securityScores={securityScores} 
-  lastUpdated={lastUpdated} 
-  onHide={() => toggleRowExpansion('ssl')}  
-/>
+                    <EnhancedSSLDetails 
+                      sslData={result.details.sslData} 
+                      securityScores={securityScores} 
+                      lastUpdated={lastUpdated} 
+                      onHide={() => toggleRowExpansion('ssl')}  
+                    />
                   </td>
                 </tr>
               )}
 
-              {/* Domain Age Row */}
+              {/* Domain Age Row - Updated with WHOIS integration */}
               <tr className="hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors duration-150">
                 <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-gray-200 border-r border-gray-300 dark:border-gray-700">Domain Age</td>
                 <td className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
                   <div className="flex items-center justify-between">
-                    <span className={`font-medium px-2 py-1 rounded text-xs ${
-                      result.details.whoisAgeMonths > 12 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 
-                      result.details.whoisAgeMonths > 3 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' : 
-                      'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                    }`}>
-                      {result.details.whoisAgeMonths} months
-                    </span>
-                    {result.details.whoisData && (
-                      <button
-                        onClick={() => toggleRowExpansion('whois')}
-                        className="ml-2 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors duration-200 px-2 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900 border border-blue-300 dark:border-blue-600"
-                      >
-                        {expandedRows['whois'] ? 'Hide Details ▼' : 'View Enhanced Details ▶'}
-                      </button>
-                    )}
+                    <div className="flex items-center space-x-2">
+                      <span className={`px-3 py-1 rounded text-xs font-medium ${
+                        result.details.whoisAgeMonths > 12 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 
+                        result.details.whoisAgeMonths > 3 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' : 
+                        'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                      }`}>
+                        {result.details.whoisAgeMonths} months
+                      </span>
+                    </div>
+                    <button
+                      onClick={handleWhoisToggle}
+                      className="ml-2 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors duration-200 px-2 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900 border border-blue-300 dark:border-blue-600"
+                      disabled={loadingWhois}
+                    >
+                      {loadingWhois ? (
+                        'Loading...'
+                      ) : expandedRows['whois'] ? (
+                        'Hide Details ▼'
+                      ) : (
+                        'View Enhanced Details ▶'
+                      )}
+                    </button>
                   </div>
                 </td>
-                <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">Domain registration history and age</td>
+                <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">
+                  {whoisData ? (
+                    <>Professional WHOIS domain information with {whoisData.risk_score || 0}/100 risk score</>
+                  ) : (
+                    'Domain registration history and age'
+                  )}
+                </td>
                 <td className="px-4 py-4 text-center border-r border-gray-300 dark:border-gray-700">
                   <div className={`text-lg font-bold ${
                     securityScores.domainAge >= 80 ? 'text-green-600 dark:text-green-400' : 
                     securityScores.domainAge >= 60 ? 'text-yellow-600 dark:text-yellow-400' : 
                     'text-red-600 dark:text-red-400'
                   }`}>
-                    {securityScores.domainAge}
+                    {whoisData ? (100 - (whoisData.risk_score || 0)) : securityScores.domainAge}
                   </div>
                 </td>
                 <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
-                  {securityScores.weights.domainAge}%
+                  30%
                 </td>
-                <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">{lastUpdated}</td>
+                <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">
+                  {whoisData ? '5 minutes ago' : lastUpdated}
+                </td>
                 <td className="px-4 py-4 text-center">
                   <button 
                     onClick={() => handleCopy(`Domain Age: ${result.details.whoisAgeMonths} months`, 'domainAge')}
@@ -310,13 +355,32 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                 </td>
               </tr>
 
-              {expandedRows['whois'] && result.details.whoisData && (
+              {/* WHOIS DETAILS - SHOW WHEN EXPANDED */}
+              {expandedRows['whois'] && (
                 <tr>
-                  <td colSpan="7" className="px-6 py-0 border-t border-gray-200 dark:border-gray-700">
-                    <WhoisDetails whoisData={result.details.whoisData} />
+                  <td colSpan="7" className="px-0 py-0 border-t border-gray-200 dark:border-gray-700">
+                    {loadingWhois ? (
+                      <div className="py-4 text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Fetching domain information...</p>
+                      </div>
+                    ) : whoisError ? (
+                      <div className="py-4 text-center">
+                        <p className="text-red-600 dark:text-red-400">Error: {whoisError}</p>
+                      </div>
+                    ) : whoisData ? (
+                      <WhoisDetails 
+                        whoisData={whoisData} 
+                        securityScores={securityScores}
+                        lastUpdated="5 minutes ago"
+                        onHide={handleWhoisToggle}
+                      />
+                    ) : null}
                   </td>
                 </tr>
               )}
+
+              {/* Continue with other table rows... */}
 
             </tbody>
           </table>
