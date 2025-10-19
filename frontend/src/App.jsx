@@ -1,16 +1,16 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { ScanProvider } from './context/ScanContext';
 import Navbar from './components/Navbar';
 import Scanner from './pages/Scanner';
 import Statistics from './pages/Statistics';
-import Login from './pages/Login';
+import Login from './components/Login';
+import Register from './components/Register';
 
 function App() {
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
-  
-  console.log('App - Authentication status:', isAuthenticated);
 
+  // Always show Navbar only if authenticated
   return (
     <ThemeProvider>
       <ScanProvider>
@@ -18,9 +18,23 @@ function App() {
           <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors duration-200">
             {isAuthenticated && <Navbar />}
             <Routes>
-              <Route path="/login" element={isAuthenticated ? <Scanner /> : <Login />} />
-              <Route path="/" element={isAuthenticated ? <Scanner /> : <Login />} />
-              <Route path="/statistics" element={isAuthenticated ? <Statistics /> : <Login />} />
+              {/* Always redirect / (home) to /login if not authenticated */}
+              <Route path="/" element={
+                isAuthenticated ? <Navigate to="/scanner" /> : <Navigate to="/login" />
+              } />
+              <Route path="/login" element={
+                isAuthenticated ? <Navigate to="/scanner" /> : <Login />
+              } />
+              <Route path="/register" element={
+                isAuthenticated ? <Navigate to="/scanner" /> : <Register />
+              } />
+              <Route path="/scanner" element={
+                isAuthenticated ? <Scanner /> : <Navigate to="/login" />
+              } />
+              <Route path="/statistics" element={
+                isAuthenticated ? <Statistics /> : <Navigate to="/login" />
+              } />
+              {/* Add more protected routes as needed */}
             </Routes>
           </div>
         </Router>
