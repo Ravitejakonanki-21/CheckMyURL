@@ -177,6 +177,13 @@ def login():
         'subscription_level': user['subscription_level']
     })
 
+@app.post("/forgot-password")
+def forgot_password():
+    data = request.get_json()
+    email = data.get("email", "")
+    # For now, just reply with dummy status. Add email logic later.
+    return jsonify({"message": f"Instructions sent to {email}."}), 200
+
 @app.get('/profile')
 @jwt_required()
 def profile():

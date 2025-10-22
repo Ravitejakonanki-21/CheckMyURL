@@ -4,9 +4,16 @@ import { useNavigate, Link } from "react-router-dom";
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  // Handler for forgot password (UI only version)
+ const handleForgotPassword = () => {
+  navigate("/forgot-password");
+};
+
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -24,6 +31,11 @@ export default function Login({ onLogin }) {
         localStorage.setItem("token", data.token);
         localStorage.setItem("isAuthenticated", "true");
         localStorage.setItem("userEmail", data.email);
+        if (rememberMe) {
+          localStorage.setItem("rememberMe", "true");
+        } else {
+          localStorage.removeItem("rememberMe");
+        }
         if (onLogin) onLogin(data);
         setTimeout(() => {
           navigate("/");
@@ -101,13 +113,36 @@ export default function Login({ onLogin }) {
               />
             </div>
 
-            {/* Error Message */}
+            {/* Remember Me and Forgot Password Row */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <input
+                  id="rememberMe"
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-700">
+                  Remember me
+                </label>
+              </div>
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Forgot password?
+              </button>
+            </div>
+
+            {/* Status/Error Message */}
             {status && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
                 <p className="text-red-600 text-sm text-center">{status}</p>
               </div>
             )}
-            
+
             {/* Sign In Button */}
             <button
               type="submit"

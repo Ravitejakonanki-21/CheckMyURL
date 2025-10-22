@@ -6,6 +6,7 @@ import Scanner from './pages/Scanner';
 import Statistics from './pages/Statistics';
 import Login from './components/Login';
 import Register from './components/Register';
+import ForgotPassword from './components/ForgotPassword'; // <-- Added import
 
 function App() {
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
@@ -27,6 +28,9 @@ function App() {
               } />
               <Route path="/register" element={
                 isAuthenticated ? <Navigate to="/scanner" /> : <Register />
+              } />
+              <Route path="/forgot-password" element={  // <-- Added route
+                isAuthenticated ? <Navigate to="/scanner" /> : <ForgotPassword />
               } />
               <Route path="/scanner" element={
                 isAuthenticated ? <Scanner /> : <Navigate to="/login" />
