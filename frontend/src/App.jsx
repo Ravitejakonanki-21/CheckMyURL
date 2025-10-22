@@ -7,6 +7,7 @@ import Statistics from './pages/Statistics';
 import Login from './components/Login';
 import Register from './components/Register';
 import ForgotPassword from './components/ForgotPassword'; // <-- Added import
+import ResetPassword from './components/ResetPassword';  // <-- Added import
 
 function App() {
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
@@ -31,6 +32,9 @@ function App() {
               } />
               <Route path="/forgot-password" element={  // <-- Added route
                 isAuthenticated ? <Navigate to="/scanner" /> : <ForgotPassword />
+              } />
+              <Route path="/reset-password/:token" element={  // <-- Added route
+                isAuthenticated ? <Navigate to="/scanner" /> : <ResetPassword />
               } />
               <Route path="/scanner" element={
                 isAuthenticated ? <Scanner /> : <Navigate to="/login" />
