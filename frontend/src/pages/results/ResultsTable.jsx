@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import EnhancedSSLDetails from "./SSLDetails.jsx";
 import WhoisDetails from "./WhoisDetails.jsx";
+import SecurityHeaderDetails from "../../components/SecurityHeaderDetails.jsx";
 import { copyToClipboard, openLearnMore, reportFalsePositive } from "../../utils/quickActions.js";
 import { checkWhois } from "../../services/whoisService.js";
 
@@ -10,8 +11,8 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
   const [whoisData, setWhoisData] = useState(null);
   const [loadingWhois, setLoadingWhois] = useState(false);
   const [whoisError, setWhoisError] = useState(null);
+  const [securityHeadersExpanded, setSecurityHeadersExpanded] = useState(false);
 
-  // Fetch WHOIS data when whois row is expanded
   useEffect(() => {
     const fetchWhoisData = async () => {
       if (expandedRows['whois'] && !whoisData && !loadingWhois) {
@@ -28,7 +29,6 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
         }
       }
     };
-
     fetchWhoisData();
   }, [expandedRows['whois'], result.url, whoisData, loadingWhois]);
 
@@ -59,7 +59,6 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
       `SSL/TLS: ${d.sslValid ? 'Valid' : 'Invalid'} (Score: ${securityScores.ssl})`,
       ssl.tls_version ? `TLS Version: ${ssl.tls_version}` : '', ssl.cipher_suite ? `Cipher Suite: ${ssl.cipher_suite}` : '',
       `Domain Age: ${d.whoisAgeMonths} months (Score: ${securityScores.domainAge})`,
-      `Open Ports: ${d.openPorts.join(", ") || "None"} (Score: ${securityScores.ports})`,
       `Security Headers: ${d.securityHeaders.join(", ") || "None"} (Score: ${securityScores.headers})`,
       `Keywords: ${d.keywords.join(", ") || "None"} (Score: ${securityScores.keywords})`,
       `ML Score: ${d.mlPhishingScore}% risk (Score: ${securityScores.mlPhishing})`,
@@ -68,7 +67,6 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
     handleCopy(text, 'all');
   };
 
-  // Function to handle WHOIS hide/show that syncs with Domain Age row
   const handleWhoisToggle = () => {
     toggleRowExpansion('whois');
   };
@@ -76,7 +74,6 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
   return (
     <div className="w-full px-6 pb-8">
       <div className="border border-gray-300 dark:border-gray-700 rounded-2xl overflow-hidden bg-white dark:bg-black shadow-lg">
-        {/* Main Header */}
         <div className="bg-transparent border-b border-gray-300 dark:border-gray-700 px-6 py-4">
           <div className="flex items-center space-x-2">
             <svg className="w-6 h-6 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -88,19 +85,14 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
             Complete security assessment with professional SSL analysis, domain validation, and threat detection
           </p>
         </div>
-
-        {/* Table */}
         <div className="overflow-auto">
           <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
-            {/* Table Header */}
             <thead className="bg-transparent">
               <tr>
                 <th className="px-4 py-4 text-left text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">Field</th>
                 <th className="px-4 py-4 text-left text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">Value</th>
                 <th className="px-4 py-4 text-left text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">Details</th>
-                <th className="px-4 py-4 text-center text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">
-                  Total Score: {securityScores.overall}%
-                </th>
+                <th className="px-4 py-4 text-center text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">Total Score: {securityScores.overall}%</th>
                 <th className="px-4 py-4 text-center text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">Weight</th>
                 <th className="px-4 py-4 text-center text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">Last Updated</th>
                 <th className="px-4 py-4 text-center text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
@@ -121,8 +113,8 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                 </th>
               </tr>
             </thead>
-
             <tbody className="bg-white dark:bg-black divide-y divide-gray-300 dark:divide-gray-700">
+
 
               {/* URL Row */}
               <tr className="hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors duration-150">
@@ -148,6 +140,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                   </button>
                 </td>
               </tr>
+
 
               {/* Risk Score Row */}
               <tr className="hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors duration-150">
@@ -182,6 +175,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                 </td>
               </tr>
 
+
               {/* SSL/TLS Security Row */}
               <tr className="hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors duration-150">
                 <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-gray-200 border-r border-gray-300 dark:border-gray-700">SSL/TLS Security</td>
@@ -200,7 +194,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                         onClick={() => toggleRowExpansion('ssl')}
                         className="ml-2 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors duration-200 px-2 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900 border border-blue-300 dark:border-blue-600"
                       >
-                        {expandedRows['ssl'] ? 'Hide Details ▼' : 'View Enhanced Details ▶'}
+                        {expandedRows['ssl'] ? 'Hide Details ▼' : 'Show All Details ▶'}
                       </button>
                     )}
                   </div>
@@ -255,7 +249,6 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                   </button>
                 </td>
               </tr>
-
               {expandedRows['ssl'] && result.details.sslData && (
                 <tr>
                   <td colSpan="7" className="px-0 py-0 border-t border-gray-200 dark:border-gray-700">
@@ -263,13 +256,14 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                       sslData={result.details.sslData} 
                       securityScores={securityScores} 
                       lastUpdated={lastUpdated} 
-                      onHide={() => toggleRowExpansion('ssl')}  
+                      onHide={() => toggleRowExpansion('ssl')}
                     />
                   </td>
                 </tr>
               )}
 
-              {/* Domain Age Row - Updated with WHOIS integration */}
+
+              {/* Domain Age Row */}
               <tr className="hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors duration-150">
                 <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-gray-200 border-r border-gray-300 dark:border-gray-700">Domain Age</td>
                 <td className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
@@ -293,7 +287,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                       ) : expandedRows['whois'] ? (
                         'Hide Details ▼'
                       ) : (
-                        'View Enhanced Details ▶'
+                        'Show All Details▶'
                       )}
                     </button>
                   </div>
@@ -343,19 +337,8 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                     </svg>
                   </button>
-                  <button 
-                    onClick={(e) => handleReportFalsePositive('Domain Age', `${result.details.whoisAgeMonths} months`, e)}
-                    className="text-orange-600 hover:text-orange-800 dark:text-orange-400 dark:hover:text-orange-200 mx-1 transition-colors duration-200"
-                    title="Report False Positive"
-                  >
-                    <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                    </svg>
-                  </button>
                 </td>
               </tr>
-
-              {/* WHOIS DETAILS - SHOW WHEN EXPANDED */}
               {expandedRows['whois'] && (
                 <tr>
                   <td colSpan="7" className="px-0 py-0 border-t border-gray-200 dark:border-gray-700">
@@ -380,8 +363,105 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                 </tr>
               )}
 
-              {/* Continue with other table rows... */}
-
+              {/* SECURITY HEADERS ROW */}
+              <tr className="hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors duration-150">
+                <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-gray-200 border-r border-gray-300 dark:border-gray-700">
+                  Security Headers
+                </td>
+                <td className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
+                  <div className="flex items-center">
+                    {result.details.securityHeaders.length > 0 ? (
+                      result.details.securityHeaders.map(h => (
+                        <span
+                          key={h}
+                          className="inline-block min-w-[70px] px-3 py-1 mr-2 rounded text-xs font-medium
+                            bg-cyan-100 dark:bg-cyan-900 text-cyan-700 dark:text-cyan-200 border border-cyan-300 dark:border-cyan-700 text-center"
+                        >
+                          {h}
+                        </span>
+                      ))
+                    ) : (
+                      <span
+                        className="inline-block min-w-[110px] px-3 py-1 mr-2 rounded text-xs font-medium
+                          bg-gray-700 dark:bg-gray-800 text-gray-200 dark:text-gray-300 border border-gray-700 dark:border-gray-700 text-center"
+                      >
+                        None detected
+                      </span>
+                    )}
+                    {result.details.headersData && (
+                      <button
+                        onClick={() => setSecurityHeadersExpanded(x => !x)}
+                        className="ml-2 px-3 py-1 rounded text-xs font-semibold border border-blue-700 dark:border-blue-400 text-blue-500 dark:text-blue-300 hover:bg-blue-900/20 focus:outline-none"
+                      >
+                        {securityHeadersExpanded ? "Hide Details ▼" : "Show All Details ▶"}
+                      </button>
+                    )}
+                  </div>
+                </td>
+                <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">
+                  Analysis of all major response headers affecting browser and data safety
+                </td>
+                <td className="px-4 py-4 text-center border-r border-gray-300 dark:border-gray-700">
+                  <div className={`text-lg font-bold ${
+                    securityScores.headers >= 80 ? 'text-green-600 dark:text-green-400' :
+                    securityScores.headers >= 60 ? 'text-yellow-600 dark:text-yellow-400' :
+                    'text-red-600 dark:text-red-400'
+                  }`}>
+                    {securityScores.headers}
+                  </div>
+                </td>
+                <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
+                  {securityScores.weights.headers}%
+                </td>
+                <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">
+                  {lastUpdated}
+                </td>
+                <td className="px-4 py-4 text-center">
+                  <button
+                    onClick={() =>
+                      handleCopy(
+                        `Security Headers:\n${result.details.securityHeaders.join(", ")}\n\n` +
+                        (result.details.headersData && result.details.headersData.all_headers
+                          ? Object.entries(result.details.headersData.all_headers)
+                              .map(([k, v]) => `${k}: ${v}`)
+                              .join("\n")
+                          : "")
+                      , 'securityHeaders')
+                    }
+                    className="w-12 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 mx-1 transition-colors duration-200"
+                    title="Copy Security Headers"
+                  >
+                    {copiedStates.securityHeaders ? (
+                      <span className="text-green-600 dark:text-green-400 text-xs font-medium">Copied!</span>
+                    ) : (
+                      <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    )}
+                  </button>
+                  <button
+                    onClick={e => handleLearnMore('headers', e)}
+                    className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200 mx-1 transition-colors duration-200"
+                    title="Learn more about Security Headers"
+                  >
+                    <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                    </svg>
+                  </button>
+                </td>
+              </tr>
+              {securityHeadersExpanded && result.details.headersData && (
+                <tr>
+                  <td colSpan="7" className="px-0 py-0 border-t border-gray-200 dark:border-gray-700">
+                    <SecurityHeaderDetails
+                      securityHeadersData={result.details.headersData}
+                      onHide={() => setSecurityHeadersExpanded(false)}
+                    />
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

@@ -16,7 +16,7 @@ from services.ssl_check import check_ssl
 from services.whois_check import check_whois
 from services.unicode_idn import check_unicode_domain
 from services.content_rules import check_keywords
-from services.headers_check import check_headers
+from services.headers_check import check_headers  # <-- REQUIRED
 from services.risk_engine import compute_risk
 from services.simple_cache import cache
 from services.utils import timed_call
@@ -52,6 +52,21 @@ mongo_client = MongoClient("mongodb://localhost:27017/")
 db = mongo_client["url_checker"]
 users = db.users
 
+# === Set Global Security Headers ===
+@app.after_request
+def set_security_headers(response):
+    response.headers['Strict-Transport-Security'] = 'max-age=63072000; includeSubDomains; preload'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['Cross-Origin-Opener-Policy'] = 'same-origin'
+    response.headers['Cross-Origin-Embedder-Policy'] = 'require-corp'
+    response.headers['Cross-Origin-Resource-Policy'] = 'same-origin'
+    response.headers['Expect-CT'] = 'max-age=86400, enforce, report-uri="https://example.com/report"'
+    response.headers['Report-To'] = '{"group":"default","max_age":10886400,"endpoints":[{"url":"https://example.com/reports"}],"include_subdomains":true}'
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self'; object-src 'none'"
+    return response
 
 # === Feature gating function ===
 def is_feature_unlocked(user, feature):
@@ -62,18 +77,15 @@ def is_feature_unlocked(user, feature):
     # Add more feature checks as needed
     return True, ""
 
-
 # === Logging ===
 @app.before_request
 def _log_request():
     app.logger.info(f"{datetime.utcnow().isoformat()}Z {request.method} {request.path}")
 
-
 # === Serve Home ===
 @app.get("/")
 def home():
     return send_from_directory(os.path.join(app.root_path, "static"), "index.html")
-
 
 # === URL Analysis ===
 @app.post("/analyze")
@@ -130,6 +142,22 @@ def analyze():
     cache.set(cache_key, response)
     return jsonify(response)
 
+# === NEW: Security Headers Check API Endpoint ===
+@app.post("/api/check-headers")
+def api_check_headers():
+    data = request.get_json(force=True) or {}
+    url = (data.get("url") or "").strip()
+    if not url:
+        return jsonify({"error": "url required"}), 400
+
+    try:
+        headers_info = check_headers(url)
+        return jsonify(headers_info)
+    except Exception as e:
+        app.logger.error(f"Header check failed for {url}: {str(e)}")
+        return jsonify({
+            "errors": [f"Header check failed: {str(e)}"]
+        }), 500
 
 # === WHOIS Endpoint ===
 @app.post("/whois_check")
@@ -151,23 +179,19 @@ def whois_check_endpoint():
             "risk_factors": []
         }), 500
 
-
 # === Health Endpoint ===
 @app.get("/health")
 def health_check():
     return jsonify({"status": "healthy", "timestamp": datetime.utcnow().isoformat() + "Z"})
-
 
 # === Static Files ===
 @app.route('/<path:path>')
 def serve_static(path):
     return send_from_directory(os.path.join(app.root_path, "static"), path)
 
-
 # =========================
 #    AUTHENTICATION ROUTES
 # =========================
-
 
 @app.post('/register')
 def register():
@@ -188,7 +212,6 @@ def register():
     })
     return jsonify({'message': 'Registration successful!'}), 201
 
-
 @app.post('/login')
 def login():
     data = request.get_json()
@@ -207,7 +230,6 @@ def login():
         'subscription_level': user['subscription_level']
     })
 
-
 # === Export Logs Route with Feature Gate ===
 @app.post('/export-logs')
 @jwt_required()
@@ -221,7 +243,6 @@ def export_logs():
     
     # Your export logic here
     return jsonify({"message": "Exported logs successfully."})
-
 
 # === Forgot Password ===
 @app.post("/forgot-password")
@@ -243,7 +264,6 @@ def forgot_password():
 
     return jsonify({"message": f"Reset instructions sent to {email}."}), 200
 
-
 # === Reset Password ===
 @app.post("/reset-password")
 def reset_password():
@@ -262,7 +282,6 @@ def reset_password():
     users.update_one({"email": email}, {"$set": {"password_hash": hashed_pw}})
 
     return jsonify({"message": "Password reset successful!"}), 200
-
 
 # === Protected Profile ===
 @app.get('/profile')
