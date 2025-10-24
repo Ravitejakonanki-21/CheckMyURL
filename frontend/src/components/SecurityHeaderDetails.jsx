@@ -224,3 +224,4 @@ function SecurityHeaderDetails({ securityHeadersData, onHide }) {
 }
 
 export default SecurityHeaderDetails;
+  
