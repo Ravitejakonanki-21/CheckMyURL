@@ -7,12 +7,13 @@ import Statistics from './pages/Statistics';
 import Login from './components/Login';
 import Register from './components/Register';
 import ForgotPassword from './components/ForgotPassword'; // <-- Added import
-import ResetPassword from './components/ResetPassword';  // <-- Added import
+import ResetPassword from './components/ResetPassword';   // <-- Added import
 
 function App() {
+  // This flag is controlled by your login logic (set in localStorage after successful login)
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
 
-  // Always show Navbar only if authenticated
+  // Only show Navbar if authenticated
   return (
     <ThemeProvider>
       <ScanProvider>
@@ -20,7 +21,7 @@ function App() {
           <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors duration-200">
             {isAuthenticated && <Navbar />}
             <Routes>
-              {/* Always redirect / (home) to /login if not authenticated */}
+              {/* Redirect home to scanner if authenticated, otherwise to login */}
               <Route path="/" element={
                 isAuthenticated ? <Navigate to="/scanner" /> : <Navigate to="/login" />
               } />
@@ -30,10 +31,10 @@ function App() {
               <Route path="/register" element={
                 isAuthenticated ? <Navigate to="/scanner" /> : <Register />
               } />
-              <Route path="/forgot-password" element={  // <-- Added route
+              <Route path="/forgot-password" element={
                 isAuthenticated ? <Navigate to="/scanner" /> : <ForgotPassword />
               } />
-              <Route path="/reset-password/:token" element={  // <-- Added route
+              <Route path="/reset-password/:token" element={
                 isAuthenticated ? <Navigate to="/scanner" /> : <ResetPassword />
               } />
               <Route path="/scanner" element={
@@ -42,7 +43,7 @@ function App() {
               <Route path="/statistics" element={
                 isAuthenticated ? <Statistics /> : <Navigate to="/login" />
               } />
-              {/* Add more protected routes as needed */}
+              {/* You can add more protected routes below */}
             </Routes>
           </div>
         </Router>

@@ -16,7 +16,7 @@ from services.ssl_check import check_ssl
 from services.whois_check import check_whois
 from services.unicode_idn import check_unicode_domain
 from services.content_rules import check_keywords
-from services.headers_check import check_headers  # <-- REQUIRED
+from services.headers_check import check_headers
 from services.risk_engine import compute_risk
 from services.simple_cache import cache
 from services.utils import timed_call
@@ -38,8 +38,8 @@ app.config['JWT_SECRET_KEY'] = 'super-secret-key'
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')  # Securely loaded from .env
-app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')  # Securely loaded from .env
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = 'noreply@checkmyurl.com'
 
 jwt = JWTManager(app)
@@ -255,7 +255,7 @@ def forgot_password():
         return jsonify({"message": "If the email exists, instructions have been sent."}), 200
 
     token = serializer.dumps(email, salt="password-reset")
-    reset_link = f"http://192.168.56.1:3000/reset-password/{token}"
+    reset_link = f"http://localhost:3000/reset-password/{token}"
 
     msg = Message("Password Reset Request", recipients=[email])
     msg.body = f"To reset your password, click the link: {reset_link}"
