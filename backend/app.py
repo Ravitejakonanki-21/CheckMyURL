@@ -15,6 +15,7 @@ load_dotenv()
 from services.ssl_check import check_ssl
 from services.whois_check import check_whois
 from services.unicode_idn import check_unicode_domain
+from services.keyword_check import check_url_for_keywords  # Added keyword check import here
 from services.content_rules import check_keywords
 from services.headers_check import check_headers
 from services.risk_engine import compute_risk
@@ -74,7 +75,6 @@ def is_feature_unlocked(user, feature):
         return False, "Upgrade to Pro or Enterprise to export logs."
     if feature == "ml_scan" and user["subscription_level"] != "enterprise":
         return False, "Upgrade to Enterprise for AI-powered scanning."
-    # Add more feature checks as needed
     return True, ""
 
 # === Logging ===
@@ -106,6 +106,7 @@ def analyze():
     ssl_info, t_ssl, e_ssl = timed_call(check_ssl, hostname)
     whois_info, t_whois, e_whois = timed_call(check_whois, hostname)
     idn_info, t_idn, e_idn = timed_call(check_unicode_domain, hostname)
+    keyword_info, t_keyword, e_keyword = timed_call(check_url_for_keywords, url)
     rules_info, t_rules, e_rules = timed_call(check_keywords, url)
     headers_info, t_head, e_head = timed_call(check_headers, url)
 
@@ -113,21 +114,28 @@ def analyze():
         "ssl_ms": int(t_ssl * 1000),
         "whois_ms": int(t_whois * 1000),
         "idn_ms": int(t_idn * 1000),
+        "keyword_ms": int(t_keyword * 1000),
         "rules_ms": int(t_rules * 1000),
-        "headers_ms": int(t_head * 1000)
+        "headers_ms": int(t_head * 1000),
     }
     errors = {
-        "ssl": e_ssl, "whois": e_whois, "idn": e_idn, "rules": e_rules, "headers": e_head
+        "ssl": e_ssl,
+        "whois": e_whois,
+        "idn": e_idn,
+        "keyword": e_keyword,
+        "rules": e_rules,
+        "headers": e_head,
     }
 
     results = {
         "ssl": ssl_info,
         "whois": whois_info,
         "idn": idn_info,
+        "keyword": keyword_info,
         "rules": rules_info,
         "headers": headers_info,
         "timings": timings,
-        "errors": errors
+        "errors": errors,
     }
 
     risk_score, label, reasons = compute_risk(results)
@@ -137,7 +145,7 @@ def analyze():
         "results": results,
         "reasons": reasons,
         "risk_score": risk_score,
-        "label": label
+        "label": label,
     }
     cache.set(cache_key, response)
     return jsonify(response)
@@ -190,7 +198,7 @@ def serve_static(path):
     return send_from_directory(os.path.join(app.root_path, "static"), path)
 
 # =========================
-#    AUTHENTICATION ROUTES
+#     AUTHENTICATION ROUTES
 # =========================
 
 @app.post('/register')
@@ -300,4 +308,4 @@ def profile():
     })
 
 if __name__ == "__main__":
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host="0.0.0.0", port=5000)
