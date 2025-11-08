@@ -6,7 +6,6 @@ import { copyToClipboard, openLearnMore, reportFalsePositive } from "../../utils
 import { checkWhois } from "../../services/whoisService.js";
 import KeywordDetails from "./KeywordDetails.jsx";
 
-
 function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setExpandedRows }) {
   const toggleRowExpansion = (key) => setExpandedRows(prev => ({ ...prev, [key]: !prev[key] }));
   const [copiedStates, setCopiedStates] = useState({});
@@ -80,6 +79,17 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
     setTimeout(() => {
       setCopiedStates(prev => ({ ...prev, keywords: false }));
     }, 2000);
+  };
+
+  // Format WHOIS summary for display
+  const getWhoisSummary = () => {
+    if (!whoisData) return "No data";
+    
+    const registrar = whoisData.registrar || "Unknown Registrar";
+    const age = whoisData.age_days ? `${whoisData.age_days} days` : "Unknown age";
+    const organization = whoisData.registrant_organization || "Unknown organization";
+    
+    return `${registrar} • ${age} • ${organization}`;
   };
 
   return (
@@ -184,7 +194,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                 </td>
               </tr>
 
-             {/* SSL/TLS Security Row */}
+              {/* SSL/TLS Security Row */}
               <tr className="hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors duration-150">
                 <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-gray-200 border-r border-gray-300 dark:border-gray-700">SSL/TLS Security</td>
                 <td className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
@@ -271,106 +281,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
               )}
 
 
-              {/* Domain Age Row */}
-              <tr className="hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors duration-150">
-                <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-gray-200 border-r border-gray-300 dark:border-gray-700">Domain Age</td>
-                <td className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <span className={`px-3 py-1 rounded text-xs font-medium ${
-                        result.details.whoisAgeMonths > 12 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 
-                        result.details.whoisAgeMonths > 3 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' : 
-                        'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                      }`}>
-                        {result.details.whoisAgeMonths} months
-                      </span>
-                    </div>
-                    <button
-                      onClick={handleWhoisToggle}
-                      className="ml-2 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors duration-200 px-2 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900 border border-blue-300 dark:border-blue-600"
-                      disabled={loadingWhois}
-                    >
-                      {loadingWhois ? (
-                        'Loading...'
-                      ) : expandedRows['whois'] ? (
-                        'Hide Details ▼'
-                      ) : (
-                        'Show All Details▶'
-                      )}
-                    </button>
-                  </div>
-                </td>
-                <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">
-                  {whoisData ? (
-                    <>Professional WHOIS domain information with {whoisData.risk_score || 0}/100 risk score</>
-                  ) : (
-                    'Domain registration history and age'
-                  )}
-                </td>
-                <td className="px-4 py-4 text-center border-r border-gray-300 dark:border-gray-700">
-                  <div className={`text-lg font-bold ${
-                    securityScores.domainAge >= 80 ? 'text-green-600 dark:text-green-400' : 
-                    securityScores.domainAge >= 60 ? 'text-yellow-600 dark:text-yellow-400' : 
-                    'text-red-600 dark:text-red-400'
-                  }`}>
-                    {whoisData ? (100 - (whoisData.risk_score || 0)) : securityScores.domainAge}
-                  </div>
-                </td>
-                <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
-                  30%
-                </td>
-                <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">
-                  {whoisData ? '5 minutes ago' : lastUpdated}
-                </td>
-                <td className="px-4 py-4 text-center">
-                  <button 
-                    onClick={() => handleCopy(`Domain Age: ${result.details.whoisAgeMonths} months`, 'domainAge')}
-                    className="w-12 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 mx-1 transition-colors duration-200"
-                    title="Copy Domain Age"
-                  >
-                    {copiedStates.domainAge ? (
-                      <span className="text-green-600 dark:text-green-400 text-xs font-medium">Copied!</span>
-                    ) : (
-                      <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
-                    )}
-                  </button>
-                  <button 
-                    onClick={(e) => handleLearnMore('domain', e)}
-                    className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200 mx-1 transition-colors duration-200"
-                    title="Learn More"
-                  >
-                    <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                  </button>
-                </td>
-              </tr>
-              {expandedRows['whois'] && (
-                <tr>
-                  <td colSpan="7" className="px-0 py-0 border-t border-gray-200 dark:border-gray-700">
-                    {loadingWhois ? (
-                      <div className="py-4 text-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Fetching domain information...</p>
-                      </div>
-                    ) : whoisError ? (
-                      <div className="py-4 text-center">
-                        <p className="text-red-600 dark:text-red-400">Error: {whoisError}</p>
-                      </div>
-                    ) : whoisData ? (
-                      <WhoisDetails 
-                        whoisData={whoisData} 
-                        securityScores={securityScores}
-                        lastUpdated="5 minutes ago"
-                        onHide={handleWhoisToggle}
-                      />
-                    ) : null}
-                  </td>
-                </tr>
-              )}
-
+            
               {/* SECURITY HEADERS ROW */}
               <tr className="hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors duration-150">
                 <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-gray-200 border-r border-gray-300 dark:border-gray-700">
@@ -528,7 +439,98 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
   </tr>
 )}
 
+              
+              {/* WHOIS Row */}
+              <tr className="hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors duration-150">
+                <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-gray-200 border-r border-gray-300 dark:border-gray-700">WHOIS</td>
+                <td className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      {loadingWhois ? (
+                        <span className="text-gray-500 dark:text-gray-400">Loading domain information...</span>
+                      ) : whoisData ? (
+                        <span>{getWhoisSummary()}</span>
+                      ) : (
+                        <span className="text-gray-500 dark:text-gray-400">No data</span>
+                      )}
+                    </div>
+                    <button
+                      onClick={handleWhoisToggle}
+                      className="ml-2 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors duration-200 px-2 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900 border border-blue-300 dark:border-blue-600"
+                    >
+                      {expandedRows['whois'] ? 'Hide Details ▼' : 'Show Details ▶'}
+                    </button>
+                  </div>
+                </td>
+                <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">WHOIS domain registration details</td>
+                <td className="px-4 py-4 text-center border-r border-gray-300 dark:border-gray-700">—</td>
+                <td className="px-4 py-4 text-center border-r border-gray-300 dark:border-gray-700">—</td>
+                <td className="px-4 py-4 text-center border-r border-gray-300 dark:border-gray-700">{lastUpdated}</td>
+                <td className="px-4 py-4 text-center">
+                  <button 
+                    onClick={() => copyToClipboard(JSON.stringify(whoisData, null, 2))}
+                    className="w-12 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 mx-1 transition-colors duration-200"
+                    title="Copy WHOIS Data"
+                    disabled={!whoisData}
+                  >
+                    {copiedStates.whois ? (
+                      <span className="text-green-600 dark:text-green-400 text-xs font-medium">Copied!</span>
+                    ) : (
+                      <svg className={`w-4 h-4 inline ${!whoisData ? 'text-gray-400' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    )}
+                  </button>
+                </td>
+              </tr>
 
+
+              {expandedRows['whois'] && (
+                <tr>
+                  <td colSpan="7" className="px-0 py-0 border-t border-gray-200 dark:border-gray-700">
+                    {loadingWhois ? (
+                      <div className="py-8 text-center bg-gray-50 dark:bg-gray-900">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-3">Fetching comprehensive domain information...</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">This may take a few seconds</p>
+                      </div>
+                    ) : whoisError ? (
+                      <div className="py-8 text-center bg-red-50 dark:bg-red-900/20">
+                        <svg className="w-12 h-12 text-red-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                        </svg>
+                        <p className="text-red-600 dark:text-red-400 font-medium">Error fetching WHOIS data</p>
+                        <p className="text-sm text-red-500 dark:text-red-400 mt-1">{whoisError}</p>
+                        <button
+                          onClick={() => {
+                            setWhoisData(null);
+                            setWhoisError(null);
+                          }}
+                          className="mt-3 px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                        >
+                          Retry
+                        </button>
+                      </div>
+                    ) : whoisData ? (
+                      <WhoisDetails 
+                        whoisData={whoisData} 
+                        securityScores={securityScores}
+                        lastUpdated={lastUpdated}
+                        onHide={handleWhoisToggle}
+                        loading={loadingWhois}
+                      />
+                    ) : (
+                      <div className="py-8 text-center bg-yellow-50 dark:bg-yellow-900/20">
+                        <svg className="w-12 h-12 text-yellow-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                        </svg>
+                        <p className="text-yellow-600 dark:text-yellow-400 font-medium">No WHOIS data available</p>
+                        <p className="text-sm text-yellow-500 dark:text-yellow-400 mt-1">The domain may not exist or WHOIS lookup failed</p>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

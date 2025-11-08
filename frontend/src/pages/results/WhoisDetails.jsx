@@ -210,33 +210,31 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
               </div>
             </div>
 
-            {/* Registrant Organization - NEW */}
-            {whoisData.registrant_organization && (
-              <div className="bg-black p-3 rounded border border-gray-600">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center">
-                    <div className="w-2 h-2 rounded-full bg-cyan-500 mr-2"></div>
-                    <div className="text-sm text-gray-300">Organization</div>
-                  </div>
-                  <button 
-                    onClick={() => handleCopy(`Organization: ${whoisData.registrant_organization}`, 'organization')}
-                    className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
-                    title="Copy Organization"
-                  >
-                    {copiedStates.organization ? (
-                      <span className="text-green-400 text-sm font-medium">Copied!</span>
-                    ) : (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
-                    )}
-                  </button>
+            {/* Registrant Organization - UPDATED: Always show with fallback */}
+            <div className="bg-black p-3 rounded border border-gray-600">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center">
+                  <div className="w-2 h-2 rounded-full bg-cyan-500 mr-2"></div>
+                  <div className="text-sm text-gray-300">Organization</div>
                 </div>
-                <div className="text-base font-semibold text-white truncate">
-                  {whoisData.registrant_organization}
-                </div>
+                <button 
+                  onClick={() => handleCopy(`Organization: ${whoisData.registrant_organization || 'Not available'}`, 'organization')}
+                  className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
+                  title="Copy Organization"
+                >
+                  {copiedStates.organization ? (
+                    <span className="text-green-400 text-sm font-medium">Copied!</span>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  )}
+                </button>
               </div>
-            )}
+              <div className="text-base font-semibold text-white truncate">
+                {whoisData.registrant_organization || 'Not available'}
+              </div>
+            </div>
           </div>
 
           {/* Technical Details Columns - Now 4 balanced columns */}
@@ -525,17 +523,43 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                   <div className="text-sm text-gray-400">Registry domain identifier</div>
                 </div>
 
-                {/* IANA ID */}
+                {/* Registrar */}
+                <div className="bg-black p-3 rounded border border-gray-600">
+                  <div className="flex items-center justify-between text-sm text-gray-300 mb-2">
+                    <div className="flex items-center">
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                      </svg>
+                      REGISTRAR
+                    </div>
+                    <button
+                      onClick={() => handleCopy(whoisData.registrar || "Not available", "registrar")}
+                      className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
+                      title="Copy Registrar"
+                    >
+                      {copiedStates.registrar ? (
+                        <span className="text-green-400 text-sm font-medium">Copied!</span>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                  <div className="text-base text-white truncate">{whoisData.registrar || "Not available"}</div>
+                </div>
+
+                {/* Registrar IANA ID */}
                 <div className="bg-black p-3 rounded border border-gray-600">
                   <div className="flex items-center justify-between text-sm text-gray-300 mb-2">
                     <div className="flex items-center">
                       <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
                       </svg>
-                      IANA ID
+                      REGISTRAR IANA ID
                     </div>
-                    <button 
-                      onClick={() => handleCopy(whoisData.registrar_iana_id || 'Not available', 'ianaId')}
+                    <button
+                      onClick={() => handleCopy(whoisData.registrar_iana_id || "Not available", "ianaId")}
                       className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
                       title="Copy IANA ID"
                     >
@@ -548,11 +572,10 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                       )}
                     </button>
                   </div>
-                  <div className="text-base text-white mb-1">{whoisData.registrar_iana_id || 'Not available'}</div>
-                  <div className="text-sm text-gray-400">Internet Assigned Numbers Authority ID</div>
+                  <div className="text-base text-white">{whoisData.registrar_iana_id || "Not available"}</div>
                 </div>
 
-                {/* Abuse Contact Email */}
+                {/* Registrar Abuse Email */}
                 <div className="bg-black p-3 rounded border border-gray-600">
                   <div className="flex items-center justify-between text-sm text-gray-300 mb-2">
                     <div className="flex items-center">
@@ -561,8 +584,8 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                       </svg>
                       ABUSE EMAIL
                     </div>
-                    <button 
-                      onClick={() => handleCopy(whoisData.registrar_abuse_email || 'Not available', 'abuseEmail')}
+                    <button
+                      onClick={() => handleCopy(whoisData.registrar_abuse_email || "Not available", "abuseEmail")}
                       className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
                       title="Copy Abuse Email"
                     >
@@ -575,11 +598,11 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                       )}
                     </button>
                   </div>
-                  <div className="text-base text-white mb-1">{whoisData.registrar_abuse_email || 'Not available'}</div>
+                  <div className="text-base text-white mb-1">{whoisData.registrar_abuse_email || "Not available"}</div>
                   <div className="text-sm text-gray-400">Registrar abuse contact email</div>
                 </div>
 
-                {/* Abuse Contact Phone */}
+                {/* Registrar Abuse Phone */}
                 <div className="bg-black p-3 rounded border border-gray-600">
                   <div className="flex items-center justify-between text-sm text-gray-300 mb-2">
                     <div className="flex items-center">
@@ -588,8 +611,8 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                       </svg>
                       ABUSE PHONE
                     </div>
-                    <button 
-                      onClick={() => handleCopy(whoisData.registrar_abuse_phone || 'Not available', 'abusePhone')}
+                    <button
+                      onClick={() => handleCopy(whoisData.registrar_abuse_phone || "Not available", "abusePhone")}
                       className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
                       title="Copy Abuse Phone"
                     >
@@ -602,8 +625,99 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                       )}
                     </button>
                   </div>
-                  <div className="text-base text-white mb-1">{whoisData.registrar_abuse_phone || 'Not available'}</div>
+                  <div className="text-base text-white mb-1">{whoisData.registrar_abuse_phone || "Not available"}</div>
                   <div className="text-sm text-gray-400">Registrar abuse contact phone</div>
+                </div>
+              </div>
+
+              {/* Part 4 Column - Registrant & Additional Info */}
+              <div className="space-y-2">
+                <div className="flex items-center text-base text-gray-300 mb-2">
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  Registrant & Additional Info
+                  <span className="ml-2 text-xs bg-purple-600 text-purple-200 px-2 py-0.5 rounded">Part 4</span>
+                </div>
+
+                {/* Registrant */}
+                <div className="bg-black p-3 rounded border border-gray-600">
+                  <div className="flex items-center justify-between text-sm text-gray-300 mb-2">
+                    <div className="flex items-center">
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      REGISTRANT
+                    </div>
+                    <button
+                      onClick={() => handleCopy(whoisData.registrant || "Not available", "registrant")}
+                      className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
+                      title="Copy Registrant"
+                    >
+                      {copiedStates.registrant ? (
+                        <span className="text-green-400 text-sm font-medium">Copied!</span>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                  <div className="text-base text-white truncate">{whoisData.registrant || "Not available"}</div>
+                </div>
+
+                {/* Registrant Organization */}
+                <div className="bg-black p-3 rounded border border-gray-600">
+                  <div className="flex items-center justify-between text-sm text-gray-300 mb-2">
+                    <div className="flex items-center">
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                      REGISTRANT ORGANIZATION
+                    </div>
+                    <button
+                      onClick={() => handleCopy(whoisData.registrant_organization || "Not available", "registrantOrganization")}
+                      className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
+                      title="Copy Registrant Organization"
+                    >
+                      {copiedStates.registrantOrganization ? (
+                        <span className="text-green-400 text-sm font-medium">Copied!</span>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                  <div className="text-base text-white truncate">{whoisData.registrant_organization || "Not available"}</div>
+                </div>
+
+                {/* Registrant Country */}
+                <div className="bg-black p-3 rounded border border-gray-600">
+                  <div className="flex items-center justify-between text-sm text-gray-300 mb-2">
+                    <div className="flex items-center">
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      REGISTRANT COUNTRY
+                    </div>
+                    <button
+                      onClick={() => handleCopy(whoisData.registrant_country || "Not available", "registrantCountry")}
+                      className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
+                      title="Copy Registrant Country"
+                    >
+                      {copiedStates.registrantCountry ? (
+                        <span className="text-green-400 text-sm font-medium">Copied!</span>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                  <div className="text-base text-white mb-1">{whoisData.registrant_country || "Not available"}</div>
+                  <div className="text-sm text-gray-400">Registrant's country</div>
                 </div>
 
                 {/* DNSSEC Status */}
@@ -640,42 +754,6 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                   </div>
                   <div className="text-sm text-gray-400">DNS Security Extensions status</div>
                 </div>
-              </div>
-
-              {/* Part 4 Column - Summary & Status (Dynamic height) */}
-              <div className="space-y-2">
-                <div className="flex items-center text-base text-gray-300 mb-2">
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                  Summary & Status
-                  <span className="ml-2 text-xs bg-purple-600 text-purple-200 px-2 py-0.5 rounded">Part 4</span>
-                </div>
-
-                <div className="bg-black p-3 rounded border border-gray-600">
-                  <div className="text-base text-white mb-2">DETAILS:</div>
-                  <div className="text-base text-gray-300 mb-3">Professional WHOIS domain information</div>
-                  
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">TOTAL SCORE:</span>
-                      <span className={`font-bold ${
-                        (100 - (whoisData.risk_score || 0)) >= 80 ? 'text-green-400' : 
-                        (100 - (whoisData.risk_score || 0)) >= 60 ? 'text-yellow-400' : 'text-red-400'
-                      }`}>
-                        {100 - (whoisData.risk_score || 0)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">WEIGHT:</span>
-                      <span className="text-gray-300">30%</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">LAST UPDATED:</span>
-                      <span className="text-gray-300">{lastUpdated || '5 minutes ago'}</span>
-                    </div>
-                  </div>
-                </div>
 
                 {/* Domain Statuses */}
                 {whoisData.statuses && whoisData.statuses.length > 0 && (
@@ -697,9 +775,9 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                         ) : (
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                        </svg>
-                      )}
-                    </button>
+                          </svg>
+                        )}
+                      </button>
                     </div>
                     <div className="space-y-1">
                       {whoisData.statuses.slice(0, 6).map((status, index) => (
@@ -714,41 +792,6 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                     </div>
                     <div className="text-sm text-gray-400 mt-2">
                       Domain protection and status information ({whoisData.statuses.length} total)
-                    </div>
-                  </div>
-                )}
-
-                {/* Risk Factors */}
-                {whoisData.risk_factors && whoisData.risk_factors.length > 0 && (
-                  <div className="bg-black p-3 rounded border border-red-600">
-                    <div className="flex items-center justify-between text-sm text-red-300 mb-2">
-                      <div className="flex items-center">
-                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                        RISK FACTORS
-                      </div>
-                      <button 
-                        onClick={() => handleCopy(whoisData.risk_factors.join(', '), 'risks')}
-                        className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
-                        title="Copy Risk Factors"
-                      >
-                        {copiedStates.risks ? (
-                          <span className="text-green-400 text-sm font-medium">Copied!</span>
-                        ) : (
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                          </svg>
-                        )}
-                      </button>
-                    </div>
-                    <div className="space-y-1">
-                      {whoisData.risk_factors.map((factor, index) => (
-                        <div key={index} className="flex items-start text-sm bg-red-900/20 p-2 rounded">
-                          <span className="text-red-400 mr-2">⚠</span>
-                          <span className="text-red-300">{factor}</span>
-                        </div>
-                      ))}
                     </div>
                   </div>
                 )}

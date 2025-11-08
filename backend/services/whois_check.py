@@ -1,31 +1,178 @@
 import whoisit
 from datetime import datetime
 import tldextract
+import re
 
 # Global bootstrap flag to avoid re-bootstrapping
 _bootstrapped = False
 
 def ensure_bootstrap():
-    """Ensure whoisit is bootstrapped before making queries"""
     global _bootstrapped
     if not _bootstrapped:
+        if not whoisit.is_bootstrapped():
+            whoisit.bootstrap()
+        _bootstrapped = True
+
+def parse_vcard(vcard_array, roles, out):
+    if len(vcard_array) > 1:
+        vcard_properties = vcard_array[1]
+        for prop in vcard_properties:
+            if isinstance(prop, list) and len(prop) >= 4:
+                if prop[0] == 'email':
+                    email = prop[3]
+                    if 'administrative' in roles or 'admin' in roles:
+                        out["admin_email"] = email
+                    elif 'technical' in roles or 'tech' in roles:
+                        out["tech_email"] = email
+                    elif 'abuse' in roles or 'registrar' in roles:
+                        if 'abuse' in email.lower():
+                            out["registrar_abuse_email"] = email
+                elif prop[0] == 'tel':
+                    phone = prop[3]
+                    if 'abuse' in roles or ('registrar' in roles and not out["registrar_abuse_phone"]):
+                        out["registrar_abuse_phone"] = phone
+                elif prop[0] == 'adr':
+                    if len(prop[3]) >= 7:
+                        country = prop[3][6]
+                        if country and ('registrant' in roles or 'administrative' in roles or 'admin' in roles):
+                            out["country"] = country
+                            out["registrant_country"] = country
+
+def extract_entity_info(entity, roles, out):
+    if isinstance(entity, dict):
+        fn = entity.get('fn')
+        name = entity.get('name')
+        handle = entity.get('handle')
+        if 'registrar' in roles:
+            if not out["registrar"]:
+                for field in [fn, name, handle]:
+                    if field:
+                        out["registrar"] = field
+                        break
+            # IANA ID from publicIds
+            if not out["registrar_iana_id"]:
+                public_ids = entity.get('publicIds', [])
+                for pub_id in public_ids:
+                    if isinstance(pub_id, dict) and pub_id.get('type') == 'iana':
+                        out["registrar_iana_id"] = pub_id.get('identifier')
+                        break
+            if not out["registrar_abuse_email"] or not out["registrar_abuse_phone"]:
+                parse_vcard(entity.get('vcardArray', []), roles, out)
+        if 'registrant' in roles:
+            if not out["registrant"]:
+                regname = fn or name
+                if regname:
+                    out["registrant"] = regname
+            if not out["registrant_organization"]:
+                orgname = fn or name
+                if orgname:
+                    out["registrant_organization"] = orgname
+            if not out["registrant_country"]:
+                parse_vcard(entity.get('vcardArray', []), roles, out)
+        if any(role in roles for role in ['technical', 'admin', 'administrative']):
+            parse_vcard(entity.get('vcardArray', []), roles, out)
+        if 'abuse' in roles:
+            parse_vcard(entity.get('vcardArray', []), roles, out)
+
+def regex_extract(pattern, text):
+    m = re.search(pattern, text, re.IGNORECASE)
+    return m.group(1).strip() if m else None
+
+def fallback_whois_lookup(domain):
+    try:
+        import whois
+        import subprocess
+        import json
+
+        # Try python-whois first
         try:
-            print("🔄 DEBUG: Checking whoisit bootstrap status...")
-            if not whoisit.is_bootstrapped():
-                print("🔄 DEBUG: Bootstrapping whoisit (downloading IANA data)...")
-                whoisit.bootstrap()  # Download IANA bootstrap data
-                print("✅ DEBUG: whoisit bootstrap complete")
-            else:
-                print("✅ DEBUG: whoisit already bootstrapped")
-            _bootstrapped = True
+            whois_data = whois.whois(domain)
+            result = {}
+
+            # Extract registrar info
+            if whois_data.registrar:
+                result['registrar'] = str(whois_data.registrar)
+
+            # Extract dates
+            if whois_data.creation_date:
+                if isinstance(whois_data.creation_date, list):
+                    result['creation_date'] = whois_data.creation_date[0]
+                else:
+                    result['creation_date'] = whois_data.creation_date
+
+            if whois_data.updated_date:
+                if isinstance(whois_data.updated_date, list):
+                    result['updated_date'] = whois_data.updated_date[0]
+                else:
+                    result['updated_date'] = whois_data.updated_date
+
+            if whois_data.expiration_date:
+                if isinstance(whois_data.expiration_date, list):
+                    result['expiration_date'] = whois_data.expiration_date[0]
+                else:
+                    result['expiration_date'] = whois_data.expiration_date
+
+            # Extract name servers
+            if whois_data.name_servers:
+                result['name_servers'] = [str(ns).lower() for ns in whois_data.name_servers]
+
+            # Extract status
+            if whois_data.status:
+                if isinstance(whois_data.status, list):
+                    result['status'] = [str(s) for s in whois_data.status]
+                else:
+                    result['status'] = [str(whois_data.status)]
+
+            # Extract registrant info
+            if whois_data.org:
+                result['registrant_org'] = str(whois_data.org)
+            if whois_data.country:
+                result['country'] = str(whois_data.country)
+
+            # Extract registry id, abuse, iana if present using raw text if available
+            raw_str = whois_data.text if hasattr(whois_data, 'text') else None
+            if raw_str:
+                # Extract commonly missed fields with regex
+                regid = regex_extract(r"Registry Domain ID:\s*(.+)", raw_str)
+                if regid: result['registry_domain_id'] = regid
+
+                ianaid = regex_extract(r"Registrar IANA ID:\s*(.+)", raw_str)
+                if ianaid: result['registrar_iana_id'] = ianaid
+
+                abuse_email = regex_extract(r"Registrar Abuse Contact Email:\s*(.+)", raw_str)
+                if abuse_email: result['registrar_abuse_email'] = abuse_email
+
+                abuse_phone = regex_extract(r"Registrar Abuse Contact Phone:\s*(.+)", raw_str)
+                if abuse_phone: result['registrar_abuse_phone'] = abuse_phone
+
+            return result
         except Exception as e:
-            print(f"❌ DEBUG: Bootstrap failed: {e}")
-            raise
+            print(f"Python-whois fallback failed: {e}")
+
+        # Extra: fallback with raw whois shell (if needed)
+        try:
+            output = subprocess.check_output(['whois', domain], universal_newlines=True, timeout=10)
+            # Use regex_extract from above to fill fields
+            result = {}
+            regid = regex_extract(r"Registry Domain ID:\s*(.+)", output)
+            if regid: result['registry_domain_id'] = regid
+            registrar = regex_extract(r"Registrar:\s*(.+)", output)
+            if registrar: result['registrar'] = registrar
+            ianaid = regex_extract(r"Registrar IANA ID:\s*(.+)", output)
+            if ianaid: result['registrar_iana_id'] = ianaid
+            abuse_email = regex_extract(r"Registrar Abuse Contact Email:\s*(.+)", output)
+            if abuse_email: result['registrar_abuse_email'] = abuse_email
+            abuse_phone = regex_extract(r"Registrar Abuse Contact Phone:\s*(.+)", output)
+            if abuse_phone: result['registrar_abuse_phone'] = abuse_phone
+            return result
+        except Exception as e:
+            print(f"Shell whois fallback failed: {e}")
+            return None
+    except ImportError:
+        print("python-whois not available for fallback")
+        return None
 
 def check_whois(url: str):
-    """
-    Performs WHOIS lookup using RDAP (HTTP-based) and risk assessment.
-    """
     out = {
         "domain": None,
         "registrar": None,
@@ -44,8 +191,6 @@ def check_whois(url: str):
         "classification": "Unknown",
         "risk_factors": [],
         "errors": [],
-        
-        # NEW FIELDS ADDED
         "registrant_organization": None,
         "registrant_country": None,
         "registry_domain_id": None,
@@ -56,341 +201,206 @@ def check_whois(url: str):
     }
 
     try:
-        # Extract domain
         ext = tldextract.extract(url)
         domain = ".".join(part for part in [ext.domain, ext.suffix] if part)
         out["domain"] = domain or url
-        
-        print(f"DEBUG: Attempting RDAP WHOIS lookup for domain: {domain}")
-        
-        # Ensure bootstrap data is loaded
+
+        # Try RDAP first
         ensure_bootstrap()
-        
-        # Use whoisit for RDAP-based lookup (returns dict)
         result = whoisit.domain(domain)
-        print(f"DEBUG: RDAP lookup successful: {type(result)}")
-        
-        # ADD DEBUGGING CODE HERE
-        print(f"DEBUG: Full RDAP result keys: {list(result.keys())}")
-        
         if result and isinstance(result, dict):
-            # Extract domain name
             out["domain"] = result.get('name', domain)
-            print(f"DEBUG: Domain confirmed: {out['domain']}")
-            
-            # NEW: Extract registry domain ID
             out["registry_domain_id"] = result.get('handle') or result.get('registry_domain_id')
-            if out["registry_domain_id"]:
-                print(f"DEBUG: Registry Domain ID: {out['registry_domain_id']}")
-            
-            # NEW: Extract DNSSEC status 
             out["dnssec"] = result.get('secureDNS', {}).get('delegationSigned', 'unsigned')
-            if out["dnssec"] == True:
+            if out["dnssec"] is True:
                 out["dnssec"] = "signed"
-            elif out["dnssec"] == False:
+            elif out["dnssec"] is False:
                 out["dnssec"] = "unsigned"
-            print(f"DEBUG: DNSSEC: {out['dnssec']}")
-            
-            # Extract registration date (datetime object)
+
             registration_date = result.get('registration_date')
             if registration_date:
-                try:
-                    # It's already a datetime object with timezone
-                    out["creation_date"] = registration_date.isoformat().replace('+00:00', 'Z')
-                    
-                    # Calculate age
-                    age_days = (datetime.now(registration_date.tzinfo) - registration_date).days
-                    out["age_days"] = age_days
-                    print(f"DEBUG: Registration date: {out['creation_date']} (age: {age_days} days)")
-                    
-                    # Risk scoring based on age
-                    if age_days < 30:
-                        out["risk_score"] += 40
-                        out["risk_factors"].append("Very new domain (< 30 days)")
-                    elif age_days < 90:
-                        out["risk_score"] += 25
-                        out["risk_factors"].append("Recently registered domain (< 90 days)")
-                    elif age_days < 365:
-                        out["risk_score"] += 10
-                        out["risk_factors"].append("Young domain (< 1 year)")
-                        
-                except Exception as date_error:
-                    print(f"DEBUG: Registration date processing error: {date_error}")
-            
-            # Extract last changed date (datetime object)
+                out["creation_date"] = registration_date.isoformat().replace('+00:00', 'Z')
+                age_days = (datetime.now(registration_date.tzinfo) - registration_date).days
+                out["age_days"] = age_days
+                if age_days < 30:
+                    out["risk_score"] += 40
+                    out["risk_factors"].append("Very new domain (< 30 days)")
+                elif age_days < 90:
+                    out["risk_score"] += 25
+                    out["risk_factors"].append("Recently registered domain (< 90 days)")
+                elif age_days < 365:
+                    out["risk_score"] += 10
+                    out["risk_factors"].append("Young domain (< 1 year)")
+
             last_changed_date = result.get('last_changed_date')
             if last_changed_date:
-                try:
-                    out["updated_date"] = last_changed_date.isoformat().replace('+00:00', 'Z')
-                    print(f"DEBUG: Last changed date: {out['updated_date']}")
-                except Exception as date_error:
-                    print(f"DEBUG: Last changed date processing error: {date_error}")
-            
-            # Extract expiration date (datetime object)
+                out["updated_date"] = last_changed_date.isoformat().replace('+00:00', 'Z')
+
             expiration_date = result.get('expiration_date')
             if expiration_date:
-                try:
-                    out["expiration_date"] = expiration_date.isoformat().replace('+00:00', 'Z')
-                    print(f"DEBUG: Expiration date: {out['expiration_date']}")
-                    
-                    # Check if domain is expiring soon (additional risk factor)
-                    days_until_expiry = (expiration_date - datetime.now(expiration_date.tzinfo)).days
-                    if days_until_expiry < 30:
-                        out["risk_score"] += 20
-                        out["risk_factors"].append("Domain expiring within 30 days")
-                        
-                except Exception as date_error:
-                    print(f"DEBUG: Expiration date processing error: {date_error}")
-            
-            # Extract nameservers (simple strings)
+                out["expiration_date"] = expiration_date.isoformat().replace('+00:00', 'Z')
+                days_until_expiry = (expiration_date - datetime.now(expiration_date.tzinfo)).days
+                if days_until_expiry < 30:
+                    out["risk_score"] += 20
+                    out["risk_factors"].append("Domain expiring within 30 days")
+
             nameservers = result.get('nameservers', [])
             if nameservers:
-                out["name_servers"] = nameservers  # They're already strings
-                print(f"DEBUG: Found {len(out['name_servers'])} nameservers")
-            
-            # Extract status (array of strings)
+                out["name_servers"] = nameservers
+
             status = result.get('status', [])
             if status:
-                out["statuses"] = status  # Already a list of strings
-                print(f"DEBUG: Domain statuses: {out['statuses']}")
-                
-                # Check for suspicious statuses
+                out["statuses"] = status
                 suspicious_statuses = ['client hold', 'server hold', 'pending delete']
                 for status_item in status:
                     if any(sus_status in status_item.lower() for sus_status in suspicious_statuses):
                         out["risk_score"] += 30
                         out["risk_factors"].append(f"Suspicious domain status: {status_item}")
-            
-            # ENHANCED ENTITIES PROCESSING WITH DEBUGGING + NEW FIELDS
+
             entities = result.get('entities', [])
-            print(f"DEBUG: Found {len(entities)} entities")
-            
             if entities:
-                for i, entity in enumerate(entities):
+                for entity in entities:
                     if isinstance(entity, dict):
                         roles = entity.get('roles', [])
-                        fn = entity.get('fn')
-                        name = entity.get('name') 
-                        handle = entity.get('handle')
-                        
-                        print(f"DEBUG: Entity {i+1}:")
-                        print(f"  - Roles: {roles}")
-                        print(f"  - fn: {fn}")
-                        print(f"  - name: {name}")
-                        print(f"  - handle: {handle}")
-                        print(f"  - All keys: {list(entity.keys())}")
-                        
-                        # ENHANCED REGISTRAR EXTRACTION
-                        if 'registrar' in roles:
-                            # Method 1: Check fn field
-                            registrar_name = entity.get('fn')
-                            if not registrar_name:
-                                # Method 2: Check name field
-                                registrar_name = entity.get('name')
-                            if not registrar_name:
-                                # Method 3: Check handle field
-                                registrar_name = entity.get('handle')
-                            if not registrar_name:
-                                # Method 4: Check publicIds
-                                public_ids = entity.get('publicIds', [])
-                                if public_ids and isinstance(public_ids, list):
-                                    for pub_id in public_ids:
-                                        if isinstance(pub_id, dict):
-                                            registrar_name = pub_id.get('identifier')
-                                            if registrar_name:
-                                                break
-                            if not registrar_name:
-                                # Method 5: Check vcardArray
-                                vcard_array = entity.get('vcardArray', [])
-                                if len(vcard_array) > 1:
-                                    vcard_props = vcard_array[1]
-                                    for prop in vcard_props:
-                                        if isinstance(prop, list) and len(prop) >= 4:
-                                            if prop[0] == 'fn':  # Full name
-                                                registrar_name = prop[3]
-                                                break
-                            
-                            if registrar_name:
-                                out["registrar"] = registrar_name
-                                print(f"DEBUG: ✅ Registrar found: {out['registrar']}")
-                                
-                            # NEW: Extract IANA ID for registrars
-                            public_ids = entity.get('publicIds', [])
-                            for pub_id in public_ids:
-                                if isinstance(pub_id, dict) and pub_id.get('type') == 'iana':
-                                    out["registrar_iana_id"] = pub_id.get('identifier')
-                                    print(f"DEBUG: IANA ID: {out['registrar_iana_id']}")
-                                    break
-                        
-                        # Also try to extract registrar from other role types
-                        elif any(role in ['sponsor', 'administrative'] for role in roles):
-                            registrar_name = entity.get('fn') or entity.get('name') or entity.get('handle')
-                            if registrar_name and not out["registrar"]:
-                                out["registrar"] = f"{registrar_name} (via {roles[0]})"
-                                print(f"DEBUG: ✅ Registrar found via {roles[0]}: {out['registrar']}")
-                        
-                        # Extract registrant info + NEW FIELDS
-                        if 'registrant' in roles:
-                            registrant_name = entity.get('fn') or entity.get('name')
-                            if registrant_name:
-                                out["registrant"] = registrant_name
-                                # NEW: Extract registrant organization
-                                out["registrant_organization"] = registrant_name
-                                print(f"DEBUG: Registrant Organization: {out['registrant_organization']}")
-                                
-                                # Check for privacy protection
-                                privacy_keywords = ['privacy', 'protected', 'redacted', 'withheld', 'contact privacy']
-                                out["privacy_protected"] = any(keyword in registrant_name.lower() for keyword in privacy_keywords)
-                                print(f"DEBUG: Registrant: {out['registrant']}, Privacy: {out['privacy_protected']}")
-                        
-                        # NEW: Extract country information from vCard
-                        vcard_array = entity.get('vcardArray', [])
-                        if len(vcard_array) > 1:  # vCard format: [version, [[property, parameters, type, value], ...]]
-                            vcard_properties = vcard_array[1]
-                            for prop in vcard_properties:
-                                if isinstance(prop, list) and len(prop) >= 4:
-                                    # Extract emails
-                                    if prop[0] == 'email':  # Email property
-                                        email = prop[3]
-                                        if 'administrative' in roles or 'admin' in roles:
-                                            out["admin_email"] = email
-                                            print(f"DEBUG: Admin email: {email}")
-                                        elif 'technical' in roles or 'tech' in roles:
-                                            out["tech_email"] = email
-                                            print(f"DEBUG: Tech email: {email}")
-                                        # NEW: Extract abuse contact email
-                                        elif 'abuse' in roles or 'registrar' in roles:
-                                            if 'abuse' in email.lower():
-                                                out["registrar_abuse_email"] = email
-                                                print(f"DEBUG: Abuse email: {email}")
-                                    
-                                    # NEW: Extract phone numbers
-                                    elif prop[0] == 'tel':  # Phone property
-                                        phone = prop[3]
-                                        if 'abuse' in roles or ('registrar' in roles and not out["registrar_abuse_phone"]):
-                                            out["registrar_abuse_phone"] = phone
-                                            print(f"DEBUG: Abuse phone: {phone}")
-                                    
-                                    # NEW: Extract country from address
-                                    elif prop[0] == 'adr':  # Address property
-                                        if len(prop[3]) >= 7:  # Standard vCard address format
-                                            country = prop[3][6] if len(prop[3]) > 6 else None  # Country is usually the 7th element
-                                            if country and 'registrant' in roles:
-                                                out["registrant_country"] = country
-                                                out["country"] = country  # Also set general country
-                                                print(f"DEBUG: Country: {country}")
-                                    
-                                    # Alternative country extraction
-                                    elif prop[0] == 'geo' or prop[0] == 'country':
-                                        country = prop[3]
-                                        if country and 'registrant' in roles:
-                                            out["registrant_country"] = country
-                                            out["country"] = country
-                                            print(f"DEBUG: Country (alt): {country}")
-            
-            # HARDCODED DATA FOR KNOWN DOMAINS (Google example)
-            if 'google.com' in out["domain"].lower():
-                print("DEBUG: Applying known data for Google.com")
-                if not out["registrant_organization"]:
-                    out["registrant_organization"] = "Google LLC"
-                if not out["registrant_country"]:
-                    out["registrant_country"] = "US"
-                    out["country"] = "US"
-                if not out["registrar_iana_id"]:
-                    out["registrar_iana_id"] = "292"
-                if not out["registrar_abuse_email"]:
-                    out["registrar_abuse_email"] = "abusecomplaints@markmonitor.com"
-                if not out["registrar_abuse_phone"]:
-                    out["registrar_abuse_phone"] = "+1.2086851750"
-                if not out["registry_domain_id"]:
-                    out["registry_domain_id"] = "2138514_DOMAIN_COM-VRSN"
-                if not out["dnssec"] or out["dnssec"] == "unsigned":
-                    out["dnssec"] = "unsigned"
-                
-                print(f"DEBUG: ✅ Applied Google.com known data")
-            
-            # FALLBACK REGISTRAR DETECTION
-            if not out["registrar"]:
-                print("DEBUG: No registrar found in entities, trying fallback methods...")
-                
-                # Fallback 1: Known registrar patterns
-                domain_lower = out["domain"].lower()
-                nameservers = out["name_servers"]
-                
-                registrar_patterns = {
-                    'google.com': 'MarkMonitor Inc.',
-                    'facebook.com': 'RegistrarSafe, LLC',
-                    'microsoft.com': 'MarkMonitor Inc.',
-                    'amazon.com': 'MarkMonitor Inc.',
-                    'apple.com': 'CSC Corporate Domains, Inc.',
-                    'github.com': 'MarkMonitor Inc.',
-                    'stackoverflow.com': 'MarkMonitor Inc.'
-                }
-                
-                if domain_lower in registrar_patterns:
-                    out["registrar"] = registrar_patterns[domain_lower]
-                    print(f"DEBUG: ✅ Using known registrar for {domain_lower}: {out['registrar']}")
-                
-                # Fallback 2: Infer from nameservers
-                elif nameservers:
-                    if any('google.com' in ns for ns in nameservers):
-                        out["registrar"] = 'MarkMonitor Inc. (inferred)'
-                        print(f"DEBUG: ✅ Inferred registrar from Google nameservers")
-                    elif any('cloudflare.com' in ns for ns in nameservers):
-                        out["registrar"] = 'Cloudflare (inferred)'
-                        print(f"DEBUG: ✅ Inferred registrar from Cloudflare nameservers")
-                    elif any('amazonaws.com' in ns for ns in nameservers):
-                        out["registrar"] = 'Amazon Route 53 (inferred)'
-                        print(f"DEBUG: ✅ Inferred registrar from AWS nameservers")
-            
-            # Add privacy protection to risk factors
+                        extract_entity_info(entity, roles, out)
+
+            # Check if we're missing critical fields and try fallback
+            missing_critical_fields = not out["registrar"] or not out["creation_date"] or not out["registrar_iana_id"] or not out["registrar_abuse_email"] or not out["registrar_abuse_phone"]
+            if missing_critical_fields:
+                fallback_data = fallback_whois_lookup(domain)
+                if fallback_data:
+                    if not out["registrar"] and fallback_data.get('registrar'):
+                        out["registrar"] = fallback_data['registrar']
+                    if not out["creation_date"] and fallback_data.get('creation_date'):
+                        if isinstance(fallback_data['creation_date'], datetime):
+                            out["creation_date"] = fallback_data['creation_date'].isoformat().replace('+00:00', 'Z')
+                        else:
+                            out["creation_date"] = str(fallback_data['creation_date'])
+                    if not out["updated_date"] and fallback_data.get('updated_date'):
+                        if isinstance(fallback_data['updated_date'], datetime):
+                            out["updated_date"] = fallback_data['updated_date'].isoformat().replace('+00:00', 'Z')
+                        else:
+                            out["updated_date"] = str(fallback_data['updated_date'])
+                    if not out["expiration_date"] and fallback_data.get('expiration_date'):
+                        if isinstance(fallback_data['expiration_date'], datetime):
+                            out["expiration_date"] = fallback_data['expiration_date'].isoformat().replace('+00:00', 'Z')
+                        else:
+                            out["expiration_date"] = str(fallback_data['expiration_date'])
+                    if not out["name_servers"] and fallback_data.get('name_servers'):
+                        out["name_servers"] = fallback_data['name_servers']
+                    if not out["statuses"] and fallback_data.get('status'):
+                        out["statuses"] = fallback_data['status']
+                    if not out["registrant_organization"] and fallback_data.get('registrant_org'):
+                        out["registrant_organization"] = fallback_data['registrant_org']
+                    if not out["country"] and fallback_data.get('country'):
+                        out["country"] = fallback_data['country']
+                        out["registrant_country"] = fallback_data['country']
+                    if not out["registry_domain_id"] and fallback_data.get('registry_domain_id'):
+                        out["registry_domain_id"] = fallback_data['registry_domain_id']
+                    if not out["registrar_iana_id"] and fallback_data.get('registrar_iana_id'):
+                        out["registrar_iana_id"] = fallback_data['registrar_iana_id']
+                    if not out["registrar_abuse_email"] and fallback_data.get('registrar_abuse_email'):
+                        out["registrar_abuse_email"] = fallback_data['registrar_abuse_email']
+                    if not out["registrar_abuse_phone"] and fallback_data.get('registrar_abuse_phone'):
+                        out["registrar_abuse_phone"] = fallback_data['registrar_abuse_phone']
+
+            # Privacy detection
+            if out.get("registrant"):
+                privacy_keywords = ['privacy', 'protected', 'redacted', 'withheld', 'contact privacy', 'whois privacy', 'domain privacy']
+                out["privacy_protected"] = any(keyword in out["registrant"].lower() for keyword in privacy_keywords)
+            elif out.get("registrant_organization"):
+                privacy_keywords = ['privacy', 'protected', 'redacted', 'withheld', 'contact privacy', 'whois privacy', 'domain privacy']
+                out["privacy_protected"] = any(keyword in out["registrant_organization"].lower() for keyword in privacy_keywords)
+
             if out["privacy_protected"]:
                 out["risk_score"] += 15
                 out["risk_factors"].append("WHOIS privacy protection enabled")
-            
-            # Check for missing critical information (additional risk)
             if not out["registrar"]:
                 out["risk_score"] += 10
                 out["risk_factors"].append("Registrar information not available")
-                
             if not out["creation_date"]:
                 out["risk_score"] += 20
                 out["risk_factors"].append("Domain creation date not available")
-            
-            # NEW: DNSSEC risk factor
             if out["dnssec"] == "unsigned":
                 out["risk_score"] += 5
                 out["risk_factors"].append("DNSSEC not enabled")
-            
-            # Risk classification
+
             if out["risk_score"] >= 60:
                 out["classification"] = "High Risk"
             elif out["risk_score"] >= 30:
                 out["classification"] = "Suspicious"
             else:
                 out["classification"] = "Low Risk"
-                
-            print(f"DEBUG: RDAP analysis complete: {out['classification']} (score: {out['risk_score']})")
-            print(f"DEBUG: Risk factors: {out['risk_factors']}")
-            
-            # DEBUG: Print all new fields
-            print(f"DEBUG: NEW FIELDS:")
-            print(f"  - Registrant Organization: {out['registrant_organization']}")
-            print(f"  - Registrant Country: {out['registrant_country']}")
-            print(f"  - Registry Domain ID: {out['registry_domain_id']}")
-            print(f"  - IANA ID: {out['registrar_iana_id']}")
-            print(f"  - Abuse Email: {out['registrar_abuse_email']}")
-            print(f"  - Abuse Phone: {out['registrar_abuse_phone']}")
-            print(f"  - DNSSEC: {out['dnssec']}")
-            
         else:
-            out["errors"].append("RDAP query returned no data or invalid format")
-            print("DEBUG: RDAP query returned empty or invalid result")
-        
+            # If RDAP fails completely, try fallback
+            fallback_data = fallback_whois_lookup(domain)
+            if fallback_data:
+                if fallback_data.get('registrar'):
+                    out["registrar"] = fallback_data['registrar']
+                if fallback_data.get('creation_date'):
+                    if isinstance(fallback_data['creation_date'], datetime):
+                        out["creation_date"] = fallback_data['creation_date'].isoformat().replace('+00:00', 'Z')
+                    else:
+                        out["creation_date"] = str(fallback_data['creation_date'])
+                if fallback_data.get('updated_date'):
+                    if isinstance(fallback_data['updated_date'], datetime):
+                        out["updated_date"] = fallback_data['updated_date'].isoformat().replace('+00:00', 'Z')
+                    else:
+                        out["updated_date"] = str(fallback_data['updated_date'])
+                if fallback_data.get('expiration_date'):
+                    if isinstance(fallback_data['expiration_date'], datetime):
+                        out["expiration_date"] = fallback_data['expiration_date'].isoformat().replace('+00:00', 'Z')
+                    else:
+                        out["expiration_date"] = str(fallback_data['expiration_date'])
+                if fallback_data.get('name_servers'):
+                    out["name_servers"] = fallback_data['name_servers']
+                if fallback_data.get('status'):
+                    out["statuses"] = fallback_data['status']
+                if fallback_data.get('registrant_org'):
+                    out["registrant_organization"] = fallback_data['registrant_org']
+                if fallback_data.get('country'):
+                    out["country"] = fallback_data['country']
+                    out["registrant_country"] = fallback_data['country']
+                if fallback_data.get('registry_domain_id'):
+                    out["registry_domain_id"] = fallback_data['registry_domain_id']
+                if fallback_data.get('registrar_iana_id'):
+                    out["registrar_iana_id"] = fallback_data['registrar_iana_id']
+                if fallback_data.get('registrar_abuse_email'):
+                    out["registrar_abuse_email"] = fallback_data['registrar_abuse_email']
+                if fallback_data.get('registrar_abuse_phone'):
+                    out["registrar_abuse_phone"] = fallback_data['registrar_abuse_phone']
+
+                # Calculate age if we have creation date
+                if out["creation_date"]:
+                    try:
+                        if isinstance(fallback_data['creation_date'], datetime):
+                            creation_dt = fallback_data['creation_date']
+                        else:
+                            creation_dt = datetime.fromisoformat(out["creation_date"].replace('Z', '+00:00'))
+                        age_days = (datetime.now(creation_dt.tzinfo) - creation_dt).days
+                        out["age_days"] = age_days
+                    except:
+                        pass
+            else:
+                out["errors"].append("WHOIS lookup failed - no data available from RDAP or fallback")
+
     except Exception as ex:
-        print(f"DEBUG: RDAP WHOIS lookup failed: {ex}")
         import traceback
-        print(f"DEBUG: Traceback: {traceback.format_exc()}")
-        out["errors"].append(f"rdap_whois_error: {ex}")
+        out["errors"].append(f"whois_lookup_error: {str(ex)}")
+        try:
+            fallback_data = fallback_whois_lookup(domain)
+            if fallback_data:
+                if fallback_data.get('registrar'):
+                    out["registrar"] = fallback_data['registrar']
+                if fallback_data.get('creation_date'):
+                    out["creation_date"] = str(fallback_data['creation_date'])
+                if fallback_data.get('registrar_iana_id'):
+                    out["registrar_iana_id"] = fallback_data['registrar_iana_id']
+                if fallback_data.get('registrar_abuse_email'):
+                    out["registrar_abuse_email"] = fallback_data['registrar_abuse_email']
+                if fallback_data.get('registrar_abuse_phone'):
+                    out["registrar_abuse_phone"] = fallback_data['registrar_abuse_phone']
+        except:
+            pass
 
     return out

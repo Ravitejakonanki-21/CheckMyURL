@@ -8,21 +8,18 @@ from dotenv import load_dotenv
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from flask_mail import Mail, Message
 
-# === Load environment variables from .env ===
 load_dotenv()
 
-# === Utility, Risk, Analyzer Services ===
 from services.ssl_check import check_ssl
 from services.whois_check import check_whois
 from services.unicode_idn import check_unicode_domain
-from services.keyword_check import check_url_for_keywords  # Added keyword check import here
+from services.keyword_check import check_url_for_keywords
 from services.content_rules import check_keywords
 from services.headers_check import check_headers
 from services.risk_engine import compute_risk
 from services.simple_cache import cache
 from services.utils import timed_call
 
-# === Auth/Database ===
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import (
     JWTManager, create_access_token, jwt_required, get_jwt_identity
@@ -33,7 +30,6 @@ app = Flask(__name__)
 CORS(app)
 app.logger.setLevel(logging.INFO)
 
-# === All Configurations ===
 app.config['DEBUG'] = True
 app.config['JWT_SECRET_KEY'] = 'super-secret-key'
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
@@ -48,12 +44,10 @@ bcrypt = Bcrypt(app)
 mail = Mail(app)
 serializer = URLSafeTimedSerializer(app.config['JWT_SECRET_KEY'])
 
-# === MongoDB Connection ===
 mongo_client = MongoClient("mongodb://localhost:27017/")
 db = mongo_client["url_checker"]
 users = db.users
 
-# === Set Global Security Headers ===
 @app.after_request
 def set_security_headers(response):
     response.headers['Strict-Transport-Security'] = 'max-age=63072000; includeSubDomains; preload'
@@ -69,7 +63,6 @@ def set_security_headers(response):
     response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self'; object-src 'none'"
     return response
 
-# === Feature gating function ===
 def is_feature_unlocked(user, feature):
     if feature == "export_logs" and user["subscription_level"] == "free":
         return False, "Upgrade to Pro or Enterprise to export logs."
@@ -77,17 +70,14 @@ def is_feature_unlocked(user, feature):
         return False, "Upgrade to Enterprise for AI-powered scanning."
     return True, ""
 
-# === Logging ===
 @app.before_request
 def _log_request():
     app.logger.info(f"{datetime.utcnow().isoformat()}Z {request.method} {request.path}")
 
-# === Serve Home ===
 @app.get("/")
 def home():
     return send_from_directory(os.path.join(app.root_path, "static"), "index.html")
 
-# === URL Analysis ===
 @app.post("/analyze")
 def analyze():
     data = request.get_json(force=True) or {}
@@ -109,6 +99,8 @@ def analyze():
     keyword_info, t_keyword, e_keyword = timed_call(check_url_for_keywords, url)
     rules_info, t_rules, e_rules = timed_call(check_keywords, url)
     headers_info, t_head, e_head = timed_call(check_headers, url)
+
+    whois_info = ensure_whois_fields_complete(whois_info)
 
     timings = {
         "ssl_ms": int(t_ssl * 1000),
@@ -150,14 +142,66 @@ def analyze():
     cache.set(cache_key, response)
     return jsonify(response)
 
-# === NEW: Security Headers Check API Endpoint ===
+def ensure_whois_fields_complete(whois_info):
+    expected_fields = {
+        "domain": None,
+        "registrar": None,
+        "creation_date": None,
+        "updated_date": None,
+        "expiration_date": None,
+        "age_days": None,
+        "privacy_protected": False,
+        "registrant": None,
+        "admin_email": None,
+        "tech_email": None,
+        "name_servers": [],
+        "country": None,
+        "statuses": [],
+        "risk_score": 0,
+        "classification": "Unknown",
+        "risk_factors": [],
+        "errors": [],
+        "registrant_organization": None,
+        "registrant_country": None,
+        "registry_domain_id": None,
+        "registrar_iana_id": None,
+        "registrar_abuse_email": None,
+        "registrar_abuse_phone": None,
+        "dnssec": None
+    }
+
+    for field, default in expected_fields.items():
+        if field not in whois_info or whois_info[field] is None:
+            whois_info[field] = default
+
+    # Warranty: Extract fallback values from alt keys for old data
+    # (add this block for extra robustness, in case parser misspells a field)
+    alt_keys = {
+        "registrar_iana_id": ["registrarinaid", "registrarianaid"],
+        "registrar_abuse_email": ["registrarabuseemail", "registrarabuse_email"],
+        "registrar_abuse_phone": ["registrarabusephone", "registrarabuse_phone"],
+    }
+    for main, alts in alt_keys.items():
+        for alt in alts:
+            if not whois_info.get(main) and whois_info.get(alt):
+                whois_info[main] = whois_info[alt]
+
+    if whois_info.get("name_servers") is None:
+        whois_info["name_servers"] = []
+    if whois_info.get("statuses") is None:
+        whois_info["statuses"] = []
+    if whois_info.get("risk_factors") is None:
+        whois_info["risk_factors"] = []
+    if whois_info.get("errors") is None:
+        whois_info["errors"] = []
+    return whois_info
+
 @app.post("/api/check-headers")
 def api_check_headers():
     data = request.get_json(force=True) or {}
     url = (data.get("url") or "").strip()
     if not url:
         return jsonify({"error": "url required"}), 400
-
     try:
         headers_info = check_headers(url)
         return jsonify(headers_info)
@@ -167,7 +211,6 @@ def api_check_headers():
             "errors": [f"Header check failed: {str(e)}"]
         }), 500
 
-# === WHOIS Endpoint ===
 @app.post("/whois_check")
 def whois_check_endpoint():
     data = request.get_json(force=True) or {}
@@ -176,6 +219,7 @@ def whois_check_endpoint():
         return jsonify({"errors": ["url required"]}), 400
     try:
         whois_info = check_whois(url)
+        whois_info = ensure_whois_fields_complete(whois_info)
         return jsonify(whois_info)
     except Exception as e:
         app.logger.error(f"WHOIS check failed for {url}: {str(e)}")
@@ -187,29 +231,21 @@ def whois_check_endpoint():
             "risk_factors": []
         }), 500
 
-# === Health Endpoint ===
 @app.get("/health")
 def health_check():
     return jsonify({"status": "healthy", "timestamp": datetime.utcnow().isoformat() + "Z"})
 
-# === Static Files ===
 @app.route('/<path:path>')
 def serve_static(path):
     return send_from_directory(os.path.join(app.root_path, "static"), path)
-
-# =========================
-#     AUTHENTICATION ROUTES
-# =========================
 
 @app.post('/register')
 def register():
     data = request.get_json()
     email = (data.get('email') or "").lower()
     password = data.get('password')
-
     if users.find_one({'email': email}):
         return jsonify({'error': 'Email already registered'}), 409
-
     hashed = bcrypt.generate_password_hash(password).decode('utf-8')
     users.insert_one({
         'email': email,
@@ -229,7 +265,6 @@ def login():
     user = users.find_one({'email': email})
     if (not user) or (not bcrypt.check_password_hash(user['password_hash'], password)):
         return jsonify({'error': 'Invalid credentials'}), 401
-
     token = create_access_token(identity=email)
     return jsonify({
         'token': token,
@@ -238,60 +273,46 @@ def login():
         'subscription_level': user['subscription_level']
     })
 
-# === Export Logs Route with Feature Gate ===
 @app.post('/export-logs')
 @jwt_required()
 def export_logs():
     email = get_jwt_identity()
     user = users.find_one({"email": email})
-    
     allowed, note = is_feature_unlocked(user, "export_logs")
     if not allowed:
         return jsonify({"error": "Feature locked!", "note": note}), 403
-    
-    # Your export logic here
     return jsonify({"message": "Exported logs successfully."})
 
-# === Forgot Password ===
 @app.post("/forgot-password")
 def forgot_password():
     data = request.get_json()
     email = data.get("email", "").lower()
-
     user = users.find_one({"email": email})
     if not user:
         return jsonify({"message": "If the email exists, instructions have been sent."}), 200
-
     token = serializer.dumps(email, salt="password-reset")
     reset_link = f"http://localhost:3000/reset-password/{token}"
-
     msg = Message("Password Reset Request", recipients=[email])
     msg.body = f"To reset your password, click the link: {reset_link}"
     msg.html = f"<p>Click <a href='{reset_link}'>here</a> to reset your password.</p>"
     mail.send(msg)
-
     return jsonify({"message": f"Reset instructions sent to {email}."}), 200
 
-# === Reset Password ===
 @app.post("/reset-password")
 def reset_password():
     data = request.get_json()
     token = data.get("token")
     new_password = data.get("password")
-
     try:
         email = serializer.loads(token, salt="password-reset", max_age=3600)
     except SignatureExpired:
         return jsonify({"error": "Reset link expired"}), 400
     except BadSignature:
         return jsonify({"error": "Invalid or tampered link"}), 400
-
     hashed_pw = bcrypt.generate_password_hash(new_password).decode('utf-8')
     users.update_one({"email": email}, {"$set": {"password_hash": hashed_pw}})
-
     return jsonify({"message": "Password reset successful!"}), 200
 
-# === Protected Profile ===
 @app.get('/profile')
 @jwt_required()
 def profile():
@@ -299,7 +320,6 @@ def profile():
     user = users.find_one({'email': email})
     if not user:
         return jsonify({'error': 'User not found'}), 404
-
     return jsonify({
         'email': user['email'],
         'credits': user['credits'],
