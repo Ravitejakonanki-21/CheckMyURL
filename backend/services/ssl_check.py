@@ -35,6 +35,12 @@ def check_ssl(hostname: str, port: int = 443, timeout: float = 5.0):
         enhanced_result = enhanced_ssl_check(hostname, port)
         
         # Transform to backward-compatible format
+        if not enhanced_result:
+            # Return explicit failure result if none returned
+            return {
+                "https_ok": False,
+                "errors": ["enhanced_ssl_check returned no result"]
+            }
         return {
             "https_ok": enhanced_result.get("https_ok", False),
             "expires_on": enhanced_result.get("expires_on"),
@@ -57,7 +63,14 @@ def check_ssl(hostname: str, port: int = 443, timeout: float = 5.0):
         }
     else:
         # Fallback to basic SSL check
-        return _basic_ssl_check(hostname, port, timeout)
+        result = _basic_ssl_check(hostname, port, timeout)
+        if not result:
+            # Return explicit failure result if none returned
+            return {
+                "https_ok": False,
+                "errors": ["basic_ssl_check returned no result"]
+            }
+        return result
 
 
 def enhanced_ssl_check(hostname: str, port: int = 443):
@@ -117,7 +130,8 @@ def enhanced_ssl_check(hostname: str, port: int = 443):
     
     try:
         # Step 1: Test HTTPS connectivity
-        result.update(_test_https_connection(hostname))
+        https_data = _test_https_connection(hostname)
+        result.update(https_data)
         
         # Step 2: Get complete SSL certificate data with technical details
         cert_data = _get_complete_certificate_details(hostname, port)
@@ -128,7 +142,13 @@ def enhanced_ssl_check(hostname: str, port: int = 443):
     except Exception as e:
         result["errors"].append(f"ssl_check_error: {str(e)}")
         print(f"❌ SSL check error: {e}")
-    
+
+    # FIX: Set https_ok based on final outcome!
+    if result.get("ssl_handshake_successful") and result.get("certificate_valid") and not result.get("expired"):
+        result["https_ok"] = True
+    else:
+        result["https_ok"] = False
+
     return result
 
 
