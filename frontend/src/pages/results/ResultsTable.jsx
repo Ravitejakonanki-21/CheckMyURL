@@ -6,6 +6,7 @@ import { copyToClipboard, openLearnMore, reportFalsePositive } from "../../utils
 import { checkWhois } from "../../services/whoisService.js";
 import KeywordDetails from "./KeywordDetails.jsx";
 
+
 function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setExpandedRows }) {
   const toggleRowExpansion = (key) => setExpandedRows(prev => ({ ...prev, [key]: !prev[key] }));
   const [copiedStates, setCopiedStates] = useState({});
@@ -13,6 +14,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
   const [loadingWhois, setLoadingWhois] = useState(false);
   const [whoisError, setWhoisError] = useState(null);
   const [securityHeadersExpanded, setSecurityHeadersExpanded] = useState(false);
+
 
   useEffect(() => {
     const fetchWhoisData = async () => {
@@ -33,6 +35,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
     fetchWhoisData();
   }, [expandedRows['whois'], result.url, whoisData, loadingWhois]);
 
+
   const handleCopy = (text, field) => {
     copyToClipboard(text);
     setCopiedStates(prev => ({ ...prev, [field]: true }));
@@ -41,17 +44,20 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
     }, 2000);
   };
 
+
   const handleLearnMore = (type, e) => {
     e.preventDefault();
     e.stopPropagation();
     openLearnMore(type);
   };
 
+
   const handleReportFalsePositive = (field, value, e) => {
     e.preventDefault();
     e.stopPropagation();
     reportFalsePositive(field, value);
   };
+
 
   const copyAllResults = () => {
     const d = result.details, ssl = d.sslData;
@@ -68,9 +74,11 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
     handleCopy(text, 'all');
   };
 
+
   const handleWhoisToggle = () => {
     toggleRowExpansion('whois');
   };
+
 
   const copyKeywords = () => {
     const keywords = result.details.keywords || [];
@@ -80,6 +88,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
       setCopiedStates(prev => ({ ...prev, keywords: false }));
     }, 2000);
   };
+
 
   // Format WHOIS summary for display
   const getWhoisSummary = () => {
@@ -91,6 +100,19 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
     
     return `${registrar} • ${age} • ${organization}`;
   };
+
+  // Prepare keywordInfo object for KeywordDetails
+  const getKeywordInfo = () => {
+    const keywords = result.details.keywords || [];
+    return {
+      keywords: keywords,
+      count: keywords.length,
+      riskLevel: keywords.length > 5 ? 'high' : keywords.length > 2 ? 'medium' : 'low',
+      score: securityScores.keywords,
+      detectedAt: lastUpdated
+    };
+  };
+
 
   return (
     <div className="w-full px-6 pb-8">
@@ -136,6 +158,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
             </thead>
             <tbody className="bg-white dark:bg-black divide-y divide-gray-300 dark:divide-gray-700">
 
+
               {/* URL Row */}
               <tr className="hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors duration-150">
                 <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-gray-200 border-r border-gray-300 dark:border-gray-700">URL</td>
@@ -160,6 +183,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                   </button>
                 </td>
               </tr>
+
 
               {/* Risk Score Row */}
               <tr className="hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors duration-150">
@@ -193,6 +217,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                   </button>
                 </td>
               </tr>
+
 
               {/* SSL/TLS Security Row */}
               <tr className="hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors duration-150">
@@ -279,6 +304,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                   </td>
                 </tr>
               )}
+
 
 
             
@@ -384,60 +410,63 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
               
 
               {/* Keywords Row */}
-<tr className="hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors duration-150">
-  <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-gray-200 border-r border-gray-300 dark:border-gray-700">Keywords</td>
-  <td className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
-    {result.details.keywords && result.details.keywords.length > 0 ? (
-      result.details.keywords.join(", ")
-    ) : (
-      <span className="italic text-gray-500 dark:text-gray-400">None detected</span>
-    )}
-    <button
-      onClick={() => toggleRowExpansion('keywords')}
-      className="ml-3 px-2 py-1 text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 border border-blue-300 dark:border-blue-600 rounded"
-    >
-      {expandedRows['keywords'] ? 'Hide Details ▼' : 'Show All Details ▶'}
-    </button>
-  </td>
-  <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">
-    Risky keywords detected in URL affecting security risk score
-  </td>
-  <td className="px-4 py-4 text-center border-r border-gray-300 dark:border-gray-700">
-    <div className={`text-lg font-bold ${
-      securityScores.keywords >= 80 ? 'text-green-600 dark:text-green-400' : 
-      securityScores.keywords >= 60 ? 'text-yellow-600 dark:text-yellow-400' : 
-      'text-red-600 dark:text-red-400'
-    }`}>
-      {securityScores.keywords}
-    </div>
-  </td>
-  <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
-    {securityScores.weights.keywords}%
-  </td>
-  <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">{lastUpdated}</td>
-  <td className="px-4 py-4 text-center">
-    <button 
-      onClick={copyKeywords}
-      className="w-12 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 mx-1 transition-colors duration-200"
-      title="Copy Keywords"
-    >
-      {copiedStates.keywords ? (
-        <span className="text-green-600 dark:text-green-400 text-xs font-medium">Copied!</span>
-      ) : (
-        <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-        </svg>
-      )}
-    </button>
-  </td>
-</tr>
-{expandedRows['keywords'] && (
-  <tr>
-    <td colSpan={7} className="px-0 py-0 border-t border-gray-200 dark:border-gray-700">
-      <KeywordDetails keywords={result.details.keywords || []} onHide={() => toggleRowExpansion('keywords')} />
-    </td>
-  </tr>
-)}
+              <tr className="hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors duration-150">
+                <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-gray-200 border-r border-gray-300 dark:border-gray-700">Keywords</td>
+                <td className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
+                  {result.details.keywords && result.details.keywords.length > 0 ? (
+                    result.details.keywords.join(", ")
+                  ) : (
+                    <span className="italic text-gray-500 dark:text-gray-400">None detected</span>
+                  )}
+                  <button
+                    onClick={() => toggleRowExpansion('keywords')}
+                    className="ml-3 px-2 py-1 text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 border border-blue-300 dark:border-blue-600 rounded"
+                  >
+                    {expandedRows['keywords'] ? 'Hide Details ▼' : 'Show More Details ▶'}
+                  </button>
+                </td>
+                <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">
+                  Risky keywords detected in URL affecting security risk score
+                </td>
+                <td className="px-4 py-4 text-center border-r border-gray-300 dark:border-gray-700">
+                  <div className={`text-lg font-bold ${
+                    securityScores.keywords >= 80 ? 'text-green-600 dark:text-green-400' : 
+                    securityScores.keywords >= 60 ? 'text-yellow-600 dark:text-yellow-400' : 
+                    'text-red-600 dark:text-red-400'
+                  }`}>
+                    {securityScores.keywords}
+                  </div>
+                </td>
+                <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
+                  {securityScores.weights.keywords}%
+                </td>
+                <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">{lastUpdated}</td>
+                <td className="px-4 py-4 text-center">
+                  <button 
+                    onClick={copyKeywords}
+                    className="w-12 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 mx-1 transition-colors duration-200"
+                    title="Copy Keywords"
+                  >
+                    {copiedStates.keywords ? (
+                      <span className="text-green-600 dark:text-green-400 text-xs font-medium">Copied!</span>
+                    ) : (
+                      <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    )}
+                  </button>
+                </td>
+              </tr>
+              {expandedRows['keywords'] && (
+                <tr>
+                  <td colSpan={7} className="px-0 py-0 border-t border-gray-200 dark:border-gray-700">
+                    <KeywordDetails 
+                      keywordInfo={getKeywordInfo()} 
+                      onHide={() => toggleRowExpansion('keywords')} 
+                    />
+                  </td>
+                </tr>
+              )}
 
               
               {/* WHOIS Row */}
@@ -483,6 +512,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                   </button>
                 </td>
               </tr>
+
 
 
               {expandedRows['whois'] && (
@@ -538,5 +568,6 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
     </div>
   );
 }
+
 
 export default ResultsTable;
