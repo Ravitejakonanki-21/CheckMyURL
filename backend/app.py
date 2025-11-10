@@ -96,7 +96,7 @@ def analyze():
 
     ssl_info, t_ssl, e_ssl = timed_call(check_ssl, hostname)
     whois_info, t_whois, e_whois = timed_call(check_whois, hostname)
-    idn_info, t_idn, e_idn = timed_call(check_unicode_domain, hostname)
+    idn_info, t_idn, e_idn = timed_call(check_unicode_domain, hostname, url)  # Pass full URL for encoded char check
     keyword_info, t_keyword, e_keyword = timed_call(check_url_for_keywords, url)
     rules_info, t_rules, e_rules = timed_call(check_keywords, url)
     headers_info, t_head, e_head = timed_call(check_headers, url)

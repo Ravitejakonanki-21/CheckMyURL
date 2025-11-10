@@ -12,14 +12,20 @@ export const calculateSecurityScores = (result) => {
   const keywordCount = keywords.length; scores.keywords = keywordCount === 0 ? 100 : keywordCount <= 2 ? 60 : keywordCount <= 4 ? 40 : 20;
   scores.mlPhishing = Math.max(0, 100 - mlPhishingScore);
   
-  // ASCII/IDN scoring based on ML model considerations
+  // ASCII/IDN scoring - use backend calculated score if available, otherwise fallback to heuristic
   if (idnData) {
-    if (idnData.mixed_confusable_scripts) {
-      scores.ascii = 20; // High risk - mixed scripts can be used for homograph attacks
-    } else if (idnData.is_idn) {
-      scores.ascii = 60; // Medium risk - IDN detected but no mixed scripts
+    if (idnData.ascii_score !== undefined && idnData.ascii_score !== null) {
+      // Use the backend calculated ASCII score based on all checks
+      scores.ascii = idnData.ascii_score;
     } else {
-      scores.ascii = 100; // Low risk - ASCII only
+      // Fallback to heuristic scoring
+      if (idnData.mixed_confusable_scripts) {
+        scores.ascii = 20; // High risk - mixed scripts can be used for homograph attacks
+      } else if (idnData.is_idn) {
+        scores.ascii = 60; // Medium risk - IDN detected but no mixed scripts
+      } else {
+        scores.ascii = 100; // Low risk - ASCII only
+      }
     }
   } else {
     scores.ascii = 100; // Default to safe if not analyzed

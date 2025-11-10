@@ -5,6 +5,7 @@ import SecurityHeaderDetails from "../../components/SecurityHeaderDetails.jsx";
 import { copyToClipboard, openLearnMore, reportFalsePositive } from "../../utils/quickActions.js";
 import { checkWhois } from "../../services/whoisService.js";
 import KeywordDetails from "./KeywordDetails.jsx";
+import AsciiDetails from "./AsciiDetails.jsx";
 
 
 function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setExpandedRows }) {
@@ -74,7 +75,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
       `WHOIS: ${getWhoisSummary()} (Score: ${securityScores.whois})`,
       `Security Headers: ${d.securityHeaders.join(", ") || "None"} (Score: ${securityScores.headers})`,
       `Keywords: ${d.keywords.join(", ") || "None"} (Score: ${securityScores.keywords})`,
-      `ASCII/IDN: ${d.idnData?.is_idn ? 'Non-ASCII (IDN)' : 'ASCII Only'} (${securityScores.ascii >= 80 ? 'Matched' : 'Not Matched'})`,
+      `ASCII/IDN: ${d.idnData?.is_idn ? 'Non-ASCII (IDN)' : 'ASCII Only'} (Score: ${securityScores.ascii})`,
       `ML Score: ${d.mlPhishingScore}% risk (Score: ${securityScores.mlPhishing})`,
       `Overall Score: ${securityScores.overall}%`
     ].filter(Boolean).join('\n');
@@ -607,13 +608,19 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                 <span className="text-green-600 dark:text-green-400 font-semibold">ASCII MATCHED</span>
               )}
               {result.details.idnData.mixed_confusable_scripts && (
-                <span className="ml-2 text-red-600 dark:text-red-400 text-xs">Mixed Scripts</span>
+                <span className="ml-2 text-red-600 dark:text-red-400 text-xs">⚠ Mixed Scripts</span>
               )}
             </>
           ) : (
             <span className="italic text-gray-500 dark:text-gray-400">ASCII NOT MATCHED</span>
           )}
         </div>
+        <button
+          onClick={() => toggleRowExpansion('ascii')}
+          className="ml-3 px-2 py-1 text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 border border-blue-300 dark:border-blue-600 rounded whitespace-nowrap self-center"
+        >
+          {expandedRows['ascii'] ? 'Hide Details ▼' : 'Show Details ▶'}
+        </button>
       </div>
     </td>
     <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">
@@ -632,7 +639,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
         securityScores.ascii >= 60 ? 'text-yellow-600 dark:text-yellow-400' : 
         'text-red-600 dark:text-red-400'
       }`}>
-        {securityScores.ascii >= 80 ? 'Matched' : 'Not Matched'}
+        {securityScores.ascii}
       </div>
     </td>
     <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
@@ -660,6 +667,16 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
       </button>
     </td>
   </tr>
+  {expandedRows['ascii'] && (
+    <tr>
+      <td colSpan={7} className="px-0 py-0 border-t border-gray-200 dark:border-gray-700">
+        <AsciiDetails 
+          idnData={result.details.idnData} 
+          onHide={() => toggleRowExpansion('ascii')} 
+        />
+      </td>
+    </tr>
+  )}
 
 
 </tbody>
