@@ -5,7 +5,7 @@ import ResultsPage from "./results/ResultsPage.jsx";
 // Helper to call your backend header check API
 const checkHeadersUrl = async (inputUrl) => {
   try {
-    const res = await fetch('http://127.0.0.1:5000/api/check-headers', {
+    const res = await fetch('http://127.0.0.1:5001/api/check-headers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: inputUrl })
@@ -39,7 +39,7 @@ function Scanner() {
 
   const analyzeUrl = async (inputUrl) => {
     try {
-      const res = await fetch('http://127.0.0.1:5000/analyze', { 
+      const res = await fetch('http://127.0.0.1:5001/analyze', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }, 
         body: JSON.stringify({ url: inputUrl })
@@ -70,7 +70,11 @@ function Scanner() {
     suspicious += rules.has_suspicious_words||rules.has_brand_words_in_host?25:0;
     suspicious += idn.is_idn||idn.mixed_confusable_scripts?15:0;
 
-    const backendRisk = backendData.risk_score || 0;
+    // Get ML data from backend response
+    const mlData = backendData.ml || null;
+
+    // Prioritize ML score, fallback to backend risk_score (which should be ML if available)
+    const backendRisk = mlData ? mlData.score : (backendData.risk_score || 0);
     if(backendRisk>=70){dangerous+=Math.max(40,dangerous); suspicious=Math.max(suspicious,30); safe=Math.max(10,safe-20);}
     else if(backendRisk>=40){suspicious+=Math.max(25,suspicious); dangerous=Math.max(10,dangerous); safe=Math.max(20,safe-10);}
     else{safe+=Math.max(20,safe); suspicious=Math.max(5,suspicious); dangerous=Math.max(0,dangerous-10);}
@@ -88,7 +92,8 @@ function Scanner() {
 
     const fTotal=nSafe+nSusp+nDanger; if(fTotal!==100){const d=100-fTotal; if(nDanger>=nSusp && nDanger>=nSafe) nDanger+=d; else if(nSusp>=nSafe) nSusp+=d; else nSafe+=d;}
 
-    const classification=backendRisk>=70?"High Risk":backendRisk>=40?"Medium Risk":"Low Risk";
+    // Use ML label if available, otherwise derive from risk score
+    const classification = mlData ? mlData.label : (backendRisk>=70?"High Risk":backendRisk>=40?"Medium Risk":"Low Risk");
 
     const presentHeaders=[];
     if(sh.strict_transport_security)presentHeaders.push("HSTS");
@@ -98,8 +103,10 @@ function Scanner() {
     if(sh.referrer_policy)presentHeaders.push("Referrer-Policy");
 
     const keywords=[...(rules.matched_suspicious||[]),...(rules.matched_brands||[])];
+    const keywordInfo = r.keyword || { keywords_found: keywords, risk_score: 0, risk_factors: [], url: backendData.url };
 
-    const mlPhishingScore=Math.min(Math.round(((rules.has_suspicious_words?0.3:0)+(rules.has_brand_words_in_host?0.4:0)+(idn.is_idn?0.2:0)+(!eSSL.https_ok?0.1:0))*100),100);
+    // Use actual ML score from backend, fallback to calculated if not available
+    const mlPhishingScore = mlData ? mlData.score : Math.min(Math.round(((rules.has_suspicious_words?0.3:0)+(rules.has_brand_words_in_host?0.4:0)+(idn.is_idn?0.2:0)+(!eSSL.https_ok?0.1:0))*100),100);
 
     return {
       url:backendData.url,
@@ -133,7 +140,9 @@ function Scanner() {
         openPorts:[],
         securityHeaders:presentHeaders,
         keywords,
+        keywordInfo,
         mlPhishingScore,
+        mlData,
         httpStatus:h.status||null,
         redirects:h.redirects||0,
         httpsRedirect:h.https_redirect,
@@ -141,6 +150,7 @@ function Scanner() {
         registrar:whois.registrar||"Unknown",
         whoisData:whois,
         headersData:h,
+        idnData:idn,
         errors:{
           ssl:eSSL.errors||[],
           headers:h.errors||[],
@@ -166,9 +176,10 @@ function Scanner() {
       }
       setHeaderResult(headerScan);
       const res = transformBackendResponse(fullScan);
+      console.log('Transformed result:', { riskScore: res.riskScore, classification: res.classification, mlData: res.details.mlData });
       setResult(res); recordScan?.(res); setCurrentPage('results');
     } catch(err) {
-      setError(`Analysis failed: ${err.message}. Make sure your Flask backend is running on http://127.0.0.1:5000`);
+      setError(`Analysis failed: ${err.message}. Make sure your Flask backend is running on http://127.0.0.1:5001`);
       console.error('Scan error:',err);
     } finally { setLoading(false); }
   };

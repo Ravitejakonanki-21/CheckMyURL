@@ -17,6 +17,7 @@ from services.keyword_check import check_url_for_keywords
 from services.content_rules import check_keywords
 from services.headers_check import check_headers
 from services.risk_engine import compute_risk
+from services.ml_scoring import score_url_with_model, ModelNotAvailableError
 from services.simple_cache import cache
 from services.utils import timed_call
 
@@ -130,12 +131,37 @@ def analyze():
         "errors": errors,
     }
 
-    risk_score, label, reasons = compute_risk(results)
+    heuristic_score, heuristic_label, heuristic_reasons = compute_risk(results)
+
+    ml_output = None
+    try:
+        ml_output = score_url_with_model(url, results)
+    except ModelNotAvailableError as e:
+        app.logger.warning(f"ML model unavailable: {e}")
+    except Exception as e:
+        app.logger.exception(f"ML scoring failed for {url}: {e}")
+
+    # Always prioritize ML score when available, otherwise use heuristic
+    if ml_output:
+        risk_score = ml_output["score"]
+        label = ml_output["label"]
+        combined_reasons = list(ml_output.get("reasons") or [])
+        combined_reasons.extend(heuristic_reasons)
+    else:
+        risk_score = heuristic_score
+        label = heuristic_label
+        combined_reasons = list(heuristic_reasons)
 
     response = {
         "url": url,
         "results": results,
-        "reasons": reasons,
+        "heuristic": {
+            "risk_score": heuristic_score,
+            "label": heuristic_label,
+            "reasons": heuristic_reasons,
+        },
+        "ml": ml_output,
+        "reasons": combined_reasons,
         "risk_score": risk_score,
         "label": label,
     }
@@ -328,4 +354,4 @@ def profile():
     })
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(debug=True, host="0.0.0.0", port=5001)

@@ -17,23 +17,28 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
 
 
   useEffect(() => {
-    const fetchWhoisData = async () => {
-      if (expandedRows['whois'] && !whoisData && !loadingWhois) {
+    // Use WHOIS data from the scan result if available, otherwise fetch it
+    if (expandedRows['whois'] && !whoisData && !loadingWhois) {
+      if (result.details.whoisData && Object.keys(result.details.whoisData).length > 0) {
+        // Use WHOIS data from the scan result
+        setWhoisData(result.details.whoisData);
+      } else {
+        // Fallback: fetch WHOIS data separately
         setLoadingWhois(true);
         setWhoisError(null);
-        try {
-          const data = await checkWhois(result.url);
-          setWhoisData(data);
-        } catch (error) {
-          console.error('Failed to fetch WHOIS data:', error);
-          setWhoisError(error.message || 'Failed to fetch domain information');
-        } finally {
-          setLoadingWhois(false);
-        }
+        checkWhois(result.url)
+          .then(data => {
+            setWhoisData(data);
+            setLoadingWhois(false);
+          })
+          .catch(error => {
+            console.error('Failed to fetch WHOIS data:', error);
+            setWhoisError(error.message || 'Failed to fetch domain information');
+            setLoadingWhois(false);
+          });
       }
-    };
-    fetchWhoisData();
-  }, [expandedRows['whois'], result.url, whoisData, loadingWhois]);
+    }
+  }, [expandedRows['whois'], result.url, result.details.whoisData, whoisData, loadingWhois]);
 
 
   const handleCopy = (text, field) => {
@@ -66,8 +71,10 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
       `SSL/TLS: ${d.sslValid ? 'Valid' : 'Invalid'} (Score: ${securityScores.ssl})`,
       ssl.tls_version ? `TLS Version: ${ssl.tls_version}` : '', ssl.cipher_suite ? `Cipher Suite: ${ssl.cipher_suite}` : '',
       `Domain Age: ${d.whoisAgeMonths} months (Score: ${securityScores.domainAge})`,
+      `WHOIS: ${getWhoisSummary()} (Score: ${securityScores.whois})`,
       `Security Headers: ${d.securityHeaders.join(", ") || "None"} (Score: ${securityScores.headers})`,
       `Keywords: ${d.keywords.join(", ") || "None"} (Score: ${securityScores.keywords})`,
+      `ASCII/IDN: ${d.idnData?.is_idn ? 'Non-ASCII (IDN)' : 'ASCII Only'} (${securityScores.ascii >= 80 ? 'Matched' : 'Not Matched'})`,
       `ML Score: ${d.mlPhishingScore}% risk (Score: ${securityScores.mlPhishing})`,
       `Overall Score: ${securityScores.overall}%`
     ].filter(Boolean).join('\n');
@@ -103,12 +110,20 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
 
   // Prepare keywordInfo object for KeywordDetails
   const getKeywordInfo = () => {
+    // Use keywordInfo from details if available, otherwise construct from keywords array
+    if (result.details.keywordInfo) {
+      return result.details.keywordInfo;
+    }
     const keywords = result.details.keywords || [];
     return {
       keywords: keywords,
+      keywords_found: keywords,
       count: keywords.length,
       riskLevel: keywords.length > 5 ? 'high' : keywords.length > 2 ? 'medium' : 'low',
       score: securityScores.keywords,
+      risk_score: result.details.keywordInfo?.risk_score || 0,
+      risk_factors: result.details.keywordInfo?.risk_factors || [],
+      url: result.url,
       detectedAt: lastUpdated
     };
   };
@@ -329,9 +344,19 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
       </div>
     </td>
     <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">WHOIS domain registration details</td>
-    <td className="px-4 py-4 text-center border-r border-gray-300 dark:border-gray-700">—</td>
-    <td className="px-4 py-4 text-center border-r border-gray-300 dark:border-gray-700">—</td>
-    <td className="px-4 py-4 text-center border-r border-gray-300 dark:border-gray-700">{lastUpdated}</td>
+    <td className="px-4 py-4 text-center border-r border-gray-300 dark:border-gray-700">
+      <div className={`text-lg font-bold ${
+        securityScores.whois >= 80 ? 'text-green-600 dark:text-green-400' : 
+        securityScores.whois >= 60 ? 'text-yellow-600 dark:text-yellow-400' : 
+        'text-red-600 dark:text-red-400'
+      }`}>
+        {securityScores.whois}
+      </div>
+    </td>
+    <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
+      {securityScores.weights.whois}%
+    </td>
+    <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">{lastUpdated}</td>
     <td className="px-4 py-4 text-center">
       <button 
         onClick={() => copyToClipboard(JSON.stringify(whoisData, null, 2))}
@@ -560,12 +585,81 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
     <tr>
       <td colSpan={7} className="px-0 py-0 border-t border-gray-200 dark:border-gray-700">
         <KeywordDetails 
+          keywords={result.details.keywords || []}
           keywordInfo={getKeywordInfo()} 
           onHide={() => toggleRowExpansion('keywords')} 
         />
       </td>
     </tr>
   )}
+
+  {/* ASCII/IDN Row */}
+  <tr className="hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors duration-150">
+    <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-gray-200 border-r border-gray-300 dark:border-gray-700">ASCII/IDN</td>
+    <td className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center">
+          {result.details.idnData ? (
+            <>
+              {result.details.idnData.is_idn ? (
+                <span className="text-yellow-600 dark:text-yellow-400 font-semibold">Non-ASCII (IDN)</span>
+              ) : (
+                <span className="text-green-600 dark:text-green-400 font-semibold">ASCII MATCHED</span>
+              )}
+              {result.details.idnData.mixed_confusable_scripts && (
+                <span className="ml-2 text-red-600 dark:text-red-400 text-xs">Mixed Scripts</span>
+              )}
+            </>
+          ) : (
+            <span className="italic text-gray-500 dark:text-gray-400">ASCII NOT MATCHED</span>
+          )}
+        </div>
+      </div>
+    </td>
+    <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">
+      {result.details.idnData?.is_idn 
+        ? "Internationalized Domain Name (IDN) detected - may be used for homograph attacks"
+        : "Domain uses only ASCII characters - safer from homograph attacks"}
+      {result.details.idnData?.scripts && (
+        <div className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+          Scripts: {result.details.idnData.scripts.join(", ")}
+        </div>
+      )}
+    </td>
+    <td className="px-4 py-4 text-center border-r border-gray-300 dark:border-gray-700">
+      <div className={`text-lg font-bold ${
+        securityScores.ascii >= 80 ? 'text-green-600 dark:text-green-400' : 
+        securityScores.ascii >= 60 ? 'text-yellow-600 dark:text-yellow-400' : 
+        'text-red-600 dark:text-red-400'
+      }`}>
+        {securityScores.ascii >= 80 ? 'Matched' : 'Not Matched'}
+      </div>
+    </td>
+    <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
+      {securityScores.weights.ascii}%
+    </td>
+    <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">{lastUpdated}</td>
+    <td className="px-4 py-4 text-center">
+      <button 
+        onClick={() => handleCopy(
+          result.details.idnData 
+            ? `ASCII/IDN: ${result.details.idnData.is_idn ? 'Non-ASCII (IDN)' : 'ASCII Only'}${result.details.idnData.mixed_confusable_scripts ? ' - Mixed Scripts' : ''}`
+            : 'ASCII/IDN: Not analyzed',
+          'ascii'
+        )}
+        className="w-12 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 mx-1 transition-colors duration-200"
+        title="Copy ASCII/IDN Info"
+      >
+        {copiedStates.ascii ? (
+          <span className="text-green-600 dark:text-green-400 text-xs font-medium">Copied!</span>
+        ) : (
+          <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+        )}
+      </button>
+    </td>
+  </tr>
 
 
 </tbody>

@@ -180,9 +180,11 @@ const exportPdf = (result, securityScores) => {
       ["SSL Valid", d.sslValid ? "Yes" : "No", securityScores.ssl, `${securityScores.weights.ssl}%`],
       ["TLS Version", ssl.tls_version || "N/A", ssl.cipher_suite ? "Secure" : "Unknown", "Protocol"],
       ["WHOIS Age (months)", d.whoisAgeMonths || "", securityScores.domainAge, `${securityScores.weights.domainAge}%`],
+      ["WHOIS", d.whoisData?.domain || "N/A", securityScores.whois, `${securityScores.weights.whois}%`],
       ["Open Ports", Array.isArray(d.openPorts) ? d.openPorts.join(", ") || "None" : "None", securityScores.ports, `${securityScores.weights.ports}%`],
       ["Security Headers", Array.isArray(d.securityHeaders) ? d.securityHeaders.join(", ") || "None" : "None", securityScores.headers, `${securityScores.weights.headers}%`],
       ["Keywords", Array.isArray(d.keywords) ? d.keywords.join(", ") || "None" : "None", securityScores.keywords, `${securityScores.weights.keywords}%`],
+      ["ASCII/IDN", d.idnData?.is_idn ? 'Non-ASCII (IDN)' : 'ASCII Only', securityScores.ascii >= 80 ? 'Matched' : 'Not Matched', `${securityScores.weights.ascii}%`],
       ["ML Phishing Score", d.mlPhishingScore || "", securityScores.mlPhishing, `${securityScores.weights.mlPhishing}%`],
     ];
 
