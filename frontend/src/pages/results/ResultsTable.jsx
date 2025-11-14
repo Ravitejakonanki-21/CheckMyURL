@@ -15,7 +15,24 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
   const [loadingWhois, setLoadingWhois] = useState(false);
   const [whoisError, setWhoisError] = useState(null);
   const [securityHeadersExpanded, setSecurityHeadersExpanded] = useState(false);
-
+  const weightages = result.weightages || {};
+  const DISPLAY_WEIGHTS = {
+    ssl: 30,
+    whois: 20,
+    headers: 20,
+    keywords: 10,
+    ascii: 20,
+  };
+  const mlWeightScore = Number.isFinite(weightages.ml_score)
+    ? weightages.ml_score
+    : (result.details?.mlData?.score ?? null);
+  const checksWeightScore = Number.isFinite(weightages.checks_score)
+    ? weightages.checks_score
+    : (result.heuristic?.risk_score ?? securityScores.overall ?? null);
+  const averageWeightScore = Number.isFinite(weightages.average_score)
+    ? weightages.average_score
+    : result.riskScore;
+ 
 
   useEffect(() => {
     // Use WHOIS data from the scan result if available, otherwise fetch it
@@ -67,6 +84,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
 
   const copyAllResults = () => {
     const d = result.details, ssl = d.sslData;
+    const weightageSummary = `Risk Weightages: ML ${Number.isFinite(mlWeightScore) ? `${mlWeightScore}%` : 'N/A'}, Checks ${Number.isFinite(checksWeightScore) ? `${checksWeightScore}%` : 'N/A'}`;
     const text = [
       `URL: ${result.url}`, `Risk Score: ${result.riskScore}%`, `Classification: ${result.classification}`,
       `SSL/TLS: ${d.sslValid ? 'Valid' : 'Invalid'} (Score: ${securityScores.ssl})`,
@@ -77,6 +95,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
       `Keywords: ${d.keywords.join(", ") || "None"} (Score: ${securityScores.keywords})`,
       `ASCII/IDN: ${d.idnData?.is_idn ? 'Non-ASCII (IDN)' : 'ASCII Only'} (Score: ${securityScores.ascii})`,
       `ML Score: ${d.mlPhishingScore}% risk (Score: ${securityScores.mlPhishing})`,
+      weightageSummary,
       `Overall Score: ${securityScores.overall}%`
     ].filter(Boolean).join('\n');
     handleCopy(text, 'all');
@@ -235,6 +254,8 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
   </tr>
 
 
+
+
   {/* SSL/TLS Security Row */}
   <tr className="hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors duration-150">
     <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-gray-200 border-r border-gray-300 dark:border-gray-700">SSL/TLS Security</td>
@@ -271,7 +292,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
       </div>
     </td>
     <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
-      {securityScores.weights.ssl}%
+      {DISPLAY_WEIGHTS.ssl}%
     </td>
     <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">{lastUpdated}</td>
     <td className="px-4 py-4 text-center">
@@ -355,7 +376,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
       </div>
     </td>
     <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
-      {securityScores.weights.whois}%
+      {DISPLAY_WEIGHTS.whois}%
     </td>
     <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">{lastUpdated}</td>
     <td className="px-4 py-4 text-center">
@@ -476,7 +497,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
       </div>
     </td>
     <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
-      {securityScores.weights.headers}%
+      {DISPLAY_WEIGHTS.headers}%
     </td>
     <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">
       {lastUpdated}
@@ -563,7 +584,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
       </div>
     </td>
     <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
-      {securityScores.weights.keywords}%
+      {DISPLAY_WEIGHTS.keywords}%
     </td>
     <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">{lastUpdated}</td>
     <td className="px-4 py-4 text-center">
@@ -643,7 +664,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
       </div>
     </td>
     <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
-      {securityScores.weights.ascii}%
+      {DISPLAY_WEIGHTS.ascii}%
     </td>
     <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">{lastUpdated}</td>
     <td className="px-4 py-4 text-center">

@@ -18,6 +18,7 @@ from services.content_rules import check_keywords
 from services.headers_check import check_headers
 from services.risk_engine import compute_risk
 from services.ml_scoring import score_url_with_model, ModelNotAvailableError
+from services.ascii_unicode_check import validate_ascii_unicode
 from services.simple_cache import cache
 from services.utils import timed_call
 
@@ -97,6 +98,7 @@ def analyze():
     ssl_info, t_ssl, e_ssl = timed_call(check_ssl, hostname)
     whois_info, t_whois, e_whois = timed_call(check_whois, hostname)
     idn_info, t_idn, e_idn = timed_call(check_unicode_domain, hostname, url)  # Pass full URL for encoded char check
+    ascii_unicode_info, t_ascii, e_ascii = timed_call(validate_ascii_unicode, url)
     keyword_info, t_keyword, e_keyword = timed_call(check_url_for_keywords, url)
     rules_info, t_rules, e_rules = timed_call(check_keywords, url)
     headers_info, t_head, e_head = timed_call(check_headers, url)
@@ -107,6 +109,7 @@ def analyze():
         "ssl_ms": int(t_ssl * 1000),
         "whois_ms": int(t_whois * 1000),
         "idn_ms": int(t_idn * 1000),
+        "ascii_unicode_ms": int(t_ascii * 1000),
         "keyword_ms": int(t_keyword * 1000),
         "rules_ms": int(t_rules * 1000),
         "headers_ms": int(t_head * 1000),
@@ -115,6 +118,7 @@ def analyze():
         "ssl": e_ssl,
         "whois": e_whois,
         "idn": e_idn,
+        "ascii_unicode": e_ascii,
         "keyword": e_keyword,
         "rules": e_rules,
         "headers": e_head,
@@ -124,6 +128,7 @@ def analyze():
         "ssl": ssl_info,
         "whois": whois_info,
         "idn": idn_info,
+        "ascii_unicode": ascii_unicode_info,
         "keyword": keyword_info,
         "rules": rules_info,
         "headers": headers_info,
@@ -141,16 +146,29 @@ def analyze():
     except Exception as e:
         app.logger.exception(f"ML scoring failed for {url}: {e}")
 
-    # Always prioritize ML score when available, otherwise use heuristic
+    # Compute weightages and averaged risk score
+    ml_weightage = ml_output["score"] if ml_output else None
+    checks_weightage = heuristic_score
+
+    scores_for_average = [checks_weightage]
+    if ml_weightage is not None:
+        scores_for_average.append(ml_weightage)
+
+    averaged_risk_score = int(round(sum(scores_for_average) / len(scores_for_average)))
+
+    def label_from_score(score: int) -> str:
+        if score >= 70:
+            return "High Risk"
+        if score >= 40:
+            return "Medium Risk"
+        return "Low Risk"
+
+    label = label_from_score(averaged_risk_score)
+
+    combined_reasons = []
     if ml_output:
-        risk_score = ml_output["score"]
-        label = ml_output["label"]
-        combined_reasons = list(ml_output.get("reasons") or [])
-        combined_reasons.extend(heuristic_reasons)
-    else:
-        risk_score = heuristic_score
-        label = heuristic_label
-        combined_reasons = list(heuristic_reasons)
+        combined_reasons.extend(ml_output.get("reasons") or [])
+    combined_reasons.extend(heuristic_reasons)
 
     response = {
         "url": url,
@@ -161,8 +179,13 @@ def analyze():
             "reasons": heuristic_reasons,
         },
         "ml": ml_output,
+        "weightages": {
+            "ml_score": ml_weightage,
+            "checks_score": checks_weightage,
+            "average_score": averaged_risk_score,
+        },
         "reasons": combined_reasons,
-        "risk_score": risk_score,
+        "risk_score": averaged_risk_score,
         "label": label,
     }
     cache.set(cache_key, response)

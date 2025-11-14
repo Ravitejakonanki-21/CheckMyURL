@@ -19,6 +19,16 @@ function ResultsPage({
     ...result,
     pie: { ...result.pie, series: securityScores.pieData },
   };
+  const weightages = result.weightages || {};
+  const mlWeightScore = Number.isFinite(weightages.ml_score)
+    ? weightages.ml_score
+    : (result.details?.mlData?.score ?? null);
+  const checksWeightScore = Number.isFinite(weightages.checks_score)
+    ? weightages.checks_score
+    : (result.heuristic?.risk_score ?? securityScores.overall ?? null);
+  const averageWeightScore = Number.isFinite(weightages.average_score)
+    ? weightages.average_score
+    : result.riskScore;
 
   return (
     <div className="min-h-screen bg-white dark:bg-black transition-colors duration-300">
@@ -134,6 +144,22 @@ function ResultsPage({
                 ? `Detected risky keywords: ${result.details.keywords.join(", ")}.`
                 : "No suspicious keywords detected."}
             </p>
+            <div className="mt-4 grid grid-cols-1 gap-3">
+              <div className="rounded-lg border border-blue-200 dark:border-blue-800 p-3 bg-blue-50 dark:bg-blue-900/30">
+                <p className="text-xs uppercase tracking-wide text-blue-600 dark:text-blue-200">
+                  Average (Final Score)
+                </p>
+                <p className={`text-lg font-semibold ${
+                  averageWeightScore >= 70
+                    ? "text-red-600 dark:text-red-400"
+                    : averageWeightScore >= 40
+                      ? "text-yellow-600 dark:text-yellow-400"
+                      : "text-green-600 dark:text-green-400"
+                }`}>
+                  {Number.isFinite(averageWeightScore) ? `${averageWeightScore}%` : "N/A"}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 

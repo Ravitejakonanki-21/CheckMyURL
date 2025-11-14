@@ -72,9 +72,25 @@ function Scanner() {
 
     // Get ML data from backend response
     const mlData = backendData.ml || null;
+    const heuristicData = backendData.heuristic || {};
+    const mlScore = typeof (mlData?.score) === "number" ? mlData.score : null;
+    const heuristicScore = typeof (heuristicData?.risk_score) === "number" ? heuristicData.risk_score : null;
+    const fallbackScores = [mlScore, heuristicScore].filter(score => typeof score === "number");
+    const computedAverage = fallbackScores.length
+      ? Math.round(fallbackScores.reduce((sum, score) => sum + score, 0) / fallbackScores.length)
+      : (typeof backendData.risk_score === "number" ? backendData.risk_score : 0);
 
-    // Prioritize ML score, fallback to backend risk_score (which should be ML if available)
-    const backendRisk = mlData ? mlData.score : (backendData.risk_score || 0);
+    const weightages = backendData.weightages || {
+      ml_score: mlScore,
+      checks_score: heuristicScore,
+      average_score: computedAverage,
+    };
+
+    const backendRisk = typeof weightages.average_score === "number"
+      ? weightages.average_score
+      : (typeof backendData.risk_score === "number"
+          ? backendData.risk_score
+          : (mlScore ?? heuristicScore ?? 0));
     if(backendRisk>=70){dangerous+=Math.max(40,dangerous); suspicious=Math.max(suspicious,30); safe=Math.max(10,safe-20);}
     else if(backendRisk>=40){suspicious+=Math.max(25,suspicious); dangerous=Math.max(10,dangerous); safe=Math.max(20,safe-10);}
     else{safe+=Math.max(20,safe); suspicious=Math.max(5,suspicious); dangerous=Math.max(0,dangerous-10);}
@@ -93,7 +109,9 @@ function Scanner() {
     const fTotal=nSafe+nSusp+nDanger; if(fTotal!==100){const d=100-fTotal; if(nDanger>=nSusp && nDanger>=nSafe) nDanger+=d; else if(nSusp>=nSafe) nSusp+=d; else nSafe+=d;}
 
     // Use ML label if available, otherwise derive from risk score
-    const classification = mlData ? mlData.label : (backendRisk>=70?"High Risk":backendRisk>=40?"Medium Risk":"Low Risk");
+    const classification = backendData.label
+      ? backendData.label
+      : (mlData ? mlData.label : (backendRisk>=70?"High Risk":backendRisk>=40?"Medium Risk":"Low Risk"));
 
     const presentHeaders=[];
     if(sh.strict_transport_security)presentHeaders.push("HSTS");
@@ -112,6 +130,7 @@ function Scanner() {
       url:backendData.url,
       riskScore:backendRisk,
       classification,
+      weightages,
       pie:{
         series:[nSafe,nSusp,nDanger],
         labels:['Safe','Suspicious','Dangerous'],
@@ -151,6 +170,7 @@ function Scanner() {
         whoisData:whois,
         headersData:h,
         idnData:idn,
+        weightages,
         errors:{
           ssl:eSSL.errors||[],
           headers:h.errors||[],
