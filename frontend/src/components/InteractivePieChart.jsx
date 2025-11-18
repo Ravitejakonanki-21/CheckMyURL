@@ -1,11 +1,12 @@
 import { useState } from "react";
 
 const InteractivePieChart = ({ data }) => {
-  const { series, labels, colors } = data;
+  const { series, labels, colors, total: suppliedTotal } = data;
   const [hoveredIndex, setHoveredIndex] = useState(null);
-  const total = Array.isArray(series)
+  const computedTotal = Array.isArray(series)
     ? Math.min(100, Math.max(0, Math.round(series.reduce((sum, value) => sum + (Number(value) || 0), 0))))
     : 0;
+  const total = Number.isFinite(suppliedTotal) ? suppliedTotal : computedTotal;
 
   const gradient = `conic-gradient(${colors.map((color, i) => { 
     const start = series.slice(0, i).reduce((s,v)=>s+v,0); 

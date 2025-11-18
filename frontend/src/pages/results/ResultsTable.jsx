@@ -18,9 +18,9 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
   const weightages = result.weightages || {};
   const DISPLAY_WEIGHTS = {
     ssl: 30,
-    whois: 20,
+    whois: 30,
     headers: 20,
-    keywords: 10,
+    keywords: 5,
     ascii: 20,
   };
   const mlWeightScore = Number.isFinite(weightages.ml_score)

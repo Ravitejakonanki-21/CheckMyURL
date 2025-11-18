@@ -17,7 +17,7 @@ function ResultsPage({
   const lastUpdated = formatLastUpdated(result.details.scanTime);
   const updatedResult = {
     ...result,
-    pie: { ...result.pie, series: securityScores.pieData },
+    pie: { ...result.pie, series: securityScores.pieData, total: securityScores.overall },
   };
   const weightages = result.weightages || {};
   const mlWeightScore = Number.isFinite(weightages.ml_score)

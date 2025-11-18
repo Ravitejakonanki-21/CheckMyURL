@@ -61,7 +61,12 @@ function Scanner() {
     safe += eSSL.tls_version==='TLSv1.3'?10:eSSL.tls_version==='TLSv1.2'?5: eSSL.tls_version?0:0; if(eSSL.tls_version && !['TLSv1.3','TLSv1.2'].includes(eSSL.tls_version)) suspicious+=10;
     safe += eSSL.certificate_chain_complete?10:0; suspicious += !eSSL.certificate_chain_complete?15:0;
 
-    const sh = h.security_headers || {}, hc = Object.values(sh).filter(Boolean).length;
+    const sh = h.security_headers || {};
+    const normalizedHeaders = Object.entries(sh).reduce((acc, [key, value]) => {
+      acc[key.toLowerCase()] = value;
+      return acc;
+    }, {});
+    const hc = Object.values(sh).filter(Boolean).length;
     safe += hc>=3?20:hc>=1?10:0; suspicious += hc<1?15:0;
 
     const whoisAgeMonths = (()=>{if(!whois.creation_date)return 0; try{const d=new Date(whois.creation_date),c=new Date(); let m=(c.getFullYear()-d.getFullYear())*12+c.getMonth()-d.getMonth(); if(c.getDate()<d.getDate())m--; return Math.max(0,m);}catch(e){return whois.age_days?Math.round(whois.age_days/30.44):0;}})();
@@ -114,11 +119,11 @@ function Scanner() {
       : (mlData ? mlData.label : (backendRisk>=70?"High Risk":backendRisk>=40?"Medium Risk":"Low Risk"));
 
     const presentHeaders=[];
-    if(sh.strict_transport_security)presentHeaders.push("HSTS");
-    if(sh.content_security_policy)presentHeaders.push("CSP");
-    if(sh.x_content_type_options)presentHeaders.push("X-Content-Type-Options");
-    if(sh.x_frame_options)presentHeaders.push("X-Frame-Options");
-    if(sh.referrer_policy)presentHeaders.push("Referrer-Policy");
+    if(normalizedHeaders["strict-transport-security"])presentHeaders.push("HSTS");
+    if(normalizedHeaders["content-security-policy"])presentHeaders.push("CSP");
+    if(normalizedHeaders["x-content-type-options"])presentHeaders.push("X-Content-Type-Options");
+    if(normalizedHeaders["x-frame-options"])presentHeaders.push("X-Frame-Options");
+    if(normalizedHeaders["referrer-policy"])presentHeaders.push("Referrer-Policy");
 
     const keywords=[...(rules.matched_suspicious||[]),...(rules.matched_brands||[])];
     const keywordInfo = r.keyword || { keywords_found: keywords, risk_score: 0, risk_factors: [], url: backendData.url };

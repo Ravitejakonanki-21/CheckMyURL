@@ -1,7 +1,50 @@
 // CALCULATE INDIVIDUAL SECURITY SCORES WITHOUT TRUST SCORE
+const SAFE_THRESHOLD = 70;
+const WARNING_THRESHOLD = 40;
+
+const splitRemainder = (remainder, classification, riskScore) => {
+  if (remainder <= 0) return [0, 0];
+
+  const score = Number(riskScore);
+  const label = (classification || "").toLowerCase();
+  const isHigh = label.includes("high") || score >= 70;
+  const isMedium = label.includes("medium") || (score >= 40 && score < 70);
+
+  if (isHigh) {
+    return [0, remainder];
+  }
+
+  if (isMedium) {
+    const dangerous = Math.round(remainder * 0.3);
+    return [remainder - dangerous, dangerous];
+  }
+
+  return [remainder, 0];
+};
+
+const buildPieData = (scores, weights, result, overallPercentage) => {
+  const safe = Math.max(0, Math.min(100, overallPercentage));
+  const remainder = 100 - safe;
+  const [suspicious, dangerous] = splitRemainder(remainder, result.classification, result.riskScore);
+
+  const total = safe + suspicious + dangerous;
+  if (total !== 100) {
+    const diff = 100 - total;
+    if (dangerous > 0) {
+      return [safe, suspicious, dangerous + diff];
+    }
+    if (suspicious > 0) {
+      return [safe, suspicious + diff, dangerous];
+    }
+    return [safe + diff, suspicious, dangerous];
+  }
+
+  return [safe, suspicious, dangerous];
+};
+
 export const calculateSecurityScores = (result) => {
   const scores = { ssl: 0, domainAge: 0, ports: 0, headers: 0, keywords: 0, mlPhishing: 0, ascii: 0, whois: 0 },
-        weights = { ssl: 30, domainAge: 20, ports: 10, headers: 15, keywords: 15, mlPhishing: 10, ascii: 10, whois: 15 };
+        weights = { ssl: 30, domainAge: 30, ports: 10, headers: 15, keywords: 5, mlPhishing: 10, ascii: 10, whois: 15 };
 
   const { sslValid, sslExpired, sslSelfSigned, whoisAgeMonths, openPorts, securityHeaders, keywords, mlPhishingScore, idnData, whoisData } = result.details;
 
@@ -85,7 +128,9 @@ export const calculateSecurityScores = (result) => {
         totalWeight = Object.values(weights).reduce((sum, w) => sum + w, 0),
         overallPercentage = Math.round(weightedSum / totalWeight);
 
-  return { ...scores, overall: overallPercentage, weights, pieData: result.pie?.series || [60, 25, 15] };
+  const pieData = buildPieData(scores, weights, result, overallPercentage);
+
+  return { ...scores, overall: overallPercentage, weights, pieData };
 };
 
 // FORMAT LAST UPDATED TIME
