@@ -147,4 +147,3 @@ For additional details, browse the code or open an issue/PR in the GitHub reposi
 ---
 
 Happy scanning!
-
