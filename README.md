@@ -49,7 +49,7 @@ A full‑stack web application that analyses URLs for phishing, poor SSL/TLS hyg
 
 1. **Clone the repo**
    ```bash
-   git clone https://github.com/Sahana1255/url-checker.git
+   git clone https://github.com/Ravitejakonanki-21/url-checker.git
    cd url-checker
    ```
 
