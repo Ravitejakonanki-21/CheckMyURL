@@ -20,13 +20,17 @@ def _get_client() -> MongoClient:
     global _client, _client_pid
     pid = os.getpid()
     if _client is None or _client_pid != pid:
-        _client = MongoClient(
-            _MONGO_URI,
-            maxPoolSize=int(os.getenv("MONGO_MAX_POOL_SIZE", "100")),
-            serverSelectionTimeoutMS=int(
-                os.getenv("MONGO_SERVER_SELECTION_TIMEOUT_MS", "5000")
-            ),
+        # Use a longer timeout in production (Atlas can be slow on cold start)
+        timeout_ms = int(os.getenv("MONGO_SERVER_SELECTION_TIMEOUT_MS", "30000"))
+        kwargs: dict = dict(
+            maxPoolSize=int(os.getenv("MONGO_MAX_POOL_SIZE", "10")),
+            serverSelectionTimeoutMS=timeout_ms,
         )
+        # Atlas (mongodb+srv) requires TLS. The Python 3.11 slim image's OpenSSL
+        # can trigger TLSV1_ALERT_INTERNAL_ERROR; bypass cert verification to fix.
+        if _MONGO_URI.startswith("mongodb+srv"):
+            kwargs["tlsAllowInvalidCertificates"] = True
+        _client = MongoClient(_MONGO_URI, **kwargs)
         _client_pid = pid
     return _client
 

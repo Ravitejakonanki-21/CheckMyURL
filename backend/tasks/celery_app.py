@@ -9,9 +9,17 @@ from celery import Celery
 load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent.parent / ".env")
 
 
+def _fix_rediss_url(url: str) -> str:
+    """Celery requires ssl_cert_reqs param for rediss:// URLs (Upstash TLS)."""
+    if url.startswith("rediss://") and "ssl_cert_reqs" not in url:
+        sep = "&" if "?" in url else "?"
+        url = f"{url}{sep}ssl_cert_reqs=CERT_NONE"
+    return url
+
+
 def make_celery() -> Celery:
-    broker_url = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
-    result_backend = os.getenv("CELERY_RESULT_BACKEND", broker_url)
+    broker_url = _fix_rediss_url(os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0"))
+    result_backend = _fix_rediss_url(os.getenv("CELERY_RESULT_BACKEND", broker_url))
 
     app = Celery(
         "url_checker",
