@@ -13,9 +13,11 @@ COPY backend/services/requirements.txt /app/backend/services/requirements.txt
 RUN pip install -r /app/backend/services/requirements.txt
 
 COPY backend /app/backend
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
 
 EXPOSE 5001
 
 WORKDIR /app/backend
-CMD ["python", "app.py"]
+CMD ["/app/start.sh"]
 
