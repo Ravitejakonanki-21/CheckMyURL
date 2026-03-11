@@ -9,8 +9,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       build-essential curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-COPY backend/services/requirements.txt /app/backend/services/requirements.txt
-RUN pip install -r /app/backend/services/requirements.txt
+COPY backend/requirements.txt /app/requirements.txt
+RUN pip install -r /app/requirements.txt
 
 COPY backend /app/backend
 COPY start.sh /app/start.sh
