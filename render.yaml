@@ -31,5 +31,8 @@ services:
         sync: false
       - key: FLASK_RUN_HOST
         value: "0.0.0.0"
-      - key: FLASK_RUN_PORT
-        value: "5001"
+      # PORT is set by Render (default 10000) - app binds to it automatically
+      - key: REDIS_SSL_CERT_REQS
+        value: "CERT_NONE"
+      - key: MONGO_TLS_ALLOW_INVALID_CERTIFICATES
+        value: "true"

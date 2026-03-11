@@ -16,7 +16,7 @@ COPY backend /app/backend
 COPY start.sh /app/start.sh
 RUN chmod +x /app/start.sh
 
-EXPOSE 5001
+EXPOSE 10000
 
 WORKDIR /app/backend
 CMD ["/app/start.sh"]

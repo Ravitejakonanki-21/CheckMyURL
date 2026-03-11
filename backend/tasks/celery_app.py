@@ -10,11 +10,13 @@ load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent.parent / ".env")
 
 
 def _fix_rediss_url(url: str) -> str:
-    """Celery requires ssl_cert_reqs param for rediss:// URLs (Upstash TLS)."""
+    """Celery requires ssl_cert_reqs param for rediss:// URLs (Upstash/Redis TLS)."""
     url = url.strip()  # Remove hidden \n from env vars
     if url.startswith("rediss://") and "ssl_cert_reqs" not in url:
+        # CERT_REQUIRED for production; CERT_NONE for providers like Upstash
+        cert_reqs = os.getenv("REDIS_SSL_CERT_REQS", "CERT_REQUIRED")
         sep = "&" if "?" in url else "?"
-        url = f"{url}{sep}ssl_cert_reqs=CERT_NONE"
+        url = f"{url}{sep}ssl_cert_reqs={cert_reqs}"
     return url
 
 

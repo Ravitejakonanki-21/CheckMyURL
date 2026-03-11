@@ -60,10 +60,11 @@ serializer = URLSafeTimedSerializer(app.config["JWT_SECRET_KEY"])
 
 # Rate limiter — uses Redis when available, falls back to in-memory
 _redis_url = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
-# Upstash rediss:// URLs require ssl_cert_reqs param for flask-limiter
+# rediss:// URLs require ssl_cert_reqs param (CERT_REQUIRED or CERT_NONE for Upstash)
 if _redis_url.startswith("rediss://") and "ssl_cert_reqs" not in _redis_url:
+    _cert_reqs = os.getenv("REDIS_SSL_CERT_REQS", "CERT_REQUIRED")
     _sep = "&" if "?" in _redis_url else "?"
-    _redis_url = f"{_redis_url}{_sep}ssl_cert_reqs=CERT_NONE"
+    _redis_url = f"{_redis_url}{_sep}ssl_cert_reqs={_cert_reqs}"
 limiter = Limiter(
     key_func=get_remote_address,
     app=app,
@@ -525,4 +526,6 @@ def profile():
     })
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5001)
+    port = int(os.getenv("PORT", os.getenv("FLASK_RUN_PORT", "5001")))
+    host = os.getenv("FLASK_RUN_HOST", "0.0.0.0")
+    app.run(debug=True, host=host, port=port)
