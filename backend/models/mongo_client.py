@@ -14,7 +14,12 @@ _client_pid: int | None = None
 
 
 def _normalize_atlas_uri(uri: str) -> str:
-    """Ensure mongodb+srv URIs have retryWrites and tls params for Atlas."""
+    """Ensure mongodb+srv URIs have retryWrites and w params for Atlas.
+    
+    NOTE: tlsAllowInvalidCertificates is intentionally NOT added to the URI
+    string — it is passed as a MongoClient kwarg instead. Mixing both methods
+    causes OpenSSL 3.x on Debian slim to raise TLSV1_ALERT_INTERNAL_ERROR.
+    """
     if not uri.startswith("mongodb+srv://"):
         return uri
     parsed = urlparse(uri)
@@ -23,9 +28,8 @@ def _normalize_atlas_uri(uri: str) -> str:
         query["retryWrites"] = ["true"]
     if "w" not in query:
         query["w"] = ["majority"]
-    allow_invalid = os.getenv("MONGO_TLS_ALLOW_INVALID_CERTIFICATES", "true").lower() in ("1", "true", "yes")
-    if "tlsAllowInvalidCertificates" not in query and allow_invalid:
-        query["tlsAllowInvalidCertificates"] = ["true"]
+    # Strip out any stale tlsAllowInvalidCertificates from the URI string
+    query.pop("tlsAllowInvalidCertificates", None)
     new_query = urlencode(query, doseq=True)
     return urlunparse(parsed._replace(query=new_query))
 
@@ -99,4 +103,3 @@ def ensure_indexes() -> None:
         [("actor_id", ASCENDING), ("timestamp", DESCENDING)],
         name="idx_audit_actor_time",
     )
-
