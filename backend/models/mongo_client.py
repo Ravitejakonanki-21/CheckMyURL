@@ -23,6 +23,9 @@ def _normalize_atlas_uri(uri: str) -> str:
         query["retryWrites"] = ["true"]
     if "w" not in query:
         query["w"] = ["majority"]
+    allow_invalid = os.getenv("MONGO_TLS_ALLOW_INVALID_CERTIFICATES", "true").lower() in ("1", "true", "yes")
+    if "tlsAllowInvalidCertificates" not in query and allow_invalid:
+        query["tlsAllowInvalidCertificates"] = ["true"]
     new_query = urlencode(query, doseq=True)
     return urlunparse(parsed._replace(query=new_query))
 
@@ -42,14 +45,16 @@ def _get_client() -> MongoClient:
             serverSelectionTimeoutMS=timeout_ms,
         )
         if uri.startswith("mongodb+srv"):
-            # Atlas TLS: use certifi for CA, optionally allow invalid certs if needed
-            try:
-                import certifi
-                kwargs["tlsCAFile"] = certifi.where()
-            except ImportError:
-                pass
+            # Atlas TLSV1_ALERT_INTERNAL_ERROR fix: skip tlsCAFile when allowing invalid certs.
+            # certifi + strict verification can fail with OpenSSL 3.x on Debian slim.
             allow_invalid = os.getenv("MONGO_TLS_ALLOW_INVALID_CERTIFICATES", "true").lower() in ("1", "true", "yes")
             kwargs["tlsAllowInvalidCertificates"] = allow_invalid
+            if not allow_invalid:
+                try:
+                    import certifi
+                    kwargs["tlsCAFile"] = certifi.where()
+                except ImportError:
+                    pass
         _client = MongoClient(uri, **kwargs)
         _client_pid = pid
     return _client

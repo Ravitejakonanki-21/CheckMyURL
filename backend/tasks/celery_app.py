@@ -1,5 +1,7 @@
 import os
+import ssl
 from pathlib import Path
+from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 
 from dotenv import load_dotenv
 from celery import Celery
@@ -11,24 +13,41 @@ load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent.parent / ".env")
 
 def _fix_rediss_url(url: str) -> str:
     """Celery requires ssl_cert_reqs param for rediss:// URLs (Upstash/Redis TLS)."""
-    url = url.strip()  # Remove hidden \n from env vars
-    if url.startswith("rediss://") and "ssl_cert_reqs" not in url:
-        # CERT_REQUIRED for production; CERT_NONE for providers like Upstash
-        cert_reqs = os.getenv("REDIS_SSL_CERT_REQS", "CERT_REQUIRED")
-        sep = "&" if "?" in url else "?"
-        url = f"{url}{sep}ssl_cert_reqs={cert_reqs}"
-    return url
+    url = url.strip()
+    if not url.startswith("rediss://") or "ssl_cert_reqs" in url:
+        return url
+    cert_reqs = os.getenv("REDIS_SSL_CERT_REQS", "CERT_NONE")
+    parsed = urlparse(url)
+    query = parse_qs(parsed.query)
+    query["ssl_cert_reqs"] = [cert_reqs]
+    new_query = urlencode(query, doseq=True)
+    return urlunparse(parsed._replace(query=new_query))
+
+
+def _ssl_cert_reqs_value() -> int:
+    """Map REDIS_SSL_CERT_REQS env to ssl constant."""
+    v = os.getenv("REDIS_SSL_CERT_REQS", "CERT_NONE").upper()
+    if v == "CERT_REQUIRED":
+        return ssl.CERT_REQUIRED
+    if v == "CERT_OPTIONAL":
+        return ssl.CERT_OPTIONAL
+    return ssl.CERT_NONE
 
 
 def make_celery() -> Celery:
     broker_url = _fix_rediss_url(os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0"))
     result_backend = _fix_rediss_url(os.getenv("CELERY_RESULT_BACKEND", broker_url))
 
+    # Override env so any Celery/kombu code reading from env gets the fixed URLs
+    os.environ["CELERY_BROKER_URL"] = broker_url
+    os.environ["CELERY_RESULT_BACKEND"] = result_backend
+
     app = Celery(
         "url_checker",
         broker=broker_url,
         backend=result_backend,
     )
+    ssl_opts = {"ssl_cert_reqs": _ssl_cert_reqs_value()}
     app.conf.update(
         task_serializer="json",
         result_serializer="json",
@@ -41,6 +60,8 @@ def make_celery() -> Celery:
         ),
         task_time_limit=int(os.getenv("CELERY_TASK_TIME_LIMIT", "120")),
         task_soft_time_limit=int(os.getenv("CELERY_TASK_SOFT_TIME_LIMIT", "90")),
+        broker_use_ssl=ssl_opts if broker_url.startswith("rediss://") else False,
+        redis_backend_use_ssl=ssl_opts if result_backend.startswith("rediss://") else False,
     )
     return app
 
