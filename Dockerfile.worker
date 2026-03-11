@@ -14,8 +14,6 @@ RUN pip install -r /app/backend/services/requirements.txt
 
 COPY backend /app/backend
 
-EXPOSE 5001
-
 WORKDIR /app/backend
-CMD ["python", "app.py"]
 
+CMD ["celery", "-A", "tasks.celery_app.celery_app", "worker", "--loglevel=INFO"]

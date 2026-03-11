@@ -1,0 +1,52 @@
+services:
+  # ─── Flask API ────────────────────────────────────────────────
+  - type: web
+    name: checkmyurl-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: MONGO_URI
+        sync: false          # paste from MongoDB Atlas
+      - key: MONGO_DB_NAME
+        value: url_checker
+      - key: MONGO_MAX_POOL_SIZE
+        value: 10            # keep low on free tier
+      - key: MONGO_SERVER_SELECTION_TIMEOUT_MS
+        value: 5000
+      - key: CELERY_BROKER_URL
+        sync: false          # paste from Upstash Redis (rediss://...)
+      - key: CELERY_RESULT_BACKEND
+        sync: false          # same Upstash URL
+      - key: JWT_SECRET_KEY
+        generateValue: true  # Render auto-generates a secure random value
+      - key: JWT_ACCESS_TOKEN_EXPIRES
+        value: 1800
+      - key: FRONTEND_URL
+        sync: false          # your Vercel URL e.g. https://checkmyurl.vercel.app
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: FLASK_RUN_HOST
+        value: "0.0.0.0"
+      - key: FLASK_RUN_PORT
+        value: "5001"
+
+  # ─── Celery Worker ───────────────────────────────────────────
+  - type: worker
+    name: checkmyurl-celery
+    runtime: docker
+    dockerfilePath: ./Dockerfile.worker
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: MONGO_DB_NAME
+        value: url_checker
+      - key: CELERY_BROKER_URL
+        sync: false
+      - key: CELERY_RESULT_BACKEND
+        sync: false
