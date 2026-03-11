@@ -35,4 +35,4 @@ services:
       - key: REDIS_SSL_CERT_REQS
         value: "CERT_NONE"
       - key: MONGO_TLS_ALLOW_INVALID_CERTIFICATES
-        value: "true"
+        value: "false"

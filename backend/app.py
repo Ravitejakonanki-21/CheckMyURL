@@ -62,7 +62,7 @@ serializer = URLSafeTimedSerializer(app.config["JWT_SECRET_KEY"])
 _redis_url = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
 # rediss:// URLs require ssl_cert_reqs param (CERT_REQUIRED or CERT_NONE for Upstash)
 if _redis_url.startswith("rediss://") and "ssl_cert_reqs" not in _redis_url:
-    _cert_reqs = os.getenv("REDIS_SSL_CERT_REQS", "CERT_REQUIRED")
+    _cert_reqs = os.getenv("REDIS_SSL_CERT_REQS", "CERT_NONE")
     _sep = "&" if "?" in _redis_url else "?"
     _redis_url = f"{_redis_url}{_sep}ssl_cert_reqs={_cert_reqs}"
 limiter = Limiter(
@@ -76,7 +76,11 @@ limiter = Limiter(
 _users_col = get_collection("users")
 
 # Ensure DB indexes for SOC collections
-ensure_indexes()
+try:
+    ensure_indexes()
+    app.logger.info("MongoDB indexes ensured")
+except Exception as e:
+    app.logger.error(f"MongoDB index creation failed: {e}")
 
 # Register SOC-related blueprints (scans, analyst workflow)
 for bp in all_blueprints:

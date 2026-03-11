@@ -24,12 +24,17 @@ def _normalize_atlas_uri(uri: str) -> str:
         return uri
     parsed = urlparse(uri)
     query = parse_qs(parsed.query)
+
+    # Strip tlsAllowInvalidCertificates from the query string so kwargs takes full control
+    query.pop("tlsAllowInvalidCertificates", None)
+
     if "retryWrites" not in query:
         query["retryWrites"] = ["true"]
     if "w" not in query:
         query["w"] = ["majority"]
     # Strip out any stale tlsAllowInvalidCertificates from the URI string
     query.pop("tlsAllowInvalidCertificates", None)
+
     new_query = urlencode(query, doseq=True)
     return urlunparse(parsed._replace(query=new_query))
 
@@ -43,23 +48,31 @@ def _get_client() -> MongoClient:
     pid = os.getpid()
     if _client is None or _client_pid != pid:
         uri = _normalize_atlas_uri(_MONGO_URI.strip())
-        timeout_ms = int(os.getenv("MONGO_SERVER_SELECTION_TIMEOUT_MS", "30000"))
+        timeout_ms = int(os.getenv("MONGO_SERVER_SELECTION_TIMEOUT_MS", "10000"))
         kwargs: dict = dict(
             maxPoolSize=int(os.getenv("MONGO_MAX_POOL_SIZE", "10")),
             serverSelectionTimeoutMS=timeout_ms,
+            connectTimeoutMS=10000,
+            socketTimeoutMS=10000,
         )
         if uri.startswith("mongodb+srv"):
-            # Atlas TLSV1_ALERT_INTERNAL_ERROR fix: skip tlsCAFile when allowing invalid certs.
-            # certifi + strict verification can fail with OpenSSL 3.x on Debian slim.
-            allow_invalid = os.getenv("MONGO_TLS_ALLOW_INVALID_CERTIFICATES", "true").lower() in ("1", "true", "yes")
+            import certifi
+            allow_invalid = os.getenv("MONGO_TLS_ALLOW_INVALID_CERTIFICATES", "false").lower() in ("1", "true", "yes")
             kwargs["tlsAllowInvalidCertificates"] = allow_invalid
+            kwargs["tls"] = True
             if not allow_invalid:
-                try:
-                    import certifi
-                    kwargs["tlsCAFile"] = certifi.where()
-                except ImportError:
-                    pass
+                kwargs["tlsCAFile"] = certifi.where()
+
         _client = MongoClient(uri, **kwargs)
+        
+        # Force connection test early to catch issues directly instead of letting them surface on query
+        try:
+            _client.admin.command("ping")
+        except Exception as e:
+            # Let it raise to be visible in logs, or handled during start
+            print(f"MongoDB Ping Failed: {e}")
+            raise e
+            
         _client_pid = pid
     return _client
 
