@@ -12,8 +12,8 @@
   "dependencies": {
     "apexcharts": "^5.3.5",
     "framer-motion": "^12.23.22",
-    "jspdf": "^3.0.3",
-    "jspdf-autotable": "^5.0.2",
+    "jspdf": "^3.0.4",
+    "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.544.0",
     "react": "^19.1.1",
     "react-apexcharts": "^1.7.0",

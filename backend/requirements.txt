@@ -32,3 +32,4 @@ scikit-learn==1.5.2
 
 celery
 redis
+flask-limiter[redis]>=3.5.0

@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 import ResultsTable from "./ResultsTable.jsx";
 import InteractivePieChart from "../../components/InteractivePieChart.jsx";
 import NewScanModal from "../../components/NewScanModal.jsx";
@@ -65,7 +67,7 @@ function ResultsPage({
         </h1>
 
         <button
-          onClick={() => window.jsPDF && exportPdf(result, securityScores)}
+          onClick={() => exportPdf(result, securityScores)}
           className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700 transition-colors duration-200 dark:bg-blue-500 dark:hover:bg-blue-600 border border-blue-700 dark:border-blue-400"
         >
           <svg
@@ -98,13 +100,12 @@ function ResultsPage({
               Risk Score:
             </span>
             <span
-              className={`text-2xl font-bold ${
-                result.riskScore >= 70
+              className={`text-2xl font-bold ${result.riskScore >= 70
                   ? "text-red-600 dark:text-red-400"
                   : result.riskScore >= 40
-                  ? "text-yellow-600 dark:text-yellow-400"
-                  : "text-green-600 dark:text-green-400"
-              }`}
+                    ? "text-yellow-600 dark:text-yellow-400"
+                    : "text-green-600 dark:text-green-400"
+                }`}
             >
               {result.riskScore}
             </span>
@@ -121,13 +122,12 @@ function ResultsPage({
               Classification:
             </span>
             <span
-              className={`text-lg font-semibold ${
-                result.classification === "High Risk"
+              className={`text-lg font-semibold ${result.classification === "High Risk"
                   ? "text-red-600 dark:text-red-400"
                   : result.classification === "Medium Risk"
-                  ? "text-yellow-600 dark:text-yellow-400"
-                  : "text-green-600 dark:text-green-400"
-              }`}
+                    ? "text-yellow-600 dark:text-yellow-400"
+                    : "text-green-600 dark:text-green-400"
+                }`}
             >
               {result.classification}
             </span>
@@ -149,13 +149,12 @@ function ResultsPage({
                 <p className="text-xs uppercase tracking-wide text-blue-600 dark:text-blue-200">
                   Average (Final Score)
                 </p>
-                <p className={`text-lg font-semibold ${
-                  averageWeightScore >= 70
+                <p className={`text-lg font-semibold ${averageWeightScore >= 70
                     ? "text-red-600 dark:text-red-400"
                     : averageWeightScore >= 40
                       ? "text-yellow-600 dark:text-yellow-400"
                       : "text-green-600 dark:text-green-400"
-                }`}>
+                  }`}>
                   {Number.isFinite(averageWeightScore) ? `${averageWeightScore}%` : "N/A"}
                 </p>
               </div>

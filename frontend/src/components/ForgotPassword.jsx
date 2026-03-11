@@ -4,15 +4,16 @@ import { useNavigate } from "react-router-dom";
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState("");
+  const [isSuccess, setIsSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setStatus("");
+    setIsSuccess(false);
     setLoading(true);
     try {
-      // Replace with your real endpoint if needed:
       const response = await fetch("http://localhost:5001/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -20,19 +21,21 @@ export default function ForgotPassword() {
       });
       const data = await response.json();
       if (response.ok) {
-        setStatus("If the email exists, reset instructions have been sent.");
+        setIsSuccess(true);
+        setStatus(data.message || "If the email exists, reset instructions have been sent.");
       } else {
-        setStatus(data.error || "Failed to send reset instructions");
+        setIsSuccess(false);
+        setStatus(data.error || "Failed to send reset instructions.");
       }
     } catch {
-      setStatus("Network error");
+      setStatus("Network error — make sure the server is running.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div 
+    <div
       className="min-h-screen flex items-center justify-center px-4"
       style={{
         backgroundImage: 'url(/bg.jpg)',
@@ -66,8 +69,8 @@ export default function ForgotPassword() {
               />
             </div>
             {status && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-600 text-sm text-center">{status}</p>
+              <div className={`p-3 border rounded-lg ${isSuccess ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}>
+                <p className={`text-sm text-center ${isSuccess ? "text-green-700" : "text-red-600"}`}>{status}</p>
               </div>
             )}
             <button

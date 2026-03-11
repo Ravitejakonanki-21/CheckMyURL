@@ -34,3 +34,4 @@ lerna-debug.log*
 
 # Data and other output folders
 DataFiles/
+.agent/

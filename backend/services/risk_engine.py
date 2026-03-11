@@ -8,7 +8,9 @@ def compute_risk(results: dict) -> tuple[int, str, list[str]]:
     rules = results.get("rules", {})
 
     # SSL
-    if not ssl.get("https_ok"):
+    if ssl.get("is_http_only"):
+        score += 35; reasons.append("http_only_url")
+    elif not ssl.get("https_ok"):
         score += 30; reasons.append("no_https")
     if ssl.get("expired"):
         score += 30; reasons.append("expired_cert")

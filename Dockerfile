@@ -1,0 +1,22 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      build-essential curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY backend/services/requirements.txt /app/backend/services/requirements.txt
+RUN pip install -r /app/backend/services/requirements.txt
+
+COPY backend /app/backend
+COPY .env /app/.env
+
+EXPOSE 5001
+
+WORKDIR /app/backend
+CMD ["python", "app.py"]
+

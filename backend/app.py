@@ -2,11 +2,13 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import os
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from urllib.parse import urlparse
 from dotenv import load_dotenv
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from flask_mail import Mail, Message
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 load_dotenv()
 
@@ -24,31 +26,56 @@ from services.utils import timed_call
 
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import (
-    JWTManager, create_access_token, jwt_required, get_jwt_identity
+    JWTManager,
+    create_access_token,
+    jwt_required,
+    get_jwt_identity,
 )
-from pymongo import MongoClient
+
+from models.mongo_client import ensure_indexes, get_collection
+from models.user_model import get_user_by_email, create_user
+from routes import all_blueprints
 
 app = Flask(__name__)
 CORS(app)
 app.logger.setLevel(logging.INFO)
 
-app.config['DEBUG'] = True
-app.config['JWT_SECRET_KEY'] = 'super-secret-key'
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
-app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
-app.config['MAIL_DEFAULT_SENDER'] = 'noreply@checkmyurl.com'
+app.config["DEBUG"] = True
+app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "super-secret-key")
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(
+    seconds=int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES", "1800"))
+)
+app.config["MAIL_SERVER"] = "smtp.gmail.com"
+app.config["MAIL_PORT"] = 587
+app.config["MAIL_USE_TLS"] = True
+app.config["MAIL_USERNAME"] = os.getenv("MAIL_USERNAME")
+app.config["MAIL_PASSWORD"] = os.getenv("MAIL_PASSWORD")
+# Gmail SMTP requires the sender to match the authenticated account
+app.config["MAIL_DEFAULT_SENDER"] = os.getenv("MAIL_USERNAME", "noreply@checkmyurl.com")
 
 jwt = JWTManager(app)
 bcrypt = Bcrypt(app)
 mail = Mail(app)
-serializer = URLSafeTimedSerializer(app.config['JWT_SECRET_KEY'])
+serializer = URLSafeTimedSerializer(app.config["JWT_SECRET_KEY"])
 
-mongo_client = MongoClient("mongodb://localhost:27017/")
-db = mongo_client["url_checker"]
-users = db.users
+# Rate limiter — uses Redis when available, falls back to in-memory
+_redis_url = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
+limiter = Limiter(
+    key_func=get_remote_address,
+    app=app,
+    storage_uri=_redis_url,
+    default_limits=["200/minute"],
+)
+
+# Use the shared MongoDB client from models layer (respects MONGO_URI env var)
+_users_col = get_collection("users")
+
+# Ensure DB indexes for SOC collections
+ensure_indexes()
+
+# Register SOC-related blueprints (scans, analyst workflow)
+for bp in all_blueprints:
+    app.register_blueprint(bp)
 
 @app.after_request
 def set_security_headers(response):
@@ -81,6 +108,7 @@ def home():
     return send_from_directory(os.path.join(app.root_path, "static"), "index.html")
 
 @app.post("/analyze")
+@limiter.limit("30/minute")
 def analyze():
     data = request.get_json(force=True) or {}
     url = (data.get("url") or "").strip()
@@ -94,8 +122,15 @@ def analyze():
 
     parsed = urlparse(url if "://" in url else "https://" + url)
     hostname = parsed.hostname or url
+    is_http_url = parsed.scheme == "http"
 
     ssl_info, t_ssl, e_ssl = timed_call(check_ssl, hostname)
+    if ssl_info and is_http_url:
+        # URL was explicitly submitted as http:// — treat as no secure channel,
+        # regardless of what is reachable on port 443.
+        ssl_info["https_ok"] = False
+        ssl_info["is_http_only"] = True
+        ssl_info.setdefault("errors", []).append("url_scheme_is_http_not_https")
     whois_info, t_whois, e_whois = timed_call(check_whois, hostname)
     idn_info, t_idn, e_idn = timed_call(check_unicode_domain, hostname, url)  # Pass full URL for encoded char check
     ascii_unicode_info, t_ascii, e_ascii = timed_call(validate_ascii_unicode, url)
@@ -189,7 +224,37 @@ def analyze():
         "label": label,
     }
     cache.set(cache_key, response)
+
+    # Persist scan result to MongoDB for authenticated users
+    _persist_scan_result(url, response)
+
     return jsonify(response)
+
+def _persist_scan_result(url: str, response: dict) -> None:
+    """
+    If the current request has a valid JWT, save the scan result to MongoDB.
+    Fires silently — never raises so it cannot break the /analyze response.
+    """
+    try:
+        from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+        verify_jwt_in_request(optional=True)
+        email = get_jwt_identity()
+        if not email:
+            return
+        from models.user_model import get_user_by_email
+        from models.scan_model import create_scan, save_scan_results
+        from utils.risk_explainable import build_explainable_risk
+        user = get_user_by_email(email)
+        if not user:
+            return
+        scan_id = create_scan(url, user["_id"])
+        risk = build_explainable_risk(response.get("results", {}), response.get("ml"))
+        save_scan_results(scan_id, risk, response.get("results", {}))
+        from models.scan_model import update_scan_state
+        update_scan_state(scan_id, "SCANNED")
+    except Exception as exc:
+        app.logger.debug(f"scan persistence skipped: {exc}")
+
 
 def ensure_whois_fields_complete(whois_info):
     expected_fields = {
@@ -284,49 +349,101 @@ def whois_check_endpoint():
 def health_check():
     return jsonify({"status": "healthy", "timestamp": datetime.utcnow().isoformat() + "Z"})
 
+
+@app.get("/api/history")
+@limiter.limit("60/minute")
+def get_scan_history():
+    """
+    Return the authenticated user's scan history from MongoDB (most recent first).
+    Falls back to empty list if user has no scans yet.
+    """
+    from flask_jwt_extended import jwt_required, get_jwt_identity
+    # Manual JWT enforcement so we can return a clean 401
+    from flask_jwt_extended import verify_jwt_in_request
+    try:
+        verify_jwt_in_request()
+    except Exception:
+        return jsonify({"error": "authentication required"}), 401
+
+    email = get_jwt_identity()
+    from models.user_model import get_user_by_email
+    from models.scan_model import list_scans_for_user
+    user = get_user_by_email(email)
+    if not user:
+        return jsonify({"error": "user_not_found"}), 404
+
+    docs = list_scans_for_user(user["_id"], limit=100)
+    serialised = []
+    for d in docs:
+        d["_id"] = str(d["_id"])
+        d["submitted_by"] = str(d["submitted_by"])
+        # Flatten for the frontend ScanContext history format
+        risk = d.get("risk") or {}
+        serialised.append({
+            "scanId":        d["_id"],
+            "url":           d.get("url", ""),
+            "riskScore":     risk.get("total_score", 0),
+            "classification": risk.get("severity_level", "UNKNOWN"),
+            "scannedAt":     d.get("submitted_at", "").isoformat() if hasattr(d.get("submitted_at", ""), "isoformat") else str(d.get("submitted_at", "")),
+            "state":         d.get("state", "SCANNED"),
+            "tools": {
+                "SSL":      1 if (d.get("raw_results") or {}).get("ssl", {}).get("https_ok") else 0,
+                "WHOIS":    1 if (d.get("raw_results") or {}).get("whois", {}).get("age_days") else 0,
+                "Headers":  len(((d.get("raw_results") or {}).get("headers") or {}).get("security_headers") or {}),
+                "Keywords": len(((d.get("raw_results") or {}).get("keyword") or {}).get("keywords_found") or []),
+                "Ports":    0,
+                "ML":       1 if (d.get("raw_results") or {}).get("ml") else 0,
+            },
+        })
+    return jsonify(serialised), 200
+
 @app.route('/<path:path>')
 def serve_static(path):
     return send_from_directory(os.path.join(app.root_path, "static"), path)
 
 @app.post('/register')
+@limiter.limit("5/minute")
 def register():
-    data = request.get_json()
+    data = request.get_json() or {}
     email = (data.get('email') or "").lower()
-    password = data.get('password')
-    if users.find_one({'email': email}):
+    password = data.get('password') or ""
+    if not email or not password:
+        return jsonify({'error': 'Email and password are required'}), 400
+    if get_user_by_email(email):
         return jsonify({'error': 'Email already registered'}), 409
     hashed = bcrypt.generate_password_hash(password).decode('utf-8')
-    users.insert_one({
-        'email': email,
-        'password_hash': hashed,
-        'credits': 10,
-        'subscription_level': 'free',
-        'created_at': datetime.utcnow()
-    })
+    # create_user sets role='USER', credits=10, subscription_level='free'
+    create_user(email, hashed, role='USER')
     return jsonify({'message': 'Registration successful!'}), 201
 
 @app.post('/login')
+@limiter.limit("5/minute")
 def login():
-    data = request.get_json()
+    data = request.get_json() or {}
     email = (data.get('email') or "").lower()
-    password = data.get('password')
+    password = data.get('password') or ""
 
-    user = users.find_one({'email': email})
+    user = get_user_by_email(email)
     if (not user) or (not bcrypt.check_password_hash(user['password_hash'], password)):
         return jsonify({'error': 'Invalid credentials'}), 401
-    token = create_access_token(identity=email)
+    # Embed role in token so rbac.py (roles_required decorator) can read it
+    additional_claims = {"role": user.get("role", "USER")}
+    token = create_access_token(identity=email, additional_claims=additional_claims)
     return jsonify({
         'token': token,
         'email': user['email'],
-        'credits': user['credits'],
-        'subscription_level': user['subscription_level']
+        'credits': user.get('credits', 10),
+        'subscription_level': user.get('subscription_level', 'free'),
+        'role': user.get('role', 'USER')
     })
 
 @app.post('/export-logs')
 @jwt_required()
 def export_logs():
     email = get_jwt_identity()
-    user = users.find_one({"email": email})
+    user = get_user_by_email(email)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
     allowed, note = is_feature_unlocked(user, "export_logs")
     if not allowed:
         return jsonify({"error": "Feature locked!", "note": note}), 403
@@ -334,17 +451,43 @@ def export_logs():
 
 @app.post("/forgot-password")
 def forgot_password():
-    data = request.get_json()
+    data = request.get_json() or {}
     email = data.get("email", "").lower()
-    user = users.find_one({"email": email})
+    if not email:
+        return jsonify({"error": "Email is required"}), 400
+
+    # Check mail is configured
+    mail_user = os.getenv("MAIL_USERNAME", "")
+    mail_pass = os.getenv("MAIL_PASSWORD", "")
+    if not mail_user or not mail_pass:
+        return jsonify({"error": "Email service is not configured. Please contact the administrator."}), 503
+
+    user = get_user_by_email(email)
     if not user:
-        return jsonify({"message": "If the email exists, instructions have been sent."}), 200
+        # Return success anyway to prevent email enumeration
+        return jsonify({"message": "If the email exists, reset instructions have been sent."}), 200
+
     token = serializer.dumps(email, salt="password-reset")
-    reset_link = f"http://localhost:3000/reset-password/{token}"
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")  # default to Vite port
+    reset_link = f"{frontend_url}/reset-password/{token}"
+
     msg = Message("Password Reset Request", recipients=[email])
-    msg.body = f"To reset your password, click the link: {reset_link}"
-    msg.html = f"<p>Click <a href='{reset_link}'>here</a> to reset your password.</p>"
-    mail.send(msg)
+    msg.body = f"To reset your password, click the link:\n{reset_link}\n\nThis link expires in 1 hour."
+    msg.html = f"""
+    <div style="font-family:sans-serif;max-width:480px;margin:auto">
+      <h2 style="color:#0891b2">CheckMyURL Password Reset</h2>
+      <p>Click the button below to reset your password. This link expires in <strong>1 hour</strong>.</p>
+      <a href="{reset_link}" style="display:inline-block;padding:12px 24px;background:#0891b2;color:#fff;border-radius:8px;text-decoration:none;font-weight:bold">Reset Password</a>
+      <p style="margin-top:24px;color:#6b7280;font-size:13px">If you didn't request this, you can safely ignore this email.</p>
+    </div>
+    """
+
+    try:
+        mail.send(msg)
+    except Exception as e:
+        app.logger.error(f"Failed to send reset email to {email}: {e}")
+        return jsonify({"error": "Failed to send email. Check server mail configuration."}), 500
+
     return jsonify({"message": f"Reset instructions sent to {email}."}), 200
 
 @app.post("/reset-password")
@@ -359,21 +502,22 @@ def reset_password():
     except BadSignature:
         return jsonify({"error": "Invalid or tampered link"}), 400
     hashed_pw = bcrypt.generate_password_hash(new_password).decode('utf-8')
-    users.update_one({"email": email}, {"$set": {"password_hash": hashed_pw}})
+    _users_col.update_one({"email": email}, {"$set": {"password_hash": hashed_pw}})
     return jsonify({"message": "Password reset successful!"}), 200
 
 @app.get('/profile')
 @jwt_required()
 def profile():
     email = get_jwt_identity()
-    user = users.find_one({'email': email})
+    user = get_user_by_email(email)
     if not user:
         return jsonify({'error': 'User not found'}), 404
     return jsonify({
         'email': user['email'],
-        'credits': user['credits'],
-        'subscription_level': user['subscription_level'],
-        'created_at': user['created_at']
+        'credits': user.get('credits', 10),
+        'subscription_level': user.get('subscription_level', 'free'),
+        'role': user.get('role', 'USER'),
+        'created_at': user.get('created_at')
     })
 
 if __name__ == "__main__":

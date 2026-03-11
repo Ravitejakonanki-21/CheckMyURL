@@ -1,0 +1,73 @@
+version: "3.9"
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  backend:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      MONGO_URI: "mongodb://mongo:27017/url_checker"
+      MONGO_DB_NAME: "url_checker"
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/0"
+      FLASK_RUN_HOST: "0.0.0.0"
+      FLASK_RUN_PORT: "5001"
+      FRONTEND_URL: "http://localhost:3000"
+    ports:
+      - "5001:5001"
+    depends_on:
+      - mongo
+      - redis
+
+  celery-worker:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      MONGO_URI: "mongodb://mongo:27017/url_checker"
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/0"
+    command:
+      [
+        "celery",
+        "-A",
+        "tasks.celery_app.celery_app",
+        "worker",
+        "--loglevel=INFO",
+      ]
+    depends_on:
+      - backend
+      - redis
+      - mongo
+
+  frontend:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 3000"
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://backend:5001
+    depends_on:
+      - backend
+
+volumes:
+  mongo-data:
