@@ -130,9 +130,7 @@ def is_feature_unlocked(user, feature):
 def _log_request():
     app.logger.info(f"{datetime.utcnow().isoformat()}Z {request.method} {request.path}")
 
-@app.get("/")
-def home():
-    return send_from_directory(os.path.join(app.root_path, "static"), "index.html")
+
 
 @app.post("/analyze")
 @limiter.limit("30/minute")
@@ -424,9 +422,13 @@ def get_scan_history():
         })
     return jsonify(serialised), 200
 
+@app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve_static(path):
-    return send_from_directory(os.path.join(app.root_path, "static"), path)
+    static_folder = os.path.join(app.root_path, "static")
+    if path != "" and os.path.exists(os.path.join(static_folder, path)):
+        return send_from_directory(static_folder, path)
+    return send_from_directory(static_folder, "index.html")
 
 @app.post('/register')
 @limiter.limit("5/minute")
