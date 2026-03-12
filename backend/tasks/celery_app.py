@@ -14,11 +14,25 @@ load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent.parent / ".env")
 def _fix_rediss_url(url: str) -> str:
     """Celery requires ssl_cert_reqs param for rediss:// URLs (Upstash/Redis TLS)."""
     url = url.strip()
-    if not url.startswith("rediss://") or "ssl_cert_reqs" in url:
+    if not url.startswith("rediss://"):
         return url
-    cert_reqs = os.getenv("REDIS_SSL_CERT_REQS", "CERT_NONE")
+    
     parsed = urlparse(url)
     query = parse_qs(parsed.query)
+    
+    # Intercept existing query string or fallback to env
+    if "ssl_cert_reqs" in query:
+        cert_reqs = query["ssl_cert_reqs"][0].lower()
+    else:
+        cert_reqs = os.getenv("REDIS_SSL_CERT_REQS", "none").lower()
+        
+    if cert_reqs in ("cert_none", "none"): 
+        cert_reqs = "none"
+    elif cert_reqs in ("cert_required", "required"): 
+        cert_reqs = "required"
+    elif cert_reqs in ("cert_optional", "optional"): 
+        cert_reqs = "optional"
+
     query["ssl_cert_reqs"] = [cert_reqs]
     new_query = urlencode(query, doseq=True)
     return urlunparse(parsed._replace(query=new_query))
@@ -26,10 +40,10 @@ def _fix_rediss_url(url: str) -> str:
 
 def _ssl_cert_reqs_value() -> int:
     """Map REDIS_SSL_CERT_REQS env to ssl constant."""
-    v = os.getenv("REDIS_SSL_CERT_REQS", "CERT_NONE").upper()
-    if v == "CERT_REQUIRED":
+    v = os.getenv("REDIS_SSL_CERT_REQS", "none").lower()
+    if v in ("cert_required", "required"):
         return ssl.CERT_REQUIRED
-    if v == "CERT_OPTIONAL":
+    if v in ("cert_optional", "optional"):
         return ssl.CERT_OPTIONAL
     return ssl.CERT_NONE
 

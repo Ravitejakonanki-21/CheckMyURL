@@ -60,11 +60,29 @@ serializer = URLSafeTimedSerializer(app.config["JWT_SECRET_KEY"])
 
 # Rate limiter — uses Redis when available, falls back to in-memory
 _redis_url = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
-# rediss:// URLs require ssl_cert_reqs param (CERT_REQUIRED or CERT_NONE for Upstash)
-if _redis_url.startswith("rediss://") and "ssl_cert_reqs" not in _redis_url:
-    _cert_reqs = os.getenv("REDIS_SSL_CERT_REQS", "CERT_NONE")
-    _sep = "&" if "?" in _redis_url else "?"
-    _redis_url = f"{_redis_url}{_sep}ssl_cert_reqs={_cert_reqs}"
+# rediss:// URLs require ssl_cert_reqs param (CERT_REQUIRED or none/optional)
+if _redis_url.startswith("rediss://"):
+    from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+    parsed = urlparse(_redis_url)
+    query = parse_qs(parsed.query)
+    
+    # Extract existing or environment-based cert requirement
+    if "ssl_cert_reqs" in query:
+        _cert_reqs = query["ssl_cert_reqs"][0].lower()
+    else:
+        _cert_reqs = os.getenv("REDIS_SSL_CERT_REQS", "none").lower()
+        
+    if _cert_reqs in ("cert_none", "none"): 
+        _cert_reqs = "none"
+    elif _cert_reqs in ("cert_required", "required"): 
+        _cert_reqs = "required"
+    elif _cert_reqs in ("cert_optional", "optional"): 
+        _cert_reqs = "optional"
+        
+    query["ssl_cert_reqs"] = [_cert_reqs]
+    new_query = urlencode(query, doseq=True)
+    _redis_url = urlunparse(parsed._replace(query=new_query))
+
 limiter = Limiter(
     key_func=get_remote_address,
     app=app,
