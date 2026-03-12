@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-const API = 'http://127.0.0.1:5001';
+const API = '/';
 
 function authHeader() {
     const token = localStorage.getItem('access_token') || localStorage.getItem('token');

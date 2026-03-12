@@ -5,7 +5,7 @@ import ResultsPage from "./results/ResultsPage.jsx";
 // Helper to call your backend header check API
 const checkHeadersUrl = async (inputUrl) => {
   try {
-    const res = await fetch('http://127.0.0.1:5001/api/check-headers', {
+    const res = await fetch('/api/check-headers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: inputUrl })
@@ -39,7 +39,7 @@ function Scanner() {
 
   const analyzeUrl = async (inputUrl) => {
     try {
-      const res = await fetch('http://127.0.0.1:5001/analyze', {
+      const res = await fetch('/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: inputUrl })
@@ -209,7 +209,7 @@ function Scanner() {
       console.log('Transformed result:', { riskScore: res.riskScore, classification: res.classification, mlData: res.details.mlData });
       setResult(res); recordScan?.(res); setCurrentPage('results');
     } catch (err) {
-      setError(`Analysis failed: ${err.message}. Make sure your Flask backend is running on http://127.0.0.1:5001`);
+      setError(`Analysis failed: ${err.message}. Make sure your Flask backend is running on /`);
       console.error('Scan error:', err);
     } finally { setLoading(false); }
   };
