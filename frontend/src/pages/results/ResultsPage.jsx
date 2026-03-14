@@ -190,7 +190,7 @@ const exportPdf = (result, securityScores) => {
     const doc = new jsPDF({ unit: "pt", format: "a4" });
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
-    doc.text("BLUECHECK — Security Scan Report", 40, 40);
+    doc.text("CYBERSHIELD — Security Scan Report", 40, 40);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
     const ts = new Date().toLocaleString();

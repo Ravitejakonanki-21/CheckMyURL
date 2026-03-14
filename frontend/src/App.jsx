@@ -32,9 +32,10 @@ function InnerApp({ isAuthenticated }) {
   const { isShowingResults } = useScan();
   
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)] transition-colors duration-200">
+    <div className="min-h-screen flex flex-col bg-[var(--bg-primary)] transition-colors duration-200">
       {!isShowingResults && <Navbar />}
-      <Routes>
+      <main className="flex-1 flex flex-col">
+        <Routes>
               {/* Public routes */}
               <Route path="/scanner" element={<Scanner />} />
               <Route
@@ -76,6 +77,7 @@ function InnerApp({ isAuthenticated }) {
                 <Route path="/admin" element={<AdminPanel />} />
               </Route>
       </Routes>
+      </main>
     </div>
   );
 }

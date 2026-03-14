@@ -86,7 +86,7 @@ function Login() {
               loading="eager"
             />
             <h1 className="text-3xl font-bold text-[#00e5ff]">
-              BLUECHECK
+              CYBERSHIELD
             </h1>
           </div>
           <p className="text-[var(--text-secondary)] text-sm">

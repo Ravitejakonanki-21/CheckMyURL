@@ -29,7 +29,7 @@ function exportHistoryPDF(items) {
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(16);
-    doc.text('BLUECHECK — Scan History Report', 40, 40);
+    doc.text('CYBERSHIELD — Scan History Report', 40, 40);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
     doc.text(`Generated: ${new Date().toLocaleString()}`, 40, 60);

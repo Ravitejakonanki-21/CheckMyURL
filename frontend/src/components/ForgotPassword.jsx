@@ -42,7 +42,7 @@ export default function ForgotPassword() {
         <div className="text-center mb-2">
           <div className="flex items-center justify-center gap-3 mb-2">
             <img src="/logo.png" alt="CheckMyURL logo" className="h-16 w-16" loading="eager" />
-            <h1 className="text-3xl font-bold text-[#00e5ff]">BLUECHECK</h1>
+            <h1 className="text-3xl font-bold text-[#00e5ff]">CYBERSHIELD</h1>
           </div>
           <p className="text-[var(--text-secondary)] text-sm">Forgot your password?</p>
         </div>

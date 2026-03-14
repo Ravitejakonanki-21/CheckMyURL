@@ -34,12 +34,8 @@ const Navbar = () => {
       <nav className="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 bg-[#00e5ff] rounded-lg flex items-center justify-center">
-             <svg className="w-5 h-5 text-[#0e0e0e]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-             </svg>
-          </div>
-          <span className="text-xl font-black text-gray-900 dark:text-white tracking-tighter">BLUE<span className="text-[#00e5ff]">CHECK</span></span>
+          <img src="/logo.png" alt="CYBERSHIELD Logo" className="h-10 w-10 object-contain" />
+          <span className="text-xl font-black text-gray-900 dark:text-white tracking-tighter">CYBER<span className="text-[#00e5ff]">SHIELD</span></span>
         </div>
 
         {/* Nav links (Center) */}

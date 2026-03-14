@@ -225,17 +225,17 @@ function Scanner() {
   }
 
   return (
-    <div className="relative min-h-screen bg-[var(--bg-primary)] flex flex-col items-center justify-center px-4 overflow-hidden py-12 transition-colors duration-300">
+    <div className="relative flex-1 flex flex-col items-center justify-center px-4 overflow-hidden transition-colors duration-300">
       <div className="w-full max-w-5xl flex flex-col items-center relative z-10 transition-all duration-500">
         <div className="mb-8 transform hover:scale-105 transition-transform duration-500">
-           <img src="/bluecheck_mascot.png" alt="BLUECHECK AI" className="h-32 w-32 object-contain" />
+           <img src="/bluecheck_mascot.png" alt="CYBERSHIELD" className="h-32 w-32 object-contain" />
         </div>
 
         <div className="text-center mb-12">
           <h2 className="text-[var(--text-primary)] text-2xl md:text-3xl font-black mb-3 flex items-center justify-center gap-2">
-            Meet, <span className="text-[#00e5ff]">BLUECHECK AI</span>
+            Meet, <span className="text-[#00e5ff]">CYBERSHIELD</span>
           </h2>
-          <p className="text-[var(--text-secondary)] text-lg md:text-xl font-bold tracking-tight">Your intelligent guardian for URL security</p>
+          <p className="text-[var(--text-secondary)] text-lg md:text-xl font-bold tracking-tight">Detect Phishing Protect Every Click</p>
         </div>
 
         {!showScanner ? (
@@ -328,10 +328,6 @@ function Scanner() {
         )}
       </div>
 
-      <div className="mt-20 flex flex-col items-center gap-4 z-10 opacity-40 hover:opacity-100 transition-opacity">
-        <div className="text-[10px] font-black uppercase tracking-[0.4em] text-[#333]">Explore More</div>
-        <svg className="w-4 h-4 text-[#333] animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
-      </div>
     </div>
   );
 }
