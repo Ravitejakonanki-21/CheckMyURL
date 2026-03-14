@@ -170,8 +170,8 @@ const EnhancedSSLDetails = ({ sslData, securityScores, lastUpdated, onHide }) =>
   if (!showDetails) return null;
 
   return (
-    <div className="w-full p-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-500/30 rounded-lg">
-      <h4 className="font-medium text-sm text-gray-900 dark:text-blue-300 flex items-center mb-4">
+    <div className="w-full p-6 bg-[#00e5ff]/10 dark:bg-[#00e5ff]/5 border border-[#00e5ff]/30 dark:border-[#00e5ff]/20 rounded-lg">
+      <h4 className="font-medium text-sm text-gray-900 dark:text-[#00e5ff] flex items-center mb-4">
         <svg
           className="w-5 h-5 mr-2"
           fill="none"
@@ -250,7 +250,7 @@ const EnhancedSSLDetails = ({ sslData, securityScores, lastUpdated, onHide }) =>
 
         {/* Summary */}
         <div className="space-y-4">
-          <h5 className="font-medium text-sm text-gray-900 dark:text-gray-100 mb-3 flex items-center border-b border-blue-300 dark:border-blue-500/30 pb-2">
+          <h5 className="font-medium text-sm text-gray-900 dark:text-gray-100 mb-3 flex items-center border-b border-[#00e5ff]/30 dark:border-[#00e5ff]/20 pb-2">
             <svg
               className="w-5 h-5 mr-2"
               fill="none"
@@ -309,7 +309,7 @@ const EnhancedSSLDetails = ({ sslData, securityScores, lastUpdated, onHide }) =>
           <div className="flex justify-center mt-4">
             <button
               onClick={() => onHide()}
-              className="ml-2 text-lg text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+              className="ml-2 text-lg text-[#00e5ff] hover:text-[#00ccf0] dark:text-[#00e5ff] dark:hover:text-[#00ccf0] font-medium"
             >
               Hide Details ▼
             </button>

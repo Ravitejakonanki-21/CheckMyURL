@@ -8,8 +8,8 @@ function authHeader() {
 }
 
 const CLASSIFICATION_STYLES = {
-    safe: { text: 'Safe', color: 'text-green-500', badge: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' },
-    low: { text: 'Low Risk', color: 'text-green-500', badge: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' },
+    safe: { text: 'Safe', color: 'text-[#00e5ff]', badge: 'bg-[#00e5ff]/10 text-[#00e5ff] border border-[#00e5ff]/20' },
+    low: { text: 'Low Risk', color: 'text-[#00e5ff]', badge: 'bg-[#00e5ff]/10 text-[#00e5ff] border border-[#00e5ff]/20' },
     medium: { text: 'Medium Risk', color: 'text-yellow-500', badge: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300' },
     suspicious: { text: 'Suspicious', color: 'text-yellow-500', badge: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300' },
     high: { text: 'High Risk', color: 'text-red-500', badge: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' },
@@ -131,7 +131,7 @@ export default function BulkScan() {
                 {/* Header */}
                 <div className="mb-8">
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                        🔍 Bulk <span className="text-cyan-500">URL Scanner</span>
+                        🔍 Bulk <span className="text-[#00e5ff]">URL Scanner</span>
                     </h1>
                     <p className="text-gray-500 dark:text-gray-400 mt-1">
                         Scan up to 50 URLs at once — paste one per line or comma-separated
@@ -148,7 +148,7 @@ export default function BulkScan() {
                         onChange={e => setInput(e.target.value)}
                         rows={6}
                         placeholder={'https://example.com\nhttps://suspicious-site.xyz\nhttps://anotherurl.com'}
-                        className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 font-mono text-sm focus:ring-2 focus:ring-cyan-500 focus:outline-none resize-vertical"
+                        className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 font-mono text-sm focus:ring-2 focus:ring-[#00e5ff] focus:outline-none resize-vertical"
                         disabled={scanning}
                     />
                     <div className="flex items-center justify-between mt-4 flex-wrap gap-3">
@@ -165,7 +165,7 @@ export default function BulkScan() {
                             <button
                                 onClick={scanning ? undefined : startScan}
                                 disabled={scanning || parseUrls(input).length === 0}
-                                className="px-6 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                className="px-6 py-2 rounded-lg bg-[#00e5ff] hover:bg-[#00ccf0] text-[#0e0e0e] text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                             >
                                 {scanning ? (
                                     <>
@@ -184,7 +184,7 @@ export default function BulkScan() {
                     {scanning && (
                         <div className="mt-4 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                             <div
-                                className="bg-cyan-500 h-2 rounded-full transition-all duration-300"
+                                className="bg-[#00e5ff] h-2 rounded-full transition-all duration-300"
                                 style={{ width: `${progress}%` }}
                             />
                         </div>
@@ -196,7 +196,7 @@ export default function BulkScan() {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                         {[
                             { label: 'Total', value: results.length, color: 'text-blue-500' },
-                            { label: 'Safe', value: safe, color: 'text-green-500' },
+                            { label: 'Safe', value: safe, color: 'text-[#00e5ff]' },
                             { label: 'Medium', value: medium, color: 'text-yellow-500' },
                             { label: 'High Risk', value: high, color: 'text-red-500' },
                         ].map((c, i) => (

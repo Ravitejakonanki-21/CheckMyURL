@@ -7,8 +7,8 @@ const NewScanModal = ({ isOpen, onClose, onConfirm }) => {
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-              <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <div className="w-10 h-10 bg-[#00e5ff]/10 dark:bg-[#00e5ff]/20 rounded-full flex items-center justify-center">
+              <svg className="w-5 h-5 text-[#00e5ff] dark:text-[#00e5ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             </div>
             <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Start New Scan</h3>
           </div>
@@ -30,8 +30,8 @@ const NewScanModal = ({ isOpen, onClose, onConfirm }) => {
 
         {/* Footer */}
         <div className="flex items-center justify-end space-x-3 p-6 bg-gray-50 dark:bg-gray-800 rounded-b-2xl border-t border-gray-200 dark:border-gray-700">
-          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-400 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200">Cancel</button>
-          <button onClick={onConfirm} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200">Start New Scan</button>
+          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-400 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-[#00e5ff] transition-colors duration-200">Cancel</button>
+          <button onClick={onConfirm} className="px-4 py-2 text-sm font-medium text-[#0e0e0e] bg-[#00e5ff] border border-transparent rounded-lg hover:bg-[#00ccf0] focus:outline-none focus:ring-2 focus:ring-[#00e5ff] transition-colors duration-200">Start New Scan</button>
         </div>
       </div>
     </div>

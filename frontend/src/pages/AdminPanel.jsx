@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 
-const API = '/';
+const API = '';
 
 function authHeader() {
-    const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem('access_token') || localStorage.getItem('token');
     return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
@@ -17,7 +17,7 @@ async function adminApi(method, path, body) {
     return res.json();
 }
 
-const ROLES = ['USER', 'ANALYST', 'MANAGER', 'ADMIN'];
+const ROLES = ['GUEST', 'USER', 'ADMIN'];
 
 // ── Users Tab ────────────────────────────────────────────────────────────────
 function UsersTab() {
@@ -75,7 +75,7 @@ function UsersTab() {
                             </td>
                             <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{u.credits ?? '—'}</td>
                             <td className="px-4 py-3">
-                                <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${u.status === 'active' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : 'bg-gray-100 text-gray-500'}`}>
+                                <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${u.status === 'active' ? 'bg-[#00e5ff]/10 text-[#00e5ff] dark:bg-[#00e5ff]/20 dark:text-[#00e5ff]' : 'bg-gray-100 text-gray-500'}`}>
                                     {u.status ?? 'active'}
                                 </span>
                             </td>
@@ -123,7 +123,7 @@ function AuditLogsTab() {
                             <td className="px-4 py-2 text-xs text-gray-500">{new Date(l.timestamp).toLocaleString()}</td>
                             <td className="px-4 py-2 text-xs text-gray-900 dark:text-white">{l.actor_email ?? l.ip_address ?? '—'}</td>
                             <td className="px-4 py-2 text-xs text-gray-500">{l.actor_role ?? '—'}</td>
-                            <td className="px-4 py-2 text-xs font-mono text-cyan-600 dark:text-cyan-400">{l.action}</td>
+                            <td className="px-4 py-2 text-xs font-mono text-[#00e5ff]">{l.action}</td>
                             <td className="px-4 py-2 text-xs text-gray-600 dark:text-gray-400">
                                 {l.details?.from_state} → {l.details?.to_state}
                             </td>
@@ -196,7 +196,7 @@ function StatsBar() {
     if (!stats) return null;
 
     const items = [
-        { label: 'Total Users', value: stats.total_users, color: 'text-cyan-500' },
+        { label: 'Total Users', value: stats.total_users, color: 'text-[#00e5ff]' },
         { label: 'Total Scans', value: stats.total_scans, color: 'text-purple-500' },
         ...Object.entries(stats.scans_by_state ?? {}).map(([k, v]) => ({ label: k, value: v, color: 'text-gray-500' })),
     ];
@@ -204,7 +204,7 @@ function StatsBar() {
     return (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
             {items.map((item, i) => (
-                <div key={i} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+                <div key={i} className="bg-white dark:bg-[#181818] border border-gray-200 dark:border-[#333] rounded-xl p-4">
                     <p className={`text-3xl font-bold ${item.color}`}>{item.value}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 uppercase tracking-wide">{item.label}</p>
                 </div>
@@ -220,12 +220,12 @@ export default function AdminPanel() {
     const [activeTab, setActiveTab] = useState('Users');
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-950 px-4 py-10">
+        <div className="min-h-screen bg-[var(--bg-primary)] px-4 py-10 transition-colors duration-300">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="mb-8">
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                        ⚙️ Admin <span className="text-cyan-500">Panel</span>
+                        ⚙️ Admin <span className="text-[#00e5ff]">Panel</span>
                     </h1>
                     <p className="text-gray-500 dark:text-gray-400 mt-1">Manage users, audit trails, and threat intelligence</p>
                 </div>
@@ -234,13 +234,13 @@ export default function AdminPanel() {
                 <StatsBar />
 
                 {/* Tab nav */}
-                <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 w-fit">
+                <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-[#0e0e0e] border border-gray-200 dark:border-[#333] rounded-xl p-1 w-fit">
                     {TABS.map(tab => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
                             className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === tab
-                                    ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm'
+                                    ? 'bg-white dark:bg-[#181818] text-gray-900 dark:text-white shadow-sm'
                                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
                                 }`}
                         >
@@ -250,7 +250,7 @@ export default function AdminPanel() {
                 </div>
 
                 {/* Tab content */}
-                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
+                <div className="bg-white dark:bg-[#181818] border border-gray-200 dark:border-[#333] rounded-2xl overflow-hidden shadow-sm">
                     {activeTab === 'Users' && <UsersTab />}
                     {activeTab === 'Audit Logs' && <AuditLogsTab />}
                     {activeTab === 'Threat Reports' && <ThreatReportsTab />}

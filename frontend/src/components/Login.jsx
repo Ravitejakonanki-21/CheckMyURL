@@ -30,7 +30,7 @@ export default function Login({ onLogin }) {
     e.preventDefault();
     setStatus(""); setIsSuccess(false); setLoading(true);
     try {
-      const response = await fetch("/login", {
+      const response = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -60,41 +60,40 @@ export default function Login({ onLogin }) {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center px-4"
-      style={{ backgroundImage: "url(/bg.jpg)", backgroundSize: "cover", backgroundPosition: "center" }}
+      className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center px-4 transition-colors duration-300"
     >
       <div className="max-w-md w-full">
         <div className="text-center mb-2">
           <div className="flex items-center justify-center gap-3 mb-2">
             <img src="/logo.png" alt="CheckMyURL logo" className="h-16 w-16" loading="eager" />
-            <h1 className="text-3xl font-bold text-blue-500">CheckMyURL</h1>
+            <h1 className="text-3xl font-bold text-[#00e5ff]">BLUECHECK</h1>
           </div>
-          <p className="text-gray-600 text-sm">Sign in to your account</p>
+          <p className="text-[var(--text-secondary)] text-sm">Sign in to your account</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
+        <div className="bg-white dark:bg-[#181818] rounded-2xl shadow-lg border border-gray-200 dark:border-[#333] p-8">
           <form onSubmit={handleLogin} className="space-y-6">
             {/* Email */}
             <div>
-              <label htmlFor="login-email" className="block text-sm font-medium text-gray-700 mb-3">Email</label>
+              <label htmlFor="login-email" className="block text-sm font-medium text-[var(--text-primary)] mb-3">Email</label>
               <input
                 id="login-email" type="email" value={email}
                 onChange={e => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-[#333] rounded-lg focus:ring-2 focus:ring-[#00e5ff] focus:border-[#00e5ff] bg-gray-50 dark:bg-[#101010] text-[var(--text-primary)]"
                 placeholder="Enter your email" required
               />
             </div>
 
             {/* Password with show/hide */}
             <div>
-              <label htmlFor="login-password" className="block text-sm font-medium text-gray-700 mb-3">Password</label>
+              <label htmlFor="login-password" className="block text-sm font-medium text-[var(--text-primary)] mb-3">Password</label>
               <div className="relative">
                 <input
                   id="login-password"
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
+                  className="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-[#333] rounded-lg focus:ring-2 focus:ring-[#00e5ff] focus:border-[#00e5ff] bg-gray-50 dark:bg-[#101010] text-[var(--text-primary)]"
                   placeholder="Enter your password" required
                 />
                 <button
@@ -114,10 +113,10 @@ export default function Login({ onLogin }) {
               <div className="flex items-center">
                 <input id="rememberMe" type="checkbox" checked={rememberMe}
                   onChange={e => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 text-blue-600 border-gray-300 rounded" />
-                <label htmlFor="rememberMe" className="ml-2 text-sm text-gray-700">Remember me</label>
+                  className="h-4 w-4 text-[#00e5ff] border-gray-300 rounded" />
+                <label htmlFor="rememberMe" className="ml-2 text-sm text-[var(--text-secondary)]">Remember me</label>
               </div>
-              <button type="button" onClick={handleForgotPassword} className="text-sm text-blue-600 hover:text-blue-800 font-medium">
+              <button type="button" onClick={handleForgotPassword} className="text-sm text-[#00e5ff] hover:text-[#00ccf0] font-medium">
                 Forgot password?
               </button>
             </div>
@@ -130,17 +129,17 @@ export default function Login({ onLogin }) {
             )}
 
             <button type="submit" disabled={loading}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 shadow-md">
+              className="w-full py-3 bg-[#00e5ff] hover:bg-[#00ccf0] text-[#0e0e0e] font-semibold rounded-lg transition-colors disabled:opacity-50 shadow-md">
               {loading ? "SIGNING IN..." : "SIGN IN"}
             </button>
           </form>
         </div>
 
         <div className="text-center mt-8">
-          <p className="text-sm text-gray-600 mb-2">Students of IBM @ 2025</p>
+          <p className="text-sm text-[var(--text-secondary)] mb-2">Students of IBM @ 2025</p>
           <div className="mt-4 text-sm">
             Don't have an account?{" "}
-            <Link to="/register" className="text-blue-600 underline">Register here</Link>
+            <Link to="/register" className="text-[#00e5ff] underline">Register here</Link>
           </div>
         </div>
       </div>

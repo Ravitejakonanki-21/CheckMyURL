@@ -65,28 +65,35 @@ if _redis_url.startswith("rediss://"):
     from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
     parsed = urlparse(_redis_url)
     query = parse_qs(parsed.query)
-    
-    # Extract existing or environment-based cert requirement
     if "ssl_cert_reqs" in query:
         _cert_reqs = query["ssl_cert_reqs"][0].lower()
     else:
         _cert_reqs = os.getenv("REDIS_SSL_CERT_REQS", "none").lower()
         
-    if _cert_reqs in ("cert_none", "none"): 
-        _cert_reqs = "none"
-    elif _cert_reqs in ("cert_required", "required"): 
-        _cert_reqs = "required"
-    elif _cert_reqs in ("cert_optional", "optional"): 
-        _cert_reqs = "optional"
+    if _cert_reqs in ("cert_none", "none"): _cert_reqs = "none"
+    elif _cert_reqs in ("cert_required", "required"): _cert_reqs = "required"
+    elif _cert_reqs in ("cert_optional", "optional"): _cert_reqs = "optional"
         
     query["ssl_cert_reqs"] = [_cert_reqs]
     new_query = urlencode(query, doseq=True)
     _redis_url = urlunparse(parsed._replace(query=new_query))
 
+# Simple check to see if we should fallback to memory://
+storage_uri = _redis_url
+if "localhost" in _redis_url or "127.0.0.1" in _redis_url:
+    try:
+        import socket
+        # Quick check if something is on 6379
+        with socket.create_connection(("localhost", 6379), timeout=0.1):
+            pass
+    except (ConnectionRefusedError, socket.timeout, OSError):
+        storage_uri = "memory://"
+        app.logger.warning("Redis not found on localhost, falling back to in-memory rate limiting")
+
 limiter = Limiter(
     key_func=get_remote_address,
     app=app,
-    storage_uri=_redis_url,
+    storage_uri=storage_uri,
     default_limits=["200/minute"],
 )
 
@@ -111,9 +118,9 @@ def set_security_headers(response):
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
     response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
     response.headers['X-Frame-Options'] = 'SAMEORIGIN'
-    response.headers['Cross-Origin-Opener-Policy'] = 'same-origin'
-    response.headers['Cross-Origin-Embedder-Policy'] = 'require-corp'
-    response.headers['Cross-Origin-Resource-Policy'] = 'same-origin'
+    response.headers['Cross-Origin-Opener-Policy'] = 'same-origin-allow-popups'
+    response.headers['Cross-Origin-Embedder-Policy'] = 'unsafe-none'
+    response.headers['Cross-Origin-Resource-Policy'] = 'cross-origin'
     response.headers['Expect-CT'] = 'max-age=86400, enforce, report-uri="https://example.com/report"'
     response.headers['Report-To'] = '{"group":"default","max_age":10886400,"endpoints":[{"url":"https://example.com/reports"}],"include_subdomains":true}'
     response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self'; object-src 'none'"
@@ -430,7 +437,7 @@ def serve_static(path):
         return send_from_directory(static_folder, path)
     return send_from_directory(static_folder, "index.html")
 
-@app.post('/register')
+@app.post('/api/register')
 @limiter.limit("5/minute")
 def register():
     data = request.get_json() or {}
@@ -445,7 +452,7 @@ def register():
     create_user(email, hashed, role='USER')
     return jsonify({'message': 'Registration successful!'}), 201
 
-@app.post('/login')
+@app.post('/api/login')
 @limiter.limit("5/minute")
 def login():
     data = request.get_json() or {}
@@ -466,7 +473,7 @@ def login():
         'role': user.get('role', 'USER')
     })
 
-@app.post('/export-logs')
+@app.post('/api/export-logs')
 @jwt_required()
 def export_logs():
     email = get_jwt_identity()
@@ -478,7 +485,7 @@ def export_logs():
         return jsonify({"error": "Feature locked!", "note": note}), 403
     return jsonify({"message": "Exported logs successfully."})
 
-@app.post("/forgot-password")
+@app.post("/api/forgot-password")
 def forgot_password():
     data = request.get_json() or {}
     email = data.get("email", "").lower()
@@ -519,7 +526,7 @@ def forgot_password():
 
     return jsonify({"message": f"Reset instructions sent to {email}."}), 200
 
-@app.post("/reset-password")
+@app.post("/api/reset-password")
 def reset_password():
     data = request.get_json()
     token = data.get("token")
@@ -534,7 +541,7 @@ def reset_password():
     _users_col.update_one({"email": email}, {"$set": {"password_hash": hashed_pw}})
     return jsonify({"message": "Password reset successful!"}), 200
 
-@app.get('/profile')
+@app.get('/api/profile')
 @jwt_required()
 def profile():
     email = get_jwt_identity()

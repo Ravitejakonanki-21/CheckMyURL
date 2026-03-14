@@ -18,7 +18,7 @@ bp = Blueprint("admin", __name__, url_prefix="/api/admin")
 _users = get_collection("users")
 _scans = get_collection("scans")
 
-VALID_ROLES = {"USER", "ANALYST", "MANAGER", "ADMIN"}
+VALID_ROLES = {"GUEST", "USER", "ADMIN"}
 
 
 @bp.get("/users")

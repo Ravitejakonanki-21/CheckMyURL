@@ -20,12 +20,12 @@ const TechnicalSSLDetailsColumn1 = ({ sslData, securityScores, lastUpdated }) =>
 
   return (
     <div className="space-y-3">
-      <h5 className="font-medium text-sm text-gray-900 dark:text-gray-100 flex items-center border-b border-blue-300 dark:border-blue-500/30 pb-2 w-full">
+      <h5 className="font-medium text-sm text-gray-900 dark:text-gray-100 flex items-center border-b border-[#00e5ff]/30 dark:border-[#00e5ff]/20 pb-2 w-full">
         <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
         </svg>
-        Advanced Technical Details <span className="ml-2 text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">Part 1</span>
+        Advanced Technical Details <span className="ml-2 text-xs px-2 py-1 bg-[#00e5ff]/10 dark:bg-[#00e5ff]/20 text-[#00e5ff] dark:text-[#00e5ff] rounded">Part 1</span>
       </h5>
       <div className="space-y-2">
         {technicalData1.map((item,index)=>
@@ -45,7 +45,7 @@ const TechnicalSSLDetailsColumn1 = ({ sslData, securityScores, lastUpdated }) =>
                 setTimeout(() => setCopiedIndex(null), 2000);
               }}
               title="Copy Value"
-              className="ml-2 text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
+              className="ml-2 text-xs text-[#00e5ff] hover:text-[#00ccf0] dark:text-[#00e5ff] dark:hover:text-[#00ccf0]"
             >
               {copiedIndex === index ? "Copied!" : (
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

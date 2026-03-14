@@ -116,7 +116,7 @@ function AsciiDetails({ idnData, onHide }) {
           Detailed ASCII/IDN Analysis
         </h4>
         <button
-          className="text-blue-600 hover:underline text-sm"
+          className="text-[#00e5ff] hover:text-[#00ccf0] text-sm"
           onClick={onHide}
         >
           Hide Details
@@ -166,7 +166,7 @@ function AsciiDetails({ idnData, onHide }) {
         </table>
       </div>
 
-      <div className="mt-4 p-4 bg-blue-100 dark:bg-blue-900/60 border border-blue-200 dark:border-blue-700 rounded-md text-blue-800 dark:text-blue-200">
+      <div className="mt-4 p-4 bg-[#00e5ff]/10 dark:bg-[#00e5ff]/20 border border-[#00e5ff]/20 dark:border-[#00e5ff]/40 rounded-md text-[#00e5ff] dark:text-[#00e5ff]">
         <div className="mb-2 font-semibold">Understanding ASCII Checks:</div>
         <ul className="text-sm ml-4 list-disc space-y-1">
           <li>ASCII-only URLs are safer and less prone to homograph attacks</li>

@@ -151,7 +151,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
 
   return (
     <div className="w-full px-6 pb-8">
-      <div className="border border-gray-300 dark:border-gray-700 rounded-2xl overflow-hidden bg-white dark:bg-black shadow-lg">
+      <div className="border border-gray-300 dark:border-gray-700 rounded-2xl overflow-hidden bg-[var(--bg-secondary)] shadow-lg">
         <div className="bg-transparent border-b border-gray-300 dark:border-gray-700 px-6 py-4">
           <div className="flex items-center space-x-2">
             <svg className="w-6 h-6 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -177,7 +177,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                   Quick Actions
                   <button 
                     onClick={copyAllResults}
-                    className="ml-2 w-12 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 transition-colors duration-200"
+                    className="ml-2 w-12 text-[#00e5ff] hover:text-[#00ccf0] dark:text-[#00e5ff] dark:hover:text-[#00ccf0] transition-colors duration-200"
                     title="Copy All Results"
                   >
                     {copiedStates.all ? (
@@ -191,7 +191,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                 </th>
               </tr>
             </thead>
-         <tbody className="bg-white dark:bg-black divide-y divide-gray-300 dark:divide-gray-700">
+         <tbody className="bg-transparent divide-y divide-gray-300 dark:divide-gray-700">
 
 
   {/* URL Row */}
@@ -205,7 +205,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
     <td className="px-4 py-4 text-center">
       <button 
         onClick={() => handleCopy(result.url, 'url')}
-        className="w-12 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 mx-1 transition-colors duration-200"
+        className="w-12 text-[#00e5ff] hover:text-[#00ccf0] dark:text-[#00e5ff] dark:hover:text-[#00ccf0] mx-1 transition-colors duration-200"
         title="Copy URL"
       >
         {copiedStates.url ? (
@@ -239,7 +239,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
     <td className="px-4 py-4 text-center">
       <button 
         onClick={() => handleCopy(`Risk Score: ${result.riskScore}%`, 'riskScore')}
-        className="w-12 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 mx-1 transition-colors duration-200"
+        className="w-12 text-[#00e5ff] hover:text-[#00ccf0] dark:text-[#00e5ff] dark:hover:text-[#00ccf0] mx-1 transition-colors duration-200"
         title="Copy Risk Score"
       >
         {copiedStates.riskScore ? (
@@ -272,7 +272,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
         {result.details.sslData && (
           <button
             onClick={() => toggleRowExpansion('ssl')}
-            className="ml-3 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors duration-200 px-2 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900 border border-blue-300 dark:border-blue-600 whitespace-nowrap self-center"
+            className="ml-3 text-xs text-[#00e5ff] hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors duration-200 px-2 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900 border border-blue-300 dark:border-blue-600 whitespace-nowrap self-center"
           >
             {expandedRows['ssl'] ? 'Hide Details ▼' : 'Show All Details ▶'}
           </button>
@@ -298,7 +298,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
     <td className="px-4 py-4 text-center">
       <button 
         onClick={() => handleCopy(`SSL: ${result.details.sslValid ? 'Valid' : 'Invalid'}`, 'ssl')}
-        className="w-12 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 mx-1 transition-colors duration-200"
+        className="w-12 text-[#00e5ff] hover:text-[#00ccf0] dark:text-[#00e5ff] dark:hover:text-[#00ccf0] mx-1 transition-colors duration-200"
         title="Copy SSL Status"
       >
         {copiedStates.ssl ? (
@@ -359,7 +359,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
         </div>
         <button
           onClick={handleWhoisToggle}
-          className="ml-3 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors duration-200 px-2 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900 border border-blue-300 dark:border-blue-600 whitespace-nowrap self-center"
+          className="ml-3 text-xs text-[#00e5ff] hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors duration-200 px-2 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900 border border-blue-300 dark:border-blue-600 whitespace-nowrap self-center"
         >
           {expandedRows['whois'] ? 'Hide Details ▼' : 'Show More Details ▶'}
         </button>
@@ -382,7 +382,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
     <td className="px-4 py-4 text-center">
       <button 
         onClick={() => copyToClipboard(JSON.stringify(whoisData, null, 2))}
-        className="w-12 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 mx-1 transition-colors duration-200"
+        className="w-12 text-[#00e5ff] hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 mx-1 transition-colors duration-200"
         title="Copy WHOIS Data"
         disabled={!whoisData}
       >
@@ -404,7 +404,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
       <td colSpan="7" className="px-0 py-0 border-t border-gray-200 dark:border-gray-700">
         {loadingWhois ? (
           <div className="py-8 text-center bg-gray-50 dark:bg-gray-900">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00e5ff] mx-auto"></div>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-3">Fetching comprehensive domain information...</p>
             <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">This may take a few seconds</p>
           </div>
@@ -420,7 +420,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                 setWhoisData(null);
                 setWhoisError(null);
               }}
-              className="mt-3 px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+              className="mt-3 px-4 py-2 text-sm bg-[#00e5ff] hover:bg-[#00ccf0] text-[#0e0e0e] rounded transition-colors"
             >
               Retry
             </button>
@@ -459,7 +459,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
               <span
                 key={h}
                 className="inline-block min-w-[70px] px-3 py-1 mr-2 rounded text-xs font-medium
-                  bg-cyan-100 dark:bg-cyan-900 text-cyan-700 dark:text-cyan-200 border border-cyan-300 dark:border-cyan-700 text-center"
+                  bg-[#00e5ff]/10 dark:bg-[#00e5ff]/20 text-[#00e5ff] dark:text-[#00e5ff] border border-[#00e5ff]/30 dark:border-[#00e5ff]/40 text-center"
               >
                 {h}
               </span>
@@ -477,7 +477,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
         {result.details.headersData && (
           <button
             onClick={() => setSecurityHeadersExpanded(x => !x)}
-            className="ml-3 px-3 py-1 rounded text-xs font-semibold border border-blue-700 dark:border-blue-400 text-blue-500 dark:text-blue-300 hover:bg-blue-900/20 focus:outline-none whitespace-nowrap self-center"
+            className="ml-3 px-3 py-1 rounded text-xs font-semibold border border-[#00e5ff]/50 dark:border-[#00e5ff]/40 text-[#00e5ff] dark:text-[#00ccf0] hover:bg-[#00e5ff]/10 focus:outline-none whitespace-nowrap self-center"
           >
             {securityHeadersExpanded ? "Hide Details ▼" : "Show All Details ▶"}
           </button>
@@ -514,7 +514,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
               : "")
           , 'securityHeaders')
         }
-        className="w-12 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 mx-1 transition-colors duration-200"
+        className="w-12 text-[#00e5ff] hover:text-[#00ccf0] dark:text-[#00e5ff] dark:hover:text-[#00ccf0] mx-1 transition-colors duration-200"
         title="Copy Security Headers"
       >
         {copiedStates.securityHeaders ? (
@@ -565,7 +565,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
 
         <button
           onClick={() => toggleRowExpansion('keywords')}
-          className="ml-3 px-2 py-1 text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 border border-blue-300 dark:border-blue-600 rounded whitespace-nowrap self-center"
+          className="ml-3 px-2 py-1 text-xs text-[#00e5ff] hover:text-[#00ccf0] dark:text-[#00e5ff] dark:hover:text-[#00ccf0] border border-[#00e5ff]/40 dark:border-[#00e5ff]/50 rounded whitespace-nowrap self-center"
         >
           {expandedRows['keywords'] ? 'Hide Details ▼' : 'Show More Details ▶'}
         </button>
@@ -590,7 +590,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
     <td className="px-4 py-4 text-center">
       <button 
         onClick={copyKeywords}
-        className="w-12 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 mx-1 transition-colors duration-200"
+        className="w-12 text-[#00e5ff] hover:text-[#00ccf0] dark:text-[#00e5ff] dark:hover:text-[#00ccf0] mx-1 transition-colors duration-200"
         title="Copy Keywords"
       >
         {copiedStates.keywords ? (
@@ -638,7 +638,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
         </div>
         <button
           onClick={() => toggleRowExpansion('ascii')}
-          className="ml-3 px-2 py-1 text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 border border-blue-300 dark:border-blue-600 rounded whitespace-nowrap self-center"
+          className="ml-3 px-2 py-1 text-xs text-[#00e5ff] hover:text-[#00ccf0] dark:text-[#00e5ff] dark:hover:text-[#00ccf0] border border-[#00e5ff]/40 dark:border-[#00e5ff]/50 rounded whitespace-nowrap self-center"
         >
           {expandedRows['ascii'] ? 'Hide Details ▼' : 'Show Details ▶'}
         </button>
@@ -675,7 +675,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
             : 'ASCII/IDN: Not analyzed',
           'ascii'
         )}
-        className="w-12 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 mx-1 transition-colors duration-200"
+        className="w-12 text-[#00e5ff] hover:text-[#00ccf0] dark:text-[#00e5ff] dark:hover:text-[#00ccf0] mx-1 transition-colors duration-200"
         title="Copy ASCII/IDN Info"
       >
         {copiedStates.ascii ? (

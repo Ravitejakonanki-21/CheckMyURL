@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
-import { ScanProvider } from './context/ScanContext';
+import { ScanProvider, useScan } from './context/ScanContext';
 import Navbar from './components/Navbar';
 import ProtectedRoutes from './components/ProtectedRoutes';
 import Scanner from './pages/Scanner';
@@ -21,14 +21,27 @@ function App() {
     <ThemeProvider>
       <ScanProvider>
         <Router>
-          <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors duration-200">
-            {isAuthenticated && <Navbar />}
-            <Routes>
-              {/* Public routes — redirect to scanner if already logged in */}
+          <InnerApp isAuthenticated={isAuthenticated} />
+        </Router>
+      </ScanProvider>
+    </ThemeProvider>
+  );
+}
+
+function InnerApp({ isAuthenticated }) {
+  const { isShowingResults } = useScan();
+  
+  return (
+    <div className="min-h-screen bg-[var(--bg-primary)] transition-colors duration-200">
+      {!isShowingResults && <Navbar />}
+      <Routes>
+              {/* Public routes */}
+              <Route path="/scanner" element={<Scanner />} />
               <Route
                 path="/"
-                element={isAuthenticated ? <Navigate to="/scanner" /> : <Navigate to="/login" />}
+                element={<Navigate to="/scanner" replace />}
               />
+              
               <Route
                 path="/login"
                 element={isAuthenticated ? <Navigate to="/scanner" /> : <Login />}
@@ -46,20 +59,24 @@ function App() {
                 element={isAuthenticated ? <Navigate to="/scanner" /> : <ResetPassword />}
               />
 
-              {/* Protected routes — ProtectedRoutes guards with real JWT check */}
-              <Route element={<ProtectedRoutes />}>
-                <Route path="/scanner" element={<Scanner />} />
+              {/* Protected routes — User level */}
+              <Route element={<ProtectedRoutes allowedRoles={['USER', 'ADMIN']} />}>
                 <Route path="/statistics" element={<Statistics />} />
                 <Route path="/history" element={<History />} />
                 <Route path="/bulk-scan" element={<BulkScan />} />
+              </Route>
+
+              {/* Protected routes — Analyst/Admin level */}
+              <Route element={<ProtectedRoutes allowedRoles={['ADMIN']} />}>
                 <Route path="/soc" element={<SOCDashboard />} />
+              </Route>
+
+              {/* Protected routes — Admin only */}
+              <Route element={<ProtectedRoutes allowedRoles={['ADMIN']} />}>
                 <Route path="/admin" element={<AdminPanel />} />
               </Route>
-            </Routes>
-          </div>
-        </Router>
-      </ScanProvider>
-    </ThemeProvider>
+      </Routes>
+    </div>
   );
 }
 

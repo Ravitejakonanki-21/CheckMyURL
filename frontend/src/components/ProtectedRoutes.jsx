@@ -11,8 +11,18 @@ import { Navigate, Outlet } from 'react-router-dom';
  *     <Route path="/statistics" element={<Statistics />} />
  *   </Route>
  */
-export default function ProtectedRoutes() {
+export default function ProtectedRoutes({ allowedRoles }) {
   const token = localStorage.getItem('token');
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
-  return token && isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
+  const role = (localStorage.getItem('role') || 'USER').toUpperCase();
+
+  if (!token || !isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (allowedRoles && !allowedRoles.includes(role)) {
+    return <Navigate to="/scanner" replace />;
+  }
+
+  return <Outlet />;
 }

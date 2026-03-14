@@ -13,7 +13,7 @@ function classColor(cls = '') {
     const c = cls.toUpperCase();
     if (c.includes('HIGH') || c.includes('CRITICAL') || c.includes('PHISH')) return 'text-red-500';
     if (c.includes('MEDIUM') || c.includes('SUSPICIOUS')) return 'text-yellow-500';
-    return 'text-green-500';
+    return 'text-[#00e5ff]';
 }
 
 function badge(cls = '') {
@@ -22,14 +22,14 @@ function badge(cls = '') {
         return 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300';
     if (c.includes('MEDIUM') || c.includes('SUSPICIOUS'))
         return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300';
-    return 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300';
+    return 'bg-[#00e5ff]/10 text-[#00e5ff] border border-[#00e5ff]/20';
 }
 
 function exportHistoryPDF(items) {
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(16);
-    doc.text('CheckMyURL — Scan History Report', 40, 40);
+    doc.text('BLUECHECK — Scan History Report', 40, 40);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
     doc.text(`Generated: ${new Date().toLocaleString()}`, 40, 60);
@@ -44,7 +44,7 @@ function exportHistoryPDF(items) {
             h.scannedAt ? new Date(h.scannedAt).toLocaleString() : '—',
         ]),
         styles: { fontSize: 9, cellPadding: 5 },
-        headStyles: { fillColor: [8, 145, 178] },
+        headStyles: { fillColor: [0, 229, 255] },
         theme: 'grid',
         margin: { left: 40, right: 40 },
         columnStyles: { 0: { cellWidth: 240 } },
@@ -92,13 +92,13 @@ export default function History() {
     );
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-950 px-4 py-10">
+        <div className="min-h-screen bg-[var(--bg-primary)] px-4 py-10 transition-colors duration-300">
             <div className="max-w-6xl mx-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                            📋 Scan <span className="text-cyan-500">History</span>
+                            📋 Scan <span className="text-[#00e5ff]">History</span>
                         </h1>
                         <p className="text-gray-500 dark:text-gray-400 mt-1">
                             {history.length} scan{history.length !== 1 ? 's' : ''} recorded
@@ -108,7 +108,7 @@ export default function History() {
                         <button
                             onClick={() => exportHistoryPDF(filtered)}
                             disabled={filtered.length === 0}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-600 disabled:opacity-50 text-white text-sm font-semibold"
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#00e5ff] hover:bg-[#00ccf0] disabled:opacity-50 text-[#0e0e0e] text-sm font-semibold"
                         >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -132,7 +132,7 @@ export default function History() {
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Search by URL…"
-                        className="w-full max-w-sm px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-cyan-500 focus:outline-none"
+                        className="w-full max-w-sm px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-[#00e5ff] focus:outline-none"
                     />
                 </div>
 

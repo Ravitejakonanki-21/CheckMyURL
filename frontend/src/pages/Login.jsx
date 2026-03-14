@@ -85,11 +85,11 @@ function Login() {
               className="h-16 w-16"
               loading="eager"
             />
-            <h1 className="text-3xl font-bold text-blue-500">
-              CheckMyURL
+            <h1 className="text-3xl font-bold text-[#00e5ff]">
+              BLUECHECK
             </h1>
           </div>
-          <p className="text-gray-600 text-sm">
+          <p className="text-[var(--text-secondary)] text-sm">
             Sign in to your account
           </p>
         </div>
@@ -99,7 +99,7 @@ function Login() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email Input */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-3">
+              <label htmlFor="email" className="block text-sm font-medium text-[var(--text-primary)] mb-3">
                 Email
               </label>
               <input
@@ -107,7 +107,7 @@ function Login() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-[#333] rounded-lg focus:ring-2 focus:ring-[#00e5ff] focus:border-[#00e5ff] bg-gray-50 dark:bg-[#0e0e0e] text-[var(--text-primary)]"
                 placeholder="deanacademics@admin.com"
                 required
               />
@@ -115,7 +115,7 @@ function Login() {
 
             {/* Password Input */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-3">
+              <label htmlFor="password" className="block text-sm font-medium text-[var(--text-primary)] mb-3">
                 Password
               </label>
               <input
@@ -123,7 +123,7 @@ function Login() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#00e5ff] focus:border-[#00e5ff] bg-gray-50"
                 placeholder="Enter your password"
                 required
               />
@@ -137,16 +137,16 @@ function Login() {
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-[#00e5ff] focus:ring-[#00e5ff] border-gray-300 rounded"
                 />
-                <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-700">
+                <label htmlFor="rememberMe" className="ml-2 block text-sm text-[var(--text-secondary)]">
                   Remember me
                 </label>
               </div>
               <button
                 type="button"
                 onClick={handleForgotOrFirstTime}
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                className="text-sm text-[#00e5ff] hover:text-[#00ccf0] font-medium"
               >
                 First Time Login/Forgot password?
               </button>
@@ -163,7 +163,7 @@ function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+              className="w-full py-3 bg-[#00e5ff] hover:bg-[#00ccf0] text-[#0e0e0e] font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
             >
               {loading ? 'SIGNING IN...' : 'SIGN IN'}
             </button>
@@ -280,7 +280,7 @@ function FirstTimeRegistration({ onBack }) {
         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
           <button
             onClick={onBack}
-            className="mb-4 text-blue-600 hover:text-blue-800 font-medium flex items-center gap-2"
+            className="mb-4 text-[#00e5ff] hover:text-[#00ccf0] font-medium flex items-center gap-2"
           >
             ← Back to Login
           </button>
@@ -373,7 +373,7 @@ function FirstTimeRegistration({ onBack }) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+              className="w-full py-3 bg-[#00e5ff] hover:bg-[#00ccf0] text-[#0e0e0e] font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
             >
               {loading 
                 ? 'PLEASE WAIT...' 

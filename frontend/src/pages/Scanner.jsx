@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useScan } from "../context/ScanContext";
 import ResultsPage from "./results/ResultsPage.jsx";
 
@@ -19,6 +20,7 @@ const checkHeadersUrl = async (inputUrl) => {
 };
 
 function Scanner() {
+  const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState('input');
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
@@ -27,6 +29,13 @@ function Scanner() {
   const [error, setError] = useState(null);
   const [expandedRows, setExpandedRows] = useState({});
   const [showNewScanModal, setShowNewScanModal] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
+
+  const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
+  const userRole = (localStorage.getItem("role") ?? "USER").toUpperCase();
+  const isAdmin = userRole === "ADMIN";
+
+  const { setIsShowingResults } = useScan();
 
   let recordScan;
   try {
@@ -58,7 +67,7 @@ function Scanner() {
 
     if (eSSL.https_ok && !eSSL.is_http_only && !eSSL.expired && !eSSL.self_signed) safe += 45;
     else {
-      if (eSSL.is_http_only) suspicious += 35;        // explicit http:// URL
+      if (eSSL.is_http_only) suspicious += 35;
       else if (!eSSL.https_ok) suspicious += 25;
       if (eSSL.expired) dangerous += 30;
       if (eSSL.self_signed) suspicious += 20;
@@ -80,7 +89,6 @@ function Scanner() {
     suspicious += rules.has_suspicious_words || rules.has_brand_words_in_host ? 25 : 0;
     suspicious += idn.is_idn || idn.mixed_confusable_scripts ? 15 : 0;
 
-    // Get ML data from backend response
     const mlData = backendData.ml || null;
     const heuristicData = backendData.heuristic || {};
     const mlScore = typeof (mlData?.score) === "number" ? mlData.score : null;
@@ -116,9 +124,6 @@ function Scanner() {
     if (backendRisk >= 70 && nDanger < 50) { nDanger = Math.max(50, nDanger); let r = 100 - nDanger; nSusp = Math.round(r * 0.7); nSafe = r - nSusp; }
     else if (backendRisk >= 40 && nSusp < 40) { nSusp = Math.max(40, nSusp); let r = 100 - nSusp; nDanger = Math.round(r * 0.3); nSafe = r - nDanger; }
 
-    const fTotal = nSafe + nSusp + nDanger; if (fTotal !== 100) { const d = 100 - fTotal; if (nDanger >= nSusp && nDanger >= nSafe) nDanger += d; else if (nSusp >= nSafe) nSusp += d; else nSafe += d; }
-
-    // Use ML label if available, otherwise derive from risk score
     const classification = backendData.label
       ? backendData.label
       : (mlData ? mlData.label : (backendRisk >= 70 ? "High Risk" : backendRisk >= 40 ? "Medium Risk" : "Low Risk"));
@@ -132,9 +137,7 @@ function Scanner() {
 
     const keywords = [...(rules.matched_suspicious || []), ...(rules.matched_brands || [])];
     const keywordInfo = r.keyword || { keywords_found: keywords, risk_score: 0, risk_factors: [], url: backendData.url };
-
-    // Use actual ML score from backend, fallback to calculated if not available
-    const mlPhishingScore = mlData ? mlData.score : Math.min(Math.round(((rules.has_suspicious_words ? 0.3 : 0) + (rules.has_brand_words_in_host ? 0.4 : 0) + (idn.is_idn ? 0.2 : 0) + (!eSSL.https_ok ? 0.1 : 0)) * 100), 100);
+    const mlPhishingScore = mlData ? mlData.score : 0;
 
     return {
       url: backendData.url,
@@ -150,21 +153,7 @@ function Scanner() {
         sslValid: (eSSL.https_ok && !eSSL.is_http_only) || false,
         sslExpired: eSSL.expired || false,
         sslSelfSigned: eSSL.self_signed_hint || eSSL.self_signed || false,
-        sslData: {
-          ...eSSL,
-          certificate_valid: eSSL.certificate_valid,
-          hostname_match: eSSL.hostname_match,
-          serial_number: eSSL.serial_number,
-          issuer_org: eSSL.issuer_org,
-          subject_org: eSSL.subject_org,
-          key_algorithm: eSSL.key_algorithm,
-          key_size: eSSL.key_size,
-          signature_algorithm: eSSL.signature_algorithm,
-          san_domains: eSSL.san_domains || [],
-          wildcard_cert: eSSL.wildcard_cert,
-          chain_length: eSSL.chain_length,
-          full_chain: eSSL.full_chain || []
-        },
+        sslData: { ...eSSL },
         whoisAgeMonths,
         openPorts: [],
         securityHeaders: presentHeaders,
@@ -180,7 +169,6 @@ function Scanner() {
         whoisData: whois,
         headersData: h,
         idnData: idn,
-        weightages,
         errors: {
           ssl: eSSL.errors || [],
           headers: h.errors || [],
@@ -206,29 +194,19 @@ function Scanner() {
       }
       setHeaderResult(headerScan);
       const res = transformBackendResponse(fullScan);
-      console.log('Transformed result:', { riskScore: res.riskScore, classification: res.classification, mlData: res.details.mlData });
-      setResult(res); recordScan?.(res); setCurrentPage('results');
+      setResult(res); recordScan?.(res); 
+      setIsShowingResults(true);
+      setCurrentPage('results');
     } catch (err) {
-      setError(`Analysis failed: ${err.message}. Make sure your Flask backend is running on /`);
-      console.error('Scan error:', err);
+      setError(`Analysis failed: ${err.message}.`);
     } finally { setLoading(false); }
   };
 
   const onNewScan = () => setShowNewScanModal(true);
-
   const confirmNewScan = () => {
-    setCurrentPage('input');
-    setUrl("");
-    setResult(null);
-    setHeaderResult(null);
-    setError(null);
-    setExpandedRows({});
-    setShowNewScanModal(false);
-  };
-
-  const onClear = () => {
-    setUrl("");
-    setError(null);
+    setIsShowingResults(false);
+    setCurrentPage('input'); setUrl(""); setResult(null); setHeaderResult(null);
+    setError(null); setExpandedRows({}); setShowNewScanModal(false); setShowScanner(false);
   };
 
   if (currentPage === 'results' && result) {
@@ -247,80 +225,113 @@ function Scanner() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black flex flex-col items-center justify-center px-4">
-      <div className="w-full max-w-2xl text-center mb-12">
-        <h1 className="text-6xl md:text-5xl font-bold mb-5">
-          <span className="text-gray-900 dark:text-white">URL </span>
-          <span className="text-cyan-500 dark:text-cyan-400">Scanner</span>
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400 text-lg">Enter a URL to scan and analyze</p>
-      </div>
+    <div className="relative min-h-screen bg-[var(--bg-primary)] flex flex-col items-center justify-center px-4 overflow-hidden py-12 transition-colors duration-300">
+      <div className="w-full max-w-5xl flex flex-col items-center relative z-10 transition-all duration-500">
+        <div className="mb-8 transform hover:scale-105 transition-transform duration-500">
+           <img src="/bluecheck_mascot.png" alt="BLUECHECK AI" className="h-32 w-32 object-contain" />
+        </div>
 
-      <div className="relative mb-10 flex items-center bg-gradient-to-r from-cyan-500/10 to-blue-500/10 dark:from-cyan-500/10 dark:to-blue-500/10 border border-cyan-500/40 dark:border-cyan-500/30 rounded-full px-20 py-5 backdrop-blur-sm">
-        <svg className="w-6 h-6 text-cyan-500 dark:text-cyan-400 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-        <input
-          value={url}
-          onChange={e => setUrl(e.target.value)}
-          placeholder="Enter URL to scan..."
-          className="flex-1 text-lg bg-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-500 outline-none"
-          onKeyPress={e => e.key === 'Enter' && onScan()}
-          disabled={loading}
-          autoFocus
-        />
-        <button
-          onClick={onScan}
-          disabled={loading || !url.trim()}
-          className="ml-4 px-8 py-3 bg-cyan-500 hover:bg-cyan-600 dark:bg-cyan-400 dark:hover:bg-cyan-300 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:opacity-50 text-white dark:text-black font-semibold rounded-full transition-all duration-200 disabled:cursor-not-allowed"
-        >
-          {loading ? (
-            <span className="flex items-center gap-2">
-              <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Scanning
-            </span>
-          ) : 'Scan'}
-        </button>
-      </div>
+        <div className="text-center mb-12">
+          <h2 className="text-[var(--text-primary)] text-2xl md:text-3xl font-black mb-3 flex items-center justify-center gap-2">
+            Meet, <span className="text-[#00e5ff]">BLUECHECK AI</span>
+          </h2>
+          <p className="text-[var(--text-secondary)] text-lg md:text-xl font-bold tracking-tight">Your intelligent guardian for URL security</p>
+        </div>
 
-      <div className="flex items-center justify-center gap-10 mb-20">
-        {['Quick Scan', 'Deep Analysis'].map((label, i) =>
-          <button
-            key={i}
-            onClick={onScan}
-            disabled={loading || !url.trim()}
-            className="px-8 py-3 bg-gray-200 hover:bg-gray-300 dark:bg-black disabled:bg-gray-200 dark:disabled:bg-gray-900 disabled:opacity-50 text-gray-700 dark:text-gray-300 rounded-lg transition-all duration-200 border border-gray-400 dark:border-gray-700 disabled:cursor-not-allowed"
-          >
-            {label}
-          </button>
-        )}
-      </div>
-
-      <div className="max-w-4xl mx-auto px-4 mb-12 flex flex-wrap justify-center gap-6">
-        {[{ name: "SSL/TLS Check", icon: <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg> },
-        { name: "WHOIS Lookup", icon: <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg> },
-        { name: "ML Analysis", icon: <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg> },
-        { name: "Keyword Detection", icon: <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg> }].map((f, i) =>
-          <div key={i} className="text-center px-4 py-2">
-            <div className="text-gray-600 dark:text-gray-400 mb-1 flex justify-center">{f.icon}</div>
-            <div className="text-sm font-medium text-gray-700 dark:text-blue-300">{f.name}</div>
+        {!showScanner ? (
+          <div className="flex flex-wrap justify-center gap-6 w-full max-w-5xl animate-in fade-in zoom-in duration-300">
+            {[
+              { 
+                id: 'guest', 
+                name: isAuthenticated ? "Full Scanner" : "Limited Scanner", 
+                desc: isAuthenticated ? "Deep Analysis ?" : "Basic Scan ?", 
+                icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>, 
+                color: "text-blue-400", 
+                handler: () => setShowScanner(true),
+                visible: true 
+              },
+              { 
+                id: 'user', 
+                name: "User Login", 
+                desc: "Member Login ?", 
+                icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>, 
+                color: "text-orange-400", 
+                handler: () => navigate('/login'),
+                visible: !isAuthenticated
+              },
+              { 
+                id: 'admin', 
+                name: "Admin Access", 
+                desc: isAdmin ? "Admin Panel ?" : "System Entry ?", 
+                icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02(003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>, 
+                color: "text-purple-400", 
+                handler: () => navigate(isAdmin ? '/admin' : '/login'),
+                visible: !isAuthenticated || isAdmin
+              },
+              { 
+                id: 'archive', 
+                name: "Scan Archive", 
+                desc: "Your History ?", 
+                icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>, 
+                color: "text-green-400", 
+                handler: () => navigate('/history'),
+                visible: isAuthenticated
+              },
+              { 
+                id: 'stats', 
+                name: "Statistics", 
+                desc: "Global Intel ?", 
+                icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>, 
+                color: "text-cyan-400", 
+                handler: () => navigate('/statistics'),
+                visible: isAdmin
+              },
+              { 
+                id: 'bulk', 
+                name: "Bulk Scanner", 
+                desc: "Dataset Control ?", 
+                icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>, 
+                color: "text-red-400", 
+                handler: () => navigate('/bulk-scan'),
+                visible: isAdmin
+              },
+              { 
+                id: 'soc', 
+                name: "SOC Dashboard", 
+                desc: "Phishing Reports ?", 
+                icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>, 
+                color: "text-amber-400", 
+                handler: () => navigate('/soc'),
+                visible: isAdmin
+              }
+            ].filter(box => box.visible).map((box) => (
+              <button key={box.id} onClick={box.handler} className="group flex flex-col items-center justify-center p-8 bg-white dark:bg-[#181818] border border-gray-200 dark:border-[#333] rounded-[2.5rem] hover:border-gray-300 dark:hover:border-[#444] hover:bg-gray-50 dark:hover:bg-[#1a1a1a] transition-all duration-300 text-center min-w-[240px] min-h-[180px] shadow-sm hover:shadow-xl dark:shadow-black/20">
+                <div className={`${box.color} mb-4 transition-transform duration-300 group-hover:-translate-y-2`}>{box.icon}</div>
+                <div className="text-[var(--text-primary)] text-xs font-black uppercase tracking-widest mb-2 opacity-60 group-hover:opacity-100">{box.name}</div>
+                <div className="text-[var(--text-secondary)] text-sm font-bold group-hover:text-[var(--text-primary)] transition-colors">{box.desc}</div>
+              </button>
+            ))}
           </div>
-        )}
-      </div>
-
-      {error && (
-        <div className="mt-6 p-4 bg-red-100 dark:bg-red-500/10 border border-red-400 dark:border-red-500/30 rounded-lg backdrop-blur-sm">
-          <div className="flex items-start justify-between">
-            <p className="text-red-600 dark:text-red-400 text-sm flex-1">{error}</p>
-            <button onClick={() => setError(null)} className="ml-4 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+        ) : (
+          <div className="w-full max-w-2xl animate-in fade-in slide-in-from-bottom-8 duration-500">
+            <div className="relative flex items-center bg-white dark:bg-[#181818] border border-[#00e5ff]/30 hover:border-[#00e5ff]/50 rounded-full p-2 pl-6 transition-all shadow-2xl group ring-1 ring-[#00e5ff]/20">
+              <svg className="w-6 h-6 text-[#555] group-focus-within:text-[#00e5ff] mr-4 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              <input value={url} onChange={e => setUrl(e.target.value)} placeholder="Paste the suspicious URL here..." className="flex-1 text-lg bg-transparent text-[var(--text-primary)] placeholder-gray-400 dark:placeholder-gray-600 outline-none py-3" onKeyPress={e => e.key === 'Enter' && onScan()} disabled={loading} autoFocus />
+              <button onClick={onScan} disabled={loading || !url.trim()} className="px-10 py-4 bg-[#00e5ff] hover:bg-[#00ccf0] disabled:bg-[#1a3d3c] disabled:text-[#006e66] text-[#0e0e0e] font-black rounded-full transition-all duration-300 shadow-lg hover:shadow-[#00e5ff]/30 disabled:cursor-not-allowed uppercase tracking-widest text-xs">
+                {loading ? 'Analyzing...' : 'Secure Scan'}
+              </button>
+            </div>
+            <button onClick={() => setShowScanner(false)} className="mt-8 text-[#555] hover:text-[#00e5ff] text-xs font-bold uppercase tracking-widest flex items-center gap-2 transition-colors mx-auto">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg> Back to Portal
             </button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
+
+      <div className="mt-20 flex flex-col items-center gap-4 z-10 opacity-40 hover:opacity-100 transition-opacity">
+        <div className="text-[10px] font-black uppercase tracking-[0.4em] text-[#333]">Explore More</div>
+        <svg className="w-4 h-4 text-[#333] animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
+      </div>
     </div>
   );
 }

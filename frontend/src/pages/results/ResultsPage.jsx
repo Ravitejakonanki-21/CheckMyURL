@@ -33,7 +33,7 @@ function ResultsPage({
     : result.riskScore;
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black transition-colors duration-300">
+    <div className="min-h-screen bg-[var(--bg-primary)] transition-colors duration-300">
       <NewScanModal
         isOpen={showNewScanModal}
         onClose={() => setShowNewScanModal(false)}
@@ -41,10 +41,10 @@ function ResultsPage({
       />
 
       {/* Header */}
-      <div className="border-b border-gray-300 dark:border-gray-700 bg-white dark:bg-black flex justify-between px-6 py-3">
+      <div className="border-b border-gray-300 dark:border-gray-700 bg-[var(--bg-primary)] flex justify-between px-6 py-3">
         <button
           onClick={onNewScan}
-          className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors duration-200 px-3 py-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-gray-900 text-sm border border-blue-300 dark:border-blue-600 hover:border-blue-400 dark:hover:border-blue-500"
+          className="inline-flex items-center gap-2 text-[#00e5ff] hover:text-[#00ccf0] dark:text-[#00e5ff] dark:hover:text-[#00ccf0] transition-colors duration-200 px-3 py-1.5 rounded-lg hover:bg-[#00e5ff]/10 dark:hover:bg-gray-900 text-sm border border-[#00e5ff]/30 dark:border-[#00e5ff]/50 hover:border-[#00e5ff]/60 dark:hover:border-[#00e5ff]/80"
         >
           <svg
             className="w-4 h-4"
@@ -68,7 +68,7 @@ function ResultsPage({
 
         <button
           onClick={() => exportPdf(result, securityScores)}
-          className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700 transition-colors duration-200 dark:bg-blue-500 dark:hover:bg-blue-600 border border-blue-700 dark:border-blue-400"
+          className="inline-flex items-center gap-2 rounded-lg bg-[#00e5ff] px-3 py-1.5 text-sm text-[#0e0e0e] hover:bg-[#00ccf0] transition-colors duration-200 dark:bg-[#00e5ff] dark:hover:bg-[#00ccf0] border border-[#00e5ff] dark:border-[#00e5ff]"
         >
           <svg
             className="w-4 h-4"
@@ -90,7 +90,7 @@ function ResultsPage({
       {/* Summary Cards */}
       <div className="w-full px-6 py-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Card 1 */}
-        <div className="lg:col-span-1 bg-white dark:bg-black rounded-lg border border-gray-300 dark:border-gray-700 p-4 shadow-sm transition-colors duration-300">
+        <div className="lg:col-span-1 bg-[var(--bg-secondary)] rounded-lg border border-gray-300 dark:border-gray-700 p-4 shadow-sm transition-colors duration-300">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
             {result.url}
           </h2>
@@ -145,8 +145,8 @@ function ResultsPage({
                 : "No suspicious keywords detected."}
             </p>
             <div className="mt-4 grid grid-cols-1 gap-3">
-              <div className="rounded-lg border border-blue-200 dark:border-blue-800 p-3 bg-blue-50 dark:bg-blue-900/30">
-                <p className="text-xs uppercase tracking-wide text-blue-600 dark:text-blue-200">
+              <div className="rounded-lg border border-[#00e5ff]/20 dark:border-[#00e5ff]/40 p-3 bg-[#00e5ff]/5 dark:bg-[#00e5ff]/10">
+                <p className="text-xs uppercase tracking-wide text-[#00e5ff] dark:text-[#00e5ff]">
                   Average (Final Score)
                 </p>
                 <p className={`text-lg font-semibold ${averageWeightScore >= 70
@@ -163,7 +163,7 @@ function ResultsPage({
         </div>
 
         {/* Card 2 */}
-        <div className="lg:col-span-2 bg-white dark:bg-black rounded-lg border border-gray-300 dark:border-gray-700 p-4 shadow-sm transition-colors duration-300">
+        <div className="lg:col-span-2 bg-[var(--bg-secondary)] rounded-lg border border-gray-300 dark:border-gray-700 p-4 shadow-sm transition-colors duration-300">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
             Risk Composition
           </h3>
@@ -190,7 +190,7 @@ const exportPdf = (result, securityScores) => {
     const doc = new jsPDF({ unit: "pt", format: "a4" });
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
-    doc.text("Enhanced URL Security Report", 40, 40);
+    doc.text("BLUECHECK — Security Scan Report", 40, 40);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
     const ts = new Date().toLocaleString();
@@ -218,7 +218,7 @@ const exportPdf = (result, securityScores) => {
       head: [["Field", "Value", "Score", "Weight"]],
       body: rows,
       styles: { fontSize: 10, cellPadding: 6 },
-      headStyles: { fillColor: [67, 56, 202] },
+      headStyles: { fillColor: [0, 229, 255] },
       theme: "grid",
       margin: { left: 40, right: 40 },
     });

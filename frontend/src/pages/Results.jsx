@@ -124,12 +124,12 @@ function Results({ scanResult }) {
               Comprehensive evaluation of the scanned URL
             </p>
             {resultData && (
-              <p className="mt-2 text-lg font-semibold text-gray-900 dark:text-white drop-shadow-sm shadow-[#00d4ff]/50">
+              <p className="mt-2 text-lg font-semibold text-gray-900 dark:text-white drop-shadow-sm shadow-[#00e5ff]/50">
                 Classification:{' '}
                 <span
                   className={
                     resultData.classification === 'Safe'
-                      ? 'text-green-500 dark:text-green-400'
+                      ? 'text-[#00e5ff]'
                       : resultData.classification === 'Suspicious'
                       ? 'text-yellow-400'
                       : 'text-red-500'
@@ -145,7 +145,7 @@ function Results({ scanResult }) {
           {/* Right Side - Export PDF Button */}
           <button
             onClick={exportPDF}
-            className="flex items-center gap-2 px-5 py-2 bg-blue-600 dark:bg-[#00d4ff] text-white dark:text-black rounded-lg hover:bg-blue-700 dark:hover:bg-[#00bbff] transition-colors"
+            className="flex items-center gap-2 px-5 py-2 bg-[#00e5ff] text-[#0e0e0e] font-semibold rounded-lg hover:bg-[#00ccf0] transition-colors"
           >
             <Download size={18} />
             Export PDF
@@ -157,7 +157,7 @@ function Results({ scanResult }) {
           {/* SSL Section */}
           <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-lg dark:shadow-[#00d4ff]/10 border border-gray-200 dark:border-[#00d4ff]/30">
             <div className="flex items-center gap-3 mb-4">
-              <Shield className="text-[#00d4ff]" size={28} />
+              <Shield className="text-[#00e5ff]" size={28} />
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">SSL / HTTPS</h2>
             </div>
             <ul className="space-y-2 text-gray-700 dark:text-gray-300">
@@ -168,18 +168,18 @@ function Results({ scanResult }) {
           </div>
 
           {/* WHOIS Section */}
-          <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-lg dark:shadow-[#00d4ff]/10 border border-gray-200 dark:border-[#00d4ff]/30">
+          <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-lg dark:shadow-[#00e5ff]/10 border border-gray-200 dark:border-[#00e5ff]/30">
             <div className="flex items-center gap-3 mb-4">
-              <Info className="text-[#00d4ff]" size={28} />
+              <Info className="text-[#00e5ff]" size={28} />
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">WHOIS</h2>
             </div>
             <p className="text-gray-700 dark:text-gray-300">Domain Age: {resultData.details.whoisAgeMonths} months</p>
           </div>
 
           {/* Security Headers Section */}
-          <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-lg dark:shadow-[#00d4ff]/10 border border-gray-200 dark:border-[#00d4ff]/30">
+          <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-lg dark:shadow-[#00e5ff]/10 border border-gray-200 dark:border-[#00e5ff]/30">
             <div className="flex items-center gap-3 mb-4">
-              <Shield className="text-[#00d4ff]" size={28} />
+              <Shield className="text-[#00e5ff]" size={28} />
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Security Headers</h2>
             </div>
             <ul className="space-y-2 text-gray-700 dark:text-gray-300">
@@ -190,18 +190,18 @@ function Results({ scanResult }) {
           </div>
 
           {/* Port Scan Section */}
-          <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-lg dark:shadow-[#00d4ff]/10 border border-gray-200 dark:border-[#00d4ff]/30">
+          <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-lg dark:shadow-[#00e5ff]/10 border border-gray-200 dark:border-[#00e5ff]/30">
             <div className="flex items-center gap-3 mb-4">
-              <Shield className="text-[#00d4ff]" size={28} />
+              <Shield className="text-[#00e5ff]" size={28} />
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Port Scan</h2>
             </div>
             <p className="text-gray-700 dark:text-gray-300">Open Ports: {resultData.details.portScan.join(', ')}</p>
           </div>
 
           {/* Phishing Detection */}
-          <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-lg dark:shadow-[#00d4ff]/10 border border-gray-200 dark:border-[#00d4ff]/30">
+          <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-lg dark:shadow-[#00e5ff]/10 border border-gray-200 dark:border-[#00e5ff]/30">
             <div className="flex items-center gap-3 mb-4">
-              <AlertTriangle className="text-[#00d4ff]" size={28} />
+              <AlertTriangle className="text-[#00e5ff]" size={28} />
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Phishing Detection</h2>
             </div>
             <p className="text-gray-700 dark:text-gray-300">
@@ -210,9 +210,9 @@ function Results({ scanResult }) {
           </div>
 
           {/* Actionable Insights */}
-          <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-lg dark:shadow-[#00d4ff]/10 border border-gray-200 dark:border-[#00d4ff]/30">
+          <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-lg dark:shadow-[#00e5ff]/10 border border-gray-200 dark:border-[#00e5ff]/30">
             <div className="flex items-center gap-3 mb-4">
-              <Info className="text-[#00d4ff]" size={28} />
+              <Info className="text-[#00e5ff]" size={28} />
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Actionable Insights</h2>
             </div>
             <ul className="list-disc pl-6 text-gray-700 dark:text-gray-300 space-y-2">

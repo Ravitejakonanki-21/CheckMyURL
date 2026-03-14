@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 
-const API = '/';
+const API = '';
 
 const SEVERITY_COLORS = {
     CRITICAL: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
     HIGH: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
     MEDIUM: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300',
-    LOW: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
+    LOW: 'bg-[#00e5ff]/10 text-[#00e5ff] dark:bg-[#00e5ff]/20 dark:text-[#00e5ff]',
 };
 
 const STATE_COLORS = {
@@ -19,17 +19,20 @@ const STATE_COLORS = {
 };
 
 function authHeader() {
-    const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem('access_token') || localStorage.getItem('token');
     return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 async function socApi(method, path, body) {
-    const res = await fetch(`${API}/api/soc${path}`, {
+    const res = await fetch(`/api/soc${path}`, {
         method,
         headers: { 'Content-Type': 'application/json', ...authHeader() },
         body: body ? JSON.stringify(body) : undefined,
     });
-    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || errData.reason || `${res.status} ${res.statusText}`);
+    }
     return res.json();
 }
 
@@ -81,7 +84,7 @@ function ReportModal({ scan, onClose, onDone }) {
                     <button
                         onClick={submit}
                         disabled={loading}
-                        className="px-5 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold disabled:opacity-60"
+                        className="px-5 py-2 rounded-lg bg-[#00e5ff] hover:bg-[#00ccf0] text-[#0e0e0e] text-sm font-semibold disabled:opacity-60"
                     >
                         {loading ? 'Submitting…' : 'Submit Report'}
                     </button>
@@ -158,7 +161,7 @@ function QueueRow({ scan, onRefresh }) {
                         )}
                         <button
                             onClick={() => setReportTarget(scan)}
-                            className="px-3 py-1 text-xs rounded-lg bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300 hover:bg-cyan-200 font-medium"
+                            className="px-3 py-1 text-xs rounded-lg bg-[#00e5ff]/10 text-[#00e5ff] dark:bg-[#00e5ff]/20 dark:text-[#00e5ff] hover:bg-[#00e5ff]/30 font-medium"
                         >
                             Report
                         </button>
@@ -211,13 +214,13 @@ export default function SOCDashboard() {
                 <div className="flex items-center justify-between mb-8">
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                            🛡️ SOC <span className="text-cyan-500">Dashboard</span>
+                            🛡️ SOC <span className="text-[#00e5ff]">Dashboard</span>
                         </h1>
                         <p className="text-gray-500 dark:text-gray-400 mt-1">Review and triage suspicious URL scans</p>
                     </div>
                     <button
                         onClick={fetchQueue}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold"
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#00e5ff] hover:bg-[#00ccf0] text-[#0e0e0e] text-sm font-semibold"
                     >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />

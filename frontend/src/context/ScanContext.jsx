@@ -25,6 +25,7 @@ function saveHistory(history) {
 export function ScanProvider({ children }) {
   const [hasScanned, setHasScanned] = useState(false);
   const [scanResult, setScanResult] = useState(null);
+  const [isShowingResults, setIsShowingResults] = useState(false);
   const [history, setHistory] = useState(loadHistory);
 
   /**
@@ -73,8 +74,8 @@ export function ScanProvider({ children }) {
     <ScanContext.Provider value={{
       hasScanned,
       setHasScanned,
-      scanResult,
-      setScanResult,
+      isShowingResults,
+      setIsShowingResults,
       history,
       recordScan,
       clearHistory,

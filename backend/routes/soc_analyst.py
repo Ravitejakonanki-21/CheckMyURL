@@ -41,7 +41,7 @@ def _transition_scan(scan_id: ObjectId, from_states, to_state: str, reason: str,
 
 
 @bp.get("/queue")
-@roles_required(["ANALYST", "MANAGER", "ADMIN"])
+@roles_required(["ADMIN"])
 def analyst_queue():
     """
     Returns scans in SCANNED or UNDER_REVIEW states,
@@ -61,7 +61,7 @@ def analyst_queue():
 
 
 @bp.post("/scans/<scan_id>/review")
-@roles_required(["ANALYST", "MANAGER", "ADMIN"])
+@roles_required(["ADMIN"])
 def review_scan(scan_id: str):
     payload = request.get_json(force=True) or {}
     notes = (payload.get("notes") or "").strip()
@@ -81,7 +81,7 @@ def review_scan(scan_id: str):
 
 
 @bp.post("/scans/<scan_id>/escalate")
-@roles_required(["ANALYST", "MANAGER", "ADMIN"])
+@roles_required(["ADMIN"])
 def escalate_scan(scan_id: str):
     payload = request.get_json(force=True) or {}
     reason = (payload.get("reason") or "").strip()
@@ -101,7 +101,7 @@ def escalate_scan(scan_id: str):
 
 
 @bp.post("/scans/<scan_id>/close")
-@roles_required(["MANAGER", "ADMIN"])
+@roles_required(["ADMIN"])
 def close_scan(scan_id: str):
     payload = request.get_json(force=True) or {}
     reason = (payload.get("reason") or "").strip()
@@ -121,7 +121,7 @@ def close_scan(scan_id: str):
 
 
 @bp.post("/scans/<scan_id>/report")
-@roles_required(["ANALYST", "MANAGER", "ADMIN"])
+@roles_required(["ADMIN"])
 def report_threat(scan_id: str):
     """
     Analyst submits a confirmed threat verdict (CONFIRMED_PHISHING or FALSE_POSITIVE).
@@ -152,7 +152,7 @@ def report_threat(scan_id: str):
 
 
 @bp.post("/scans/<scan_id>/false-positive")
-@roles_required(["ANALYST", "MANAGER", "ADMIN"])
+@roles_required(["ADMIN"])
 def mark_false_positive(scan_id: str):
     """Shortcut: mark a scan FALSE_POSITIVE without writing a full report."""
     payload = request.get_json(force=True) or {}

@@ -92,7 +92,7 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
     <div className="bg-slate-800 border border-gray-600 rounded-lg">
       {/* Header - aligned with other components */}
       <div className="p-4 pb-3">
-        <h4 className="flex items-center text-lg font-semibold" style={{color: 'rgb(147 197 253)'}}>
+        <h4 className="flex items-center text-lg font-semibold" style={{color: '#00e5ff'}}>
           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
@@ -115,7 +115,7 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                 </div>
                 <button 
                   onClick={() => handleCopy(`Risk: ${whoisData.classification || 'Unknown'} (${whoisData.risk_score || 0}/100)`, 'risk')}
-                  className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
+                  className="text-[#00e5ff] hover:text-[#00ccf0] transition-colors p-1 rounded hover:bg-[#00e5ff]/10"
                   title="Copy Risk Assessment"
                 >
                   {copiedStates.risk ? (
@@ -135,12 +135,12 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
             <div className="bg-black p-3 rounded border border-gray-600">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center">
-                  <div className="w-2 h-2 rounded-full bg-blue-500 mr-2"></div>
+                  <div className="w-2 h-2 rounded-full bg-[#00e5ff] mr-2"></div>
                   <div className="text-sm text-gray-300">Domain Age</div>
                 </div>
                 <button 
                   onClick={() => handleCopy(`Domain Age: ${whoisData.age_days ? `${whoisData.age_days} days` : 'Unknown'} (${ageMonths} months)`, 'age')}
-                  className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
+                  className="text-[#00e5ff] hover:text-[#00ccf0] transition-colors p-1 rounded hover:bg-[#00e5ff]/10"
                   title="Copy Domain Age"
                 >
                   {copiedStates.age ? (
@@ -167,7 +167,7 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                 </div>
                 <button 
                   onClick={() => handleCopy(`Registrar: ${whoisData.registrar || 'Not available'}`, 'registrar')}
-                  className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
+                  className="text-[#00e5ff] hover:text-[#00ccf0] transition-colors p-1 rounded hover:bg-[#00e5ff]/10"
                   title="Copy Registrar"
                 >
                   {copiedStates.registrar ? (
@@ -193,7 +193,7 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                 </div>
                 <button 
                   onClick={() => handleCopy(`Privacy Protection: ${whoisData.privacy_protected ? 'Protected' : 'Disabled'}`, 'privacy')}
-                  className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
+                  className="text-[#00e5ff] hover:text-[#00ccf0] transition-colors p-1 rounded hover:bg-[#00e5ff]/10"
                   title="Copy Privacy Status"
                 >
                   {copiedStates.privacy ? (
@@ -214,12 +214,12 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
             <div className="bg-black p-3 rounded border border-gray-600">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center">
-                  <div className="w-2 h-2 rounded-full bg-cyan-500 mr-2"></div>
+                  <div className="w-2 h-2 rounded-full bg-[#00e5ff] mr-2"></div>
                   <div className="text-sm text-gray-300">Organization</div>
                 </div>
                 <button 
                   onClick={() => handleCopy(`Organization: ${whoisData.registrant_organization || 'Not available'}`, 'organization')}
-                  className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
+                  className="text-[#00e5ff] hover:text-[#00ccf0] transition-colors p-1 rounded hover:bg-[#00e5ff]/10"
                   title="Copy Organization"
                 >
                   {copiedStates.organization ? (
@@ -248,7 +248,7 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                   Domain & Dates
-                  <span className="ml-2 text-xs bg-blue-600 text-blue-200 px-2 py-0.5 rounded">Part 1</span>
+                  <span className="ml-2 text-xs bg-[#00e5ff] text-[#0e0e0e] px-2 py-0.5 rounded">Part 1</span>
                 </div>
 
                 {/* Domain Details */}
@@ -262,7 +262,7 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                     </div>
                     <button 
                       onClick={() => handleCopy(whoisData.domain || "Not available", 'domain')}
-                      className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
+                      className="text-[#00e5ff] hover:text-[#00ccf0] transition-colors p-1 rounded hover:bg-[#00e5ff]/10"
                       title="Copy Domain"
                     >
                       {copiedStates.domain ? (
@@ -288,7 +288,7 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                     </div>
                     <button 
                       onClick={() => handleCopy(formatDate(whoisData.creation_date), 'creation')}
-                      className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
+                      className="text-[#00e5ff] hover:text-[#00ccf0] transition-colors p-1 rounded hover:bg-[#00e5ff]/10"
                       title="Copy Creation Date"
                     >
                       {copiedStates.creation ? (
@@ -314,7 +314,7 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                     </div>
                     <button 
                       onClick={() => handleCopy(formatDate(whoisData.updated_date), 'updated')}
-                      className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
+                      className="text-[#00e5ff] hover:text-[#00ccf0] transition-colors p-1 rounded hover:bg-[#00e5ff]/10"
                       title="Copy Updated Date"
                     >
                       {copiedStates.updated ? (
@@ -340,7 +340,7 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                     </div>
                     <button 
                       onClick={() => handleCopy(formatDate(whoisData.expiration_date), 'expiration')}
-                      className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
+                      className="text-[#00e5ff] hover:text-[#00ccf0] transition-colors p-1 rounded hover:bg-[#00e5ff]/10"
                       title="Copy Expiration Date"
                     >
                       {copiedStates.expiration ? (
@@ -364,7 +364,7 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
                   </svg>
                   DNS & Contacts
-                  <span className="ml-2 text-xs bg-green-600 text-green-200 px-2 py-0.5 rounded">Part 2</span>
+                  <span className="ml-2 text-xs bg-green-500 text-green-100 px-2 py-0.5 rounded">Part 2</span>
                 </div>
 
                 {/* Name Servers */}
@@ -379,7 +379,7 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                       </div>
                       <button 
                         onClick={() => handleCopy(whoisData.name_servers.join(', '), 'nameservers')}
-                        className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
+                        className="text-[#00e5ff] hover:text-[#00ccf0] transition-colors p-1 rounded hover:bg-[#00e5ff]/10"
                         title="Copy Name Servers"
                       >
                         {copiedStates.nameservers ? (
@@ -414,7 +414,7 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                     </div>
                     <button 
                       onClick={() => handleCopy(whoisData.admin_email || 'Not available', 'admin')}
-                      className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
+                      className="text-[#00e5ff] hover:text-[#00ccf0] transition-colors p-1 rounded hover:bg-[#00e5ff]/10"
                       title="Copy Admin Email"
                     >
                       {copiedStates.admin ? (
@@ -441,7 +441,7 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                     </div>
                     <button 
                       onClick={() => handleCopy(whoisData.tech_email || 'Not available', 'tech')}
-                      className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
+                      className="text-[#00e5ff] hover:text-[#00ccf0] transition-colors p-1 rounded hover:bg-[#00e5ff]/10"
                       title="Copy Tech Email"
                     >
                       {copiedStates.tech ? (
@@ -469,7 +469,7 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                     </div>
                     <button 
                       onClick={() => handleCopy(whoisData.registrant_country || whoisData.country || 'Not available', 'country')}
-                      className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
+                      className="text-[#00e5ff] hover:text-[#00ccf0] transition-colors p-1 rounded hover:bg-[#00e5ff]/10"
                       title="Copy Country"
                     >
                       {copiedStates.country ? (
@@ -507,7 +507,7 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                     </div>
                     <button 
                       onClick={() => handleCopy(whoisData.registry_domain_id || 'Not available', 'registryId')}
-                      className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
+                      className="text-[#00e5ff] hover:text-[#00ccf0] transition-colors p-1 rounded hover:bg-[#00e5ff]/10"
                       title="Copy Registry Domain ID"
                     >
                       {copiedStates.registryId ? (
@@ -534,7 +534,7 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                     </div>
                     <button
                       onClick={() => handleCopy(whoisData.registrar || "Not available", "registrar")}
-                      className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
+                      className="text-[#00e5ff] hover:text-[#00ccf0] transition-colors p-1 rounded hover:bg-[#00e5ff]/10"
                       title="Copy Registrar"
                     >
                       {copiedStates.registrar ? (
@@ -560,7 +560,7 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                     </div>
                     <button
                       onClick={() => handleCopy(whoisData.registrar_iana_id || "Not available", "ianaId")}
-                      className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
+                      className="text-[#00e5ff] hover:text-[#00ccf0] transition-colors p-1 rounded hover:bg-[#00e5ff]/10"
                       title="Copy IANA ID"
                     >
                       {copiedStates.ianaId ? (
@@ -586,7 +586,7 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                     </div>
                     <button
                       onClick={() => handleCopy(whoisData.registrar_abuse_email || "Not available", "abuseEmail")}
-                      className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
+                      className="text-[#00e5ff] hover:text-[#00ccf0] transition-colors p-1 rounded hover:bg-[#00e5ff]/10"
                       title="Copy Abuse Email"
                     >
                       {copiedStates.abuseEmail ? (
@@ -613,7 +613,7 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                     </div>
                     <button
                       onClick={() => handleCopy(whoisData.registrar_abuse_phone || "Not available", "abusePhone")}
-                      className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
+                      className="text-[#00e5ff] hover:text-[#00ccf0] transition-colors p-1 rounded hover:bg-[#00e5ff]/10"
                       title="Copy Abuse Phone"
                     >
                       {copiedStates.abusePhone ? (
@@ -651,7 +651,7 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                     </div>
                     <button
                       onClick={() => handleCopy(whoisData.registrant || "Not available", "registrant")}
-                      className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
+                      className="text-[#00e5ff] hover:text-[#00ccf0] transition-colors p-1 rounded hover:bg-[#00e5ff]/10"
                       title="Copy Registrant"
                     >
                       {copiedStates.registrant ? (
@@ -677,7 +677,7 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                     </div>
                     <button
                       onClick={() => handleCopy(whoisData.registrant_organization || "Not available", "registrantOrganization")}
-                      className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
+                      className="text-[#00e5ff] hover:text-[#00ccf0] transition-colors p-1 rounded hover:bg-[#00e5ff]/10"
                       title="Copy Registrant Organization"
                     >
                       {copiedStates.registrantOrganization ? (
@@ -704,7 +704,7 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                     </div>
                     <button
                       onClick={() => handleCopy(whoisData.registrant_country || "Not available", "registrantCountry")}
-                      className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
+                      className="text-[#00e5ff] hover:text-[#00ccf0] transition-colors p-1 rounded hover:bg-[#00e5ff]/10"
                       title="Copy Registrant Country"
                     >
                       {copiedStates.registrantCountry ? (
@@ -731,7 +731,7 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                     </div>
                     <button 
                       onClick={() => handleCopy(whoisData.dnssec || 'Not available', 'dnssec')}
-                      className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
+                      className="text-[#00e5ff] hover:text-[#00ccf0] transition-colors p-1 rounded hover:bg-[#00e5ff]/10"
                       title="Copy DNSSEC Status"
                     >
                       {copiedStates.dnssec ? (
@@ -767,7 +767,7 @@ const WhoisDetails = ({ whoisData, loading = false, securityScores, lastUpdated,
                       </div>
                       <button 
                         onClick={() => handleCopy(whoisData.statuses.join(', '), 'statuses')}
-                        className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded hover:bg-blue-900/20"
+                        className="text-[#00e5ff] hover:text-[#00ccf0] transition-colors p-1 rounded hover:bg-[#00e5ff]/10"
                         title="Copy Domain Statuses"
                       >
                         {copiedStates.statuses ? (

@@ -18,14 +18,14 @@ function PasswordField({ id, label, value, onChange, placeholder }) {
   const [show, setShow] = useState(false);
   return (
     <div>
-      <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-3">{label}</label>
+      <label htmlFor={id} className="block text-sm font-medium text-[var(--text-primary)] mb-3">{label}</label>
       <div className="relative">
         <input
           id={id}
           type={show ? "text" : "password"}
           value={value}
           onChange={onChange}
-          className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
+          className="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-[#333] rounded-lg focus:ring-2 focus:ring-[#00e5ff] focus:border-[#00e5ff] bg-gray-50 dark:bg-[#0e0e0e] text-[var(--text-primary)]"
           placeholder={placeholder}
           required
           minLength={6}
@@ -68,7 +68,7 @@ export default function ResetPassword() {
 
     setLoading(true);
     try {
-      const response = await fetch("/reset-password", {
+      const response = await fetch("/api/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, password }),
@@ -90,19 +90,18 @@ export default function ResetPassword() {
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-center px-4 bg-gray-50"
-      style={{ backgroundImage: "url(/bg.jpg)", backgroundSize: "cover", backgroundPosition: "center" }}
+      className="min-h-screen bg-[var(--bg-primary)] flex flex-col items-center justify-center px-4 transition-colors duration-300"
     >
       <div className="max-w-md w-full">
         <div className="text-center mb-6">
           <div className="flex items-center justify-center gap-3 mb-2">
             <img src="/logo.png" alt="CheckMyURL logo" className="h-16 w-16" loading="eager" />
-            <h1 className="text-3xl font-bold text-blue-500">CheckMyURL</h1>
+            <h1 className="text-3xl font-bold text-[#00e5ff]">BLUECHECK</h1>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Reset Your Password</h2>
+        <div className="bg-white dark:bg-[#181818] rounded-2xl shadow-lg border border-gray-200 dark:border-[#333] p-8">
+          <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-6 text-center">Reset Your Password</h2>
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* New Password */}
             <PasswordField
@@ -126,12 +125,12 @@ export default function ResetPassword() {
             )}
 
             <button type="submit" disabled={loading}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 shadow-md">
+              className="w-full py-3 bg-[#00e5ff] hover:bg-[#00ccf0] text-[#0e0e0e] font-semibold rounded-lg transition-colors disabled:opacity-50 shadow-md">
               {loading ? "Resetting…" : "Reset Password"}
             </button>
           </form>
         </div>
-        <p className="text-sm text-gray-600 mt-8 text-center">Students of IBM @ 2025</p>
+        <p className="text-sm text-[var(--text-secondary)] mt-8 text-center">Students of IBM @ 2025</p>
       </div>
     </div>
   );

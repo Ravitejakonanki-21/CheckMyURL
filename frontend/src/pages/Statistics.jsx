@@ -29,7 +29,7 @@ function Statistics() {
       stroke: { curve: "smooth", width: 3 },
       dataLabels: { enabled: false },
       grid: { 
-        borderColor: '#1e40af',
+        borderColor: '#00e5ff22',
         strokeDashArray: 4,
         xaxis: { lines: { show: true } },
         yaxis: { lines: { show: true } }
@@ -38,7 +38,7 @@ function Statistics() {
         categories: labels, 
         tickPlacement: "on",
         labels: { 
-          style: { colors: '#60a5fa' }
+          style: { colors: '#00e5ff' }
         }
       },
       yaxis: { 
@@ -46,10 +46,10 @@ function Statistics() {
         max: 100, 
         forceNiceScale: true,
         labels: { 
-          style: { colors: '#60a5fa' }
+          style: { colors: '#00e5ff' }
         }
       },
-      colors: ["#06b6d4"],
+      colors: ["#00e5ff"],
       tooltip: {
         theme: 'dark',
         style: {
@@ -90,18 +90,18 @@ function Statistics() {
       xaxis: { 
         categories: toolOrder,
         labels: { 
-          style: { colors: '#60a5fa' }
+          style: { colors: '#00e5ff' }
         }
       },
       yaxis: {
         labels: { 
-          style: { colors: '#60a5fa' }
+          style: { colors: '#00e5ff' }
         }
       },
-      colors: ["#3b82f6"],
+      colors: ["#00e5ff"],
       dataLabels: { enabled: false },
       grid: { 
-        borderColor: '#1e40af',
+        borderColor: '#00e5ff22',
         strokeDashArray: 4 
       },
       tooltip: {
@@ -145,18 +145,18 @@ function Statistics() {
       xaxis: { 
         categories: bucketLabels,
         labels: { 
-          style: { colors: '#60a5fa' }
+          style: { colors: '#00e5ff' }
         }
       },
       yaxis: {
         labels: { 
-          style: { colors: '#60a5fa' }
+          style: { colors: '#00e5ff' }
         }
       },
       colors: ["#22c55e", "#84cc16", "#eab308", "#f97316", "#ef4444"],
       dataLabels: { enabled: false },
       grid: { 
-        borderColor: '#1e40af',
+        borderColor: '#00e5ff22',
         strokeDashArray: 4 
       },
       legend: { show: false },
@@ -179,37 +179,37 @@ function Statistics() {
   const safeCount = history.filter(e => (e.riskScore || 0) < 40).length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-blue-100 dark:from-black dark:via-black dark:to-blue-950/20 p-6">
+    <div className="min-h-screen bg-[var(--bg-primary)] p-6 transition-colors duration-300">
       {/* Header Section */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <svg className="w-8 h-8 text-blue-600 dark:text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-8 h-8 text-[#00e5ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
           </svg>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-cyan-400">
-            Security <span className="text-blue-600 dark:text-cyan-300">Analytics</span>
+          <h1 className="text-3xl font-bold text-[var(--text-primary)]">
+            Security <span className="text-[#00e5ff]">Analytics</span>
           </h1>
         </div>
-        <p className="text-gray-600 dark:text-cyan-200/80">Comprehensive insights into your URL security scans</p>
+        <p className="text-gray-600 dark:text-[#00e5ff]/80">Comprehensive insights into your URL security scans</p>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {/* Total Scans */}
-        <div className="bg-white/80 dark:bg-black/40 backdrop-blur-xl border border-blue-200 dark:border-cyan-500/30 rounded-xl p-5 shadow-lg dark:shadow-cyan-500/10 hover:shadow-xl dark:hover:shadow-cyan-500/20 transition-all duration-300">
+        <div className="bg-white dark:bg-[#181818] border border-gray-200 dark:border-[#333] rounded-xl p-5 shadow-lg transition-all duration-300">
           <div className="flex items-center justify-between mb-2">
-            <div className="p-2 bg-blue-100 dark:bg-cyan-500/20 rounded-lg">
-              <svg className="w-5 h-5 text-blue-600 dark:text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="p-2 bg-[#00e5ff]/10 rounded-lg">
+              <svg className="w-5 h-5 text-[#00e5ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
           </div>
-          <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{totalScans}</div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">Total Scans</div>
+          <div className="text-3xl font-bold text-[var(--text-primary)] mb-1">{totalScans}</div>
+          <div className="text-sm text-[var(--text-secondary)]">Total Scans</div>
         </div>
 
         {/* Average Risk */}
-        <div className="bg-white/80 dark:bg-black/40 backdrop-blur-xl border border-blue-200 dark:border-cyan-500/30 rounded-xl p-5 shadow-lg dark:shadow-cyan-500/10 hover:shadow-xl dark:hover:shadow-cyan-500/20 transition-all duration-300">
+        <div className="bg-white dark:bg-[#181818] border border-gray-200 dark:border-[#333] rounded-xl p-5 shadow-lg transition-all duration-300">
           <div className="flex items-center justify-between mb-2">
             <div className="p-2 bg-yellow-100 dark:bg-yellow-500/20 rounded-lg">
               <svg className="w-5 h-5 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -217,12 +217,12 @@ function Statistics() {
               </svg>
             </div>
           </div>
-          <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{avgRisk}</div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">Average Risk Score</div>
+          <div className="text-3xl font-bold text-[var(--text-primary)] mb-1">{avgRisk}</div>
+          <div className="text-sm text-[var(--text-secondary)]">Average Risk Score</div>
         </div>
 
         {/* High Risk URLs */}
-        <div className="bg-white/80 dark:bg-black/40 backdrop-blur-xl border border-blue-200 dark:border-cyan-500/30 rounded-xl p-5 shadow-lg dark:shadow-cyan-500/10 hover:shadow-xl dark:hover:shadow-cyan-500/20 transition-all duration-300">
+        <div className="bg-white dark:bg-[#181818] border border-gray-200 dark:border-[#333] rounded-xl p-5 shadow-lg transition-all duration-300">
           <div className="flex items-center justify-between mb-2">
             <div className="p-2 bg-red-100 dark:bg-red-500/20 rounded-lg">
               <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -230,12 +230,12 @@ function Statistics() {
               </svg>
             </div>
           </div>
-          <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{highRiskCount}</div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">High Risk URLs</div>
+          <div className="text-3xl font-bold text-[var(--text-primary)] mb-1">{highRiskCount}</div>
+          <div className="text-sm text-[var(--text-secondary)]">High Risk URLs</div>
         </div>
 
         {/* Safe URLs */}
-        <div className="bg-white/80 dark:bg-black/40 backdrop-blur-xl border border-blue-200 dark:border-cyan-500/30 rounded-xl p-5 shadow-lg dark:shadow-cyan-500/10 hover:shadow-xl dark:hover:shadow-cyan-500/20 transition-all duration-300">
+        <div className="bg-white dark:bg-[#181818] border border-gray-200 dark:border-[#333] rounded-xl p-5 shadow-lg transition-all duration-300">
           <div className="flex items-center justify-between mb-2">
             <div className="p-2 bg-green-100 dark:bg-green-500/20 rounded-lg">
               <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -243,8 +243,8 @@ function Statistics() {
               </svg>
             </div>
           </div>
-          <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{safeCount}</div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">Safe URLs</div>
+          <div className="text-3xl font-bold text-[var(--text-primary)] mb-1">{safeCount}</div>
+          <div className="text-sm text-[var(--text-secondary)]">Safe URLs</div>
         </div>
       </div>
 
@@ -258,13 +258,13 @@ function Statistics() {
         {/* Charts - Right Column */}
         <div className="lg:col-span-2 space-y-6">
           {/* Risk Trend Line Chart */}
-          <div className="bg-white/80 dark:bg-black/90 backdrop-blur-xl border border-blue-200 dark:border-cyan-500/50 rounded-xl shadow-lg dark:shadow-cyan-500/20 overflow-hidden hover:shadow-xl dark:hover:shadow-cyan-500/30 transition-all duration-300">
-            <div className="p-5 border-b border-blue-200 dark:border-cyan-500/50">
+          <div className="bg-white dark:bg-[#181818] border border-gray-200 dark:border-[#333] rounded-xl shadow-lg overflow-hidden transition-all duration-300">
+            <div className="p-5 border-b border-gray-200 dark:border-[#333]">
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-cyan-400 dark:bg-cyan-400 animate-pulse"></div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-cyan-400">Risk Trend</h3>
+                <div className="w-2 h-2 rounded-full bg-[#00e5ff] animate-pulse"></div>
+                <h3 className="text-lg font-semibold text-[var(--text-primary)]">Risk Trend</h3>
               </div>
-              <p className="text-xs text-gray-600 dark:text-cyan-300/80 mt-1">Last {last.length} scans</p>
+              <p className="text-xs text-[var(--text-secondary)] mt-1">Last {last.length} scans</p>
             </div>
             <div className="p-5">
               <LineCard
@@ -278,13 +278,13 @@ function Statistics() {
           </div>
 
           {/* Tool Findings Bar Chart */}
-          <div className="bg-white/80 dark:bg-black/90 backdrop-blur-xl border border-blue-200 dark:border-cyan-500/50 rounded-xl shadow-lg dark:shadow-cyan-500/20 overflow-hidden hover:shadow-xl dark:hover:shadow-cyan-500/30 transition-all duration-300">
-            <div className="p-5 border-b border-blue-200 dark:border-cyan-500/50">
+          <div className="bg-white dark:bg-[#181818] border border-gray-200 dark:border-[#333] rounded-xl shadow-lg overflow-hidden transition-all duration-300">
+            <div className="p-5 border-b border-gray-200 dark:border-[#333]">
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-blue-500 dark:bg-cyan-400 animate-pulse"></div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-cyan-400">Tool Findings Distribution</h3>
+                <div className="w-2 h-2 rounded-full bg-[#00e5ff] animate-pulse"></div>
+                <h3 className="text-lg font-semibold text-[var(--text-primary)]">Tool Findings Distribution</h3>
               </div>
-              <p className="text-xs text-gray-600 dark:text-cyan-300/80 mt-1">Cumulative findings across all scans</p>
+              <p className="text-xs text-[var(--text-secondary)] mt-1">Cumulative findings across all scans</p>
             </div>
             <div className="p-5">
               <BarCard
@@ -298,13 +298,13 @@ function Statistics() {
           </div>
 
           {/* Risk Distribution Bar Chart */}
-          <div className="bg-white/80 dark:bg-black/90 backdrop-blur-xl border border-blue-200 dark:border-cyan-500/50 rounded-xl shadow-lg dark:shadow-cyan-500/20 overflow-hidden hover:shadow-xl dark:hover:shadow-cyan-500/30 transition-all duration-300">
-            <div className="p-5 border-b border-blue-200 dark:border-cyan-500/50">
+          <div className="bg-white dark:bg-[#181818] border border-gray-200 dark:border-[#333] rounded-xl shadow-lg overflow-hidden transition-all duration-300">
+            <div className="p-5 border-b border-gray-200 dark:border-[#333]">
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-red-500 dark:bg-cyan-400 animate-pulse"></div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-cyan-400">Risk Score Distribution</h3>
+                <div className="w-2 h-2 rounded-full bg-[#00e5ff] animate-pulse"></div>
+                <h3 className="text-lg font-semibold text-[var(--text-primary)]">Risk Score Distribution</h3>
               </div>
-              <p className="text-xs text-gray-600 dark:text-cyan-300/80 mt-1">URLs categorized by risk level</p>
+              <p className="text-xs text-[var(--text-secondary)] mt-1">URLs categorized by risk level</p>
             </div>
             <div className="p-5">
               <BarCard
