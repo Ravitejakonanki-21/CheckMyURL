@@ -284,7 +284,7 @@ function Scanner() {
                 icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>, 
                 color: "text-cyan-400", 
                 handler: () => navigate('/statistics'),
-                visible: isAdmin
+                visible: isAuthenticated
               },
               { 
                 id: 'bulk', 
@@ -293,7 +293,7 @@ function Scanner() {
                 icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>, 
                 color: "text-red-400", 
                 handler: () => navigate('/bulk-scan'),
-                visible: isAdmin
+                visible: isAuthenticated
               },
               { 
                 id: 'soc', 
@@ -305,10 +305,10 @@ function Scanner() {
                 visible: isAdmin
               }
             ].filter(box => box.visible).map((box) => (
-              <button key={box.id} onClick={box.handler} className="group flex flex-col items-center justify-center p-8 bg-white dark:bg-[#181818] border border-gray-200 dark:border-[#333] rounded-[2.5rem] hover:border-gray-300 dark:hover:border-[#444] hover:bg-gray-50 dark:hover:bg-[#1a1a1a] transition-all duration-300 text-center min-w-[240px] min-h-[180px] shadow-sm hover:shadow-xl dark:shadow-black/20">
-                <div className={`${box.color} mb-4 transition-transform duration-300 group-hover:-translate-y-2`}>{box.icon}</div>
-                <div className="text-[var(--text-primary)] text-xs font-black uppercase tracking-widest mb-2 opacity-60 group-hover:opacity-100">{box.name}</div>
-                <div className="text-[var(--text-secondary)] text-sm font-bold group-hover:text-[var(--text-primary)] transition-colors">{box.desc}</div>
+              <button key={box.id} onClick={box.handler} className="group flex flex-col items-center justify-center p-6 md:p-8 bg-white dark:bg-[#181818] border border-gray-200 dark:border-[#333] rounded-[2rem] md:rounded-[2.5rem] hover:border-gray-300 dark:hover:border-[#444] hover:bg-gray-50 dark:hover:bg-[#1a1a1a] transition-all duration-300 text-center w-full sm:w-[calc(50%-1.5rem)] lg:w-[calc(25%-1.5rem)] min-w-[160px] md:min-w-[240px] min-h-[140px] md:min-h-[180px] shadow-sm hover:shadow-xl dark:shadow-black/20">
+                <div className={`${box.color} mb-3 md:mb-4 transition-transform duration-300 group-hover:-translate-y-2`}>{box.icon}</div>
+                <div className="text-[var(--text-primary)] text-[10px] md:text-xs font-black uppercase tracking-widest mb-1 md:mb-2 opacity-60 group-hover:opacity-100">{box.name}</div>
+                <div className="text-[var(--text-secondary)] text-xs md:text-sm font-bold group-hover:text-[var(--text-primary)] transition-colors">{box.desc}</div>
               </button>
             ))}
           </div>
