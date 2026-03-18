@@ -41,47 +41,27 @@ function ResultsPage({
       />
 
       {/* Header */}
-      <div className="border-b border-gray-300 dark:border-gray-700 bg-[var(--bg-primary)] flex justify-between px-6 py-3">
+      <div className="border-b border-gray-300 dark:border-gray-700 bg-[var(--bg-primary)] flex flex-col sm:flex-row items-center justify-between gap-4 px-4 sm:px-6 py-4 sm:py-3 transition-colors duration-300">
         <button
           onClick={onNewScan}
-          className="inline-flex items-center gap-2 text-[#00e5ff] hover:text-[#00ccf0] dark:text-[#00e5ff] dark:hover:text-[#00ccf0] transition-colors duration-200 px-3 py-1.5 rounded-lg hover:bg-[#00e5ff]/10 dark:hover:bg-gray-900 text-sm border border-[#00e5ff]/30 dark:border-[#00e5ff]/50 hover:border-[#00e5ff]/60 dark:hover:border-[#00e5ff]/80"
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-[#00e5ff] hover:text-[#00ccf0] transition-colors duration-200 px-4 py-2 sm:py-1.5 rounded-lg hover:bg-[#00e5ff]/10 text-sm border border-[#00e5ff]/30 sm:border-[#00e5ff]/50 hover:border-[#00e5ff]/60"
         >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M10 19l-7-7m0 0l7-7m-7 7h18"
-            />
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
           New Scan
         </button>
 
-        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          Enhanced Security Scan Results
+        <h1 className="text-sm sm:text-lg font-black text-gray-900 dark:text-gray-100 text-center uppercase tracking-tight">
+          SCAN <span className="text-[#00e5ff]">RESULTS</span>
         </h1>
 
         <button
           onClick={() => exportPdf(result, securityScores)}
-          className="inline-flex items-center gap-2 rounded-lg bg-[#00e5ff] px-3 py-1.5 text-sm text-[#0e0e0e] hover:bg-[#00ccf0] transition-colors duration-200 dark:bg-[#00e5ff] dark:hover:bg-[#00ccf0] border border-[#00e5ff] dark:border-[#00e5ff]"
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-[#00e5ff] px-4 py-2 sm:py-1.5 text-sm text-[#0e0e0e] font-black hover:bg-[#00ccf0] transition-colors duration-200 border border-[#00e5ff] shadow-lg shadow-[#00e5ff]/20 uppercase tracking-widest text-[10px] sm:text-xs"
         >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
           Export PDF
         </button>

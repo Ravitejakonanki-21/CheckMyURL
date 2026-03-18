@@ -163,27 +163,27 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
             Complete security assessment with professional SSL analysis, domain validation, and threat detection
           </p>
         </div>
-        <div className="overflow-auto">
-          <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
+        <div className="overflow-x-auto">
+          <table className="min-w-full lg:min-w-max divide-y divide-gray-300 dark:divide-gray-700">
             <thead className="bg-transparent">
               <tr>
-                <th className="px-4 py-4 text-left text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">Field</th>
-                <th className="px-4 py-4 text-left text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">Value</th>
-                <th className="px-4 py-4 text-left text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">Details</th>
-                <th className="px-4 py-4 text-center text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">Total Score: {securityScores.overall}%</th>
-                <th className="px-4 py-4 text-center text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">Weight</th>
-                <th className="px-4 py-4 text-center text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">Last Updated</th>
-                <th className="px-4 py-4 text-center text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                  Quick Actions
+                <th className="px-3 sm:px-4 py-4 text-left text-[10px] sm:text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">Field</th>
+                <th className="px-3 sm:px-4 py-4 text-left text-[10px] sm:text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">Value</th>
+                <th className="hidden sm:table-cell px-3 sm:px-4 py-4 text-left text-[10px] sm:text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">Details</th>
+                <th className="px-3 sm:px-4 py-4 text-center text-[10px] sm:text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">Total: {securityScores.overall}%</th>
+                <th className="hidden md:table-cell px-3 sm:px-4 py-4 text-center text-[10px] sm:text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">Weight</th>
+                <th className="hidden lg:table-cell px-3 sm:px-4 py-4 text-center text-[10px] sm:text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">Last Updated</th>
+                <th className="px-3 sm:px-4 py-4 text-center text-[10px] sm:text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                  Actions
                   <button 
                     onClick={copyAllResults}
-                    className="ml-2 w-12 text-[#00e5ff] hover:text-[#00ccf0] dark:text-[#00e5ff] dark:hover:text-[#00ccf0] transition-colors duration-200"
+                    className="ml-2 text-[#00e5ff] hover:text-[#00ccf0] transition-colors duration-200"
                     title="Copy All Results"
                   >
                     {copiedStates.all ? (
-                      <span className="text-green-600 dark:text-green-400 text-xs font-medium">Copied!</span>
+                      <span className="text-green-600 dark:text-green-400 text-[10px] font-medium">!</span>
                     ) : (
-                      <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-3 h-3 sm:w-4 sm:h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                       </svg>
                     )}
@@ -198,10 +198,10 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
   <tr className="hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors duration-150">
     <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-gray-200 border-r border-gray-300 dark:border-gray-700">URL</td>
     <td className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">{result.url}</td>
-    <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">Scanned domain with enhanced analysis</td>
+    <td className="hidden sm:table-cell px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">Scanned domain with enhanced analysis</td>
     <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">—</td>
-    <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">—</td>
-    <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">{lastUpdated}</td>
+    <td className="hidden md:table-cell px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">—</td>
+    <td className="hidden lg:table-cell px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">{lastUpdated}</td>
     <td className="px-4 py-4 text-center">
       <button 
         onClick={() => handleCopy(result.url, 'url')}
@@ -232,10 +232,10 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
         {result.riskScore}%
       </span>
     </td>
-    <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">Overall security risk assessment</td>
+    <td className="hidden sm:table-cell px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">Overall security risk assessment</td>
     <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">—</td>
-    <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">—</td>
-    <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">{lastUpdated}</td>
+    <td className="hidden md:table-cell px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">—</td>
+    <td className="hidden lg:table-cell px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">{lastUpdated}</td>
     <td className="px-4 py-4 text-center">
       <button 
         onClick={() => handleCopy(`Risk Score: ${result.riskScore}%`, 'riskScore')}
@@ -279,7 +279,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
         )}
       </div>
     </td>
-    <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">
+    <td className="hidden sm:table-cell px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">
       Professional SSL/TLS certificate validation
     </td>
     <td className="px-4 py-4 text-center border-r border-gray-300 dark:border-gray-700">
@@ -291,10 +291,10 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
         {securityScores.ssl}
       </div>
     </td>
-    <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
+    <td className="hidden md:table-cell px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
       {DISPLAY_WEIGHTS.ssl}%
     </td>
-    <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">{lastUpdated}</td>
+    <td className="hidden lg:table-cell px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">{lastUpdated}</td>
     <td className="px-4 py-4 text-center">
       <button 
         onClick={() => handleCopy(`SSL: ${result.details.sslValid ? 'Valid' : 'Invalid'}`, 'ssl')}
@@ -365,7 +365,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
         </button>
       </div>
     </td>
-    <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">WHOIS domain registration details</td>
+    <td className="hidden sm:table-cell px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">WHOIS domain registration details</td>
     <td className="px-4 py-4 text-center border-r border-gray-300 dark:border-gray-700">
       <div className={`text-lg font-bold ${
         securityScores.whois >= 80 ? 'text-green-600 dark:text-green-400' : 
@@ -375,10 +375,10 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
         {securityScores.whois}
       </div>
     </td>
-    <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
+    <td className="hidden md:table-cell px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
       {DISPLAY_WEIGHTS.whois}%
     </td>
-    <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">{lastUpdated}</td>
+    <td className="hidden lg:table-cell px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">{lastUpdated}</td>
     <td className="px-4 py-4 text-center">
       <button 
         onClick={() => copyToClipboard(JSON.stringify(whoisData, null, 2))}
@@ -484,7 +484,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
         )}
       </div>
     </td>
-    <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">
+    <td className="hidden sm:table-cell px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">
       Analysis of all major response headers affecting browser and data safety
     </td>
     <td className="px-4 py-4 text-center border-r border-gray-300 dark:border-gray-700">
@@ -496,10 +496,10 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
         {securityScores.headers}
       </div>
     </td>
-    <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
+    <td className="hidden md:table-cell px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
       {DISPLAY_WEIGHTS.headers}%
     </td>
-    <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">
+    <td className="hidden lg:table-cell px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">
       {lastUpdated}
     </td>
     <td className="px-4 py-4 text-center">
@@ -571,7 +571,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
         </button>
       </div>
     </td>
-    <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">
+    <td className="hidden sm:table-cell px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">
       Risky keywords detected in URL affecting security risk score
     </td>
     <td className="px-4 py-4 text-center border-r border-gray-300 dark:border-gray-700">
@@ -583,10 +583,10 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
         {securityScores.keywords}
       </div>
     </td>
-    <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
+    <td className="hidden md:table-cell px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
       {DISPLAY_WEIGHTS.keywords}%
     </td>
-    <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">{lastUpdated}</td>
+    <td className="hidden lg:table-cell px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">{lastUpdated}</td>
     <td className="px-4 py-4 text-center">
       <button 
         onClick={copyKeywords}
@@ -644,7 +644,7 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
         </button>
       </div>
     </td>
-    <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">
+    <td className="hidden sm:table-cell px-4 py-4 text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">
       {result.details.idnData?.is_idn 
         ? "Internationalized Domain Name (IDN) detected - may be used for homograph attacks"
         : "Domain uses only ASCII characters - safer from homograph attacks"}
@@ -663,10 +663,10 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
         {securityScores.ascii}
       </div>
     </td>
-    <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
+    <td className="hidden md:table-cell px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 border-r border-gray-300 dark:border-gray-700">
       {DISPLAY_WEIGHTS.ascii}%
     </td>
-    <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">{lastUpdated}</td>
+    <td className="hidden lg:table-cell px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400 border-r border-gray-300 dark:border-gray-700">{lastUpdated}</td>
     <td className="px-4 py-4 text-center">
       <button 
         onClick={() => handleCopy(

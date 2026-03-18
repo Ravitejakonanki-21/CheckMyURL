@@ -54,32 +54,34 @@ function UsersTab() {
             <table className="w-full">
                 <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                        {['Email', 'Role', 'Credits', 'Status', 'Created'].map(h => (
-                            <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{h}</th>
-                        ))}
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role</th>
+                        <th className="hidden sm:table-cell px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Credits</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                        <th className="hidden lg:table-cell px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Created</th>
                     </tr>
                 </thead>
                 <tbody>
                     {users.map(u => (
                         <tr key={u._id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
-                            <td className="px-4 py-3 text-sm text-gray-900 dark:text-white font-medium">{u.email}</td>
+                            <td className="px-4 py-3 text-sm text-gray-900 dark:text-white font-medium max-w-[120px] truncate">{u.email}</td>
                             <td className="px-4 py-3">
                                 <select
                                     value={u.role}
                                     onChange={e => changeRole(u._id, e.target.value)}
                                     disabled={saving[u._id]}
-                                    className="text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-2 py-1 disabled:opacity-60"
+                                    className="text-[10px] sm:text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-1 sm:px-2 py-1 disabled:opacity-60"
                                 >
                                     {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
                                 </select>
                             </td>
-                            <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{u.credits ?? '—'}</td>
+                            <td className="hidden sm:table-cell px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{u.credits ?? '—'}</td>
                             <td className="px-4 py-3">
-                                <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${u.status === 'active' ? 'bg-[#00e5ff]/10 text-[#00e5ff] dark:bg-[#00e5ff]/20 dark:text-[#00e5ff]' : 'bg-gray-100 text-gray-500'}`}>
+                                <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold ${u.status === 'active' ? 'bg-[#00e5ff]/10 text-[#00e5ff] dark:bg-[#00e5ff]/20 dark:text-[#00e5ff]' : 'bg-gray-100 text-gray-500'}`}>
                                     {u.status ?? 'active'}
                                 </span>
                             </td>
-                            <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
+                            <td className="hidden lg:table-cell px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
                                 {u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}
                             </td>
                         </tr>
@@ -112,22 +114,25 @@ function AuditLogsTab() {
             <table className="w-full">
                 <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                        {['Time', 'Actor', 'Role', 'Action', 'From → To', 'Reason'].map(h => (
-                            <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{h}</th>
-                        ))}
+                        <th className="hidden sm:table-cell px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Time</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actor</th>
+                        <th className="hidden lg:table-cell px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Change</th>
+                        <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Reason</th>
                     </tr>
                 </thead>
                 <tbody>
                     {logs.map((l, i) => (
                         <tr key={i} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/40">
-                            <td className="px-4 py-2 text-xs text-gray-500">{new Date(l.timestamp).toLocaleString()}</td>
-                            <td className="px-4 py-2 text-xs text-gray-900 dark:text-white">{l.actor_email ?? l.ip_address ?? '—'}</td>
-                            <td className="px-4 py-2 text-xs text-gray-500">{l.actor_role ?? '—'}</td>
-                            <td className="px-4 py-2 text-xs font-mono text-[#00e5ff]">{l.action}</td>
-                            <td className="px-4 py-2 text-xs text-gray-600 dark:text-gray-400">
+                            <td className="hidden sm:table-cell px-4 py-2 text-[10px] text-gray-500">{new Date(l.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</td>
+                            <td className="px-4 py-2 text-[10px] sm:text-xs text-gray-900 dark:text-white max-w-[80px] sm:max-w-none truncate">{l.actor_email ?? l.ip_address ?? '—'}</td>
+                            <td className="hidden lg:table-cell px-4 py-2 text-[10px] text-gray-500">{l.actor_role ?? '—'}</td>
+                            <td className="px-4 py-2 text-[10px] sm:text-xs font-mono text-[#00e5ff]">{l.action}</td>
+                            <td className="px-4 py-2 text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
                                 {l.details?.from_state} → {l.details?.to_state}
                             </td>
-                            <td className="px-4 py-2 text-xs text-gray-500 max-w-xs truncate">{l.details?.reason ?? '—'}</td>
+                            <td className="hidden md:table-cell px-4 py-2 text-[10px] text-gray-500 max-w-xs truncate">{l.details?.reason ?? '—'}</td>
                         </tr>
                     ))}
                 </tbody>

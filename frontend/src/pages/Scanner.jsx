@@ -313,15 +313,29 @@ function Scanner() {
             ))}
           </div>
         ) : (
-          <div className="w-full max-w-2xl animate-in fade-in slide-in-from-bottom-8 duration-500">
-            <div className="relative flex items-center bg-white dark:bg-[#181818] border border-[#00e5ff]/30 hover:border-[#00e5ff]/50 rounded-full p-2 pl-6 transition-all shadow-2xl group ring-1 ring-[#00e5ff]/20">
-              <svg className="w-6 h-6 text-[#555] group-focus-within:text-[#00e5ff] mr-4 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-              <input value={url} onChange={e => setUrl(e.target.value)} placeholder="Paste the suspicious URL here..." className="flex-1 text-lg bg-transparent text-[var(--text-primary)] placeholder-gray-400 dark:placeholder-gray-600 outline-none py-3" onKeyPress={e => e.key === 'Enter' && onScan()} disabled={loading} autoFocus />
-              <button onClick={onScan} disabled={loading || !url.trim()} className="px-10 py-4 bg-[#00e5ff] hover:bg-[#00ccf0] disabled:bg-[#1a3d3c] disabled:text-[#006e66] text-[#0e0e0e] font-black rounded-full transition-all duration-300 shadow-lg hover:shadow-[#00e5ff]/30 disabled:cursor-not-allowed uppercase tracking-widest text-xs">
+          <div className="w-full max-w-2xl animate-in fade-in slide-in-from-bottom-8 duration-500 px-2 sm:px-0">
+            <div className="relative flex flex-col md:flex-row items-stretch md:items-center bg-white dark:bg-[#181818] border border-[#00e5ff]/30 hover:border-[#00e5ff]/50 rounded-[2rem] md:rounded-full p-2 md:pl-6 transition-all shadow-2xl group ring-1 ring-[#00e5ff]/20 gap-2 md:gap-0">
+              <div className="hidden md:flex items-center">
+                <svg className="w-6 h-6 text-[#555] group-focus-within:text-[#00e5ff] mr-4 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              </div>
+              <input 
+                value={url} 
+                onChange={e => setUrl(e.target.value)} 
+                placeholder="Paste the suspicious URL here..." 
+                className="flex-1 text-base md:text-lg bg-transparent text-[var(--text-primary)] placeholder-gray-400 dark:placeholder-gray-600 outline-none py-3 px-4 md:px-0" 
+                onKeyPress={e => e.key === 'Enter' && onScan()} 
+                disabled={loading} 
+                autoFocus 
+              />
+              <button 
+                onClick={onScan} 
+                disabled={loading || !url.trim()} 
+                className="px-6 md:px-10 py-3.5 md:py-4 bg-[#00e5ff] hover:bg-[#00ccf0] disabled:bg-[#1a3d3c] disabled:text-[#006e66] text-[#0e0e0e] font-black rounded-3xl md:rounded-full transition-all duration-300 shadow-lg hover:shadow-[#00e5ff]/30 disabled:cursor-not-allowed uppercase tracking-widest text-[10px] md:text-xs"
+              >
                 {loading ? 'Analyzing...' : 'Secure Scan'}
               </button>
             </div>
-            <button onClick={() => setShowScanner(false)} className="mt-8 text-[#555] hover:text-[#00e5ff] text-xs font-bold uppercase tracking-widest flex items-center gap-2 transition-colors mx-auto">
+            <button onClick={() => setShowScanner(false)} className="mt-8 text-[#555] hover:text-[#00e5ff] text-[10px] md:text-xs font-bold uppercase tracking-widest flex items-center gap-2 transition-colors mx-auto">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg> Back to Portal
             </button>
           </div>

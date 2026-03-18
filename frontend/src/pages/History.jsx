@@ -137,7 +137,7 @@ export default function History() {
                 </div>
 
                 {/* Table */}
-                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
+                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-x-auto shadow-sm">
                     {loading ? (
                         <div className="flex items-center justify-center h-48 text-gray-400">Loading history…</div>
                     ) : error ? (
@@ -148,31 +148,32 @@ export default function History() {
                             <p>{search ? 'No results match your search.' : 'No scans yet — run your first URL check!'}</p>
                         </div>
                     ) : (
-                        <table className="w-full">
+                        <table className="w-full min-w-max">
                             <thead>
                                 <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                                    {['URL', 'Risk Score', 'Classification', 'Scanned At'].map(h => (
-                                        <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{h}</th>
-                                    ))}
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">URL</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Risk Score</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Classification</th>
+                                    <th className="hidden sm:table-cell px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Scanned At</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {filtered.map((h, i) => (
                                     <tr key={i} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
-                                        <td className="px-4 py-3 max-w-xs">
-                                            <span className="font-mono text-sm text-gray-900 dark:text-white truncate block" title={h.url}>{h.url}</span>
+                                        <td className="px-4 py-3 max-w-[120px] sm:max-w-xs">
+                                            <span className="font-mono text-xs sm:text-sm text-gray-900 dark:text-white truncate block" title={h.url}>{h.url}</span>
                                         </td>
                                         <td className="px-4 py-3">
-                                            <span className={`text-2xl font-bold ${classColor(h.classification)}`}>
+                                            <span className={`text-xl sm:text-2xl font-bold ${classColor(h.classification)}`}>
                                                 {h.riskScore ?? '—'}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3">
-                                            <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${badge(h.classification)}`}>
+                                            <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold ${badge(h.classification)} uppercase tracking-widest`}>
                                                 {h.classification ?? '—'}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                                        <td className="hidden sm:table-cell px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                                             {h.scannedAt ? new Date(h.scannedAt).toLocaleString() : '—'}
                                         </td>
                                     </tr>
