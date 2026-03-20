@@ -170,7 +170,13 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
                 <th className="px-3 sm:px-4 py-4 text-left text-[10px] sm:text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">Field</th>
                 <th className="px-3 sm:px-4 py-4 text-left text-[10px] sm:text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">Value</th>
                 <th className="hidden sm:table-cell px-3 sm:px-4 py-4 text-left text-[10px] sm:text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">Details</th>
-                <th className="px-3 sm:px-4 py-4 text-center text-[10px] sm:text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">Total: {securityScores.overall}%</th>
+                <th 
+                  className="px-3 sm:px-4 py-4 text-center text-[10px] sm:text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700"
+                  title="Risk Score: 0–39 Low, 40–69 Medium, 70+ High | Security Score: checks passed (higher = better)"
+                >
+                  Total: {securityScores.overall}%
+                </th>
+
                 <th className="hidden md:table-cell px-3 sm:px-4 py-4 text-center text-[10px] sm:text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">Weight</th>
                 <th className="hidden lg:table-cell px-3 sm:px-4 py-4 text-center text-[10px] sm:text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-700">Last Updated</th>
                 <th className="px-3 sm:px-4 py-4 text-center text-[10px] sm:text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">

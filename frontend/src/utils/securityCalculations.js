@@ -2,45 +2,53 @@
 const SAFE_THRESHOLD = 70;
 const WARNING_THRESHOLD = 40;
 
-const splitRemainder = (remainder, classification, riskScore) => {
-  if (remainder <= 0) return [0, 0];
+const buildPieData = (scores, weights, result, overallPercentage) => {
+  // overallPercentage = how many checks passed (89% = safe)
+  // We need to show: Safe, Suspicious, Dangerous
+  const riskScore = Number(result.riskScore) || 0;
+  const classification = (result.classification || "").toLowerCase();
 
-  const score = Number(riskScore);
-  const label = (classification || "").toLowerCase();
-  const isHigh = label.includes("high") || score >= 70;
-  const isMedium = label.includes("medium") || (score >= 40 && score < 70);
+  const isHigh   = classification.includes("high")   || riskScore >= 70;
+  const isMedium = classification.includes("medium")  || (riskScore >= 40 && riskScore < 70);
+
+  let dangerous  = 0;
+  let suspicious = 0;
+  let safe       = 0;
 
   if (isHigh) {
-    return [0, remainder];
+    // High risk: mostly dangerous
+    dangerous  = Math.min(100, riskScore);
+    suspicious = Math.min(100 - dangerous, Math.round((100 - overallPercentage) * 0.3));
+    safe       = 100 - dangerous - suspicious;
+  } else if (isMedium) {
+    // Medium risk: some suspicious
+    suspicious = Math.min(100, riskScore);
+    dangerous  = Math.round(suspicious * 0.2);
+    suspicious = suspicious - dangerous;
+    safe       = 100 - suspicious - dangerous;
+  } else {
+    // Low risk: mostly safe
+    safe       = overallPercentage;
+    suspicious = Math.round((100 - safe) * 0.8);
+    dangerous  = 100 - safe - suspicious;
   }
 
-  if (isMedium) {
-    const dangerous = Math.round(remainder * 0.3);
-    return [remainder - dangerous, dangerous];
-  }
-
-  return [remainder, 0];
-};
-
-const buildPieData = (scores, weights, result, overallPercentage) => {
-  const safe = Math.max(0, Math.min(100, overallPercentage));
-  const remainder = 100 - safe;
-  const [suspicious, dangerous] = splitRemainder(remainder, result.classification, result.riskScore);
-
+  // Ensure they sum to 100
+  safe = Math.max(0, safe);
+  suspicious = Math.max(0, suspicious);
+  dangerous = Math.max(0, dangerous);
   const total = safe + suspicious + dangerous;
   if (total !== 100) {
-    const diff = 100 - total;
-    if (dangerous > 0) {
-      return [safe, suspicious, dangerous + diff];
-    }
-    if (suspicious > 0) {
-      return [safe, suspicious + diff, dangerous];
-    }
-    return [safe + diff, suspicious, dangerous];
+    safe = safe + (100 - total);
   }
 
-  return [safe, suspicious, dangerous];
+  return [
+    Math.max(0, safe),
+    Math.max(0, suspicious),
+    Math.max(0, dangerous)
+  ];
 };
+
 
 export const calculateSecurityScores = (result) => {
   const scores = { ssl: 0, domainAge: 0, ports: 0, headers: 0, keywords: 0, mlPhishing: 0, ascii: 0, whois: 0 },

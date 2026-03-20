@@ -111,7 +111,11 @@ function Scanner() {
         : (mlScore ?? heuristicScore ?? 0));
     if (backendRisk >= 70) { dangerous += Math.max(40, dangerous); suspicious = Math.max(suspicious, 30); safe = Math.max(10, safe - 20); }
     else if (backendRisk >= 40) { suspicious += Math.max(25, suspicious); dangerous = Math.max(10, dangerous); safe = Math.max(20, safe - 10); }
-    else { safe += Math.max(20, safe); suspicious = Math.max(5, suspicious); dangerous = Math.max(0, dangerous - 10); }
+    else {
+      safe += 30;
+      suspicious = Math.max(0, suspicious - 10);
+      dangerous = Math.max(0, dangerous - 15);
+    }
 
     if (rules.has_suspicious_words && rules.has_brand_words_in_host) { dangerous += 20; safe = Math.max(0, safe - 15); }
     if (idn.is_idn && idn.mixed_confusable_scripts) { dangerous += 15; suspicious += 10; }
@@ -135,7 +139,9 @@ function Scanner() {
     if (normalizedHeaders["x-frame-options"]) presentHeaders.push("X-Frame-Options");
     if (normalizedHeaders["referrer-policy"]) presentHeaders.push("Referrer-Policy");
 
-    const keywords = [...(rules.matched_suspicious || []), ...(rules.matched_brands || [])];
+    // Only show actual suspicious keywords — NOT brand matches
+    // Brand matches (google, paypal etc.) are not phishing keywords by themselves
+    const keywords = [...(rules.matched_suspicious || [])];
     const keywordInfo = r.keyword || { keywords_found: keywords, risk_score: 0, risk_factors: [], url: backendData.url };
     const mlPhishingScore = mlData ? mlData.score : 0;
 
@@ -194,7 +200,7 @@ function Scanner() {
       }
       setHeaderResult(headerScan);
       const res = transformBackendResponse(fullScan);
-      setResult(res); recordScan?.(res); 
+      setResult(res); recordScan?.(res);
       setIsShowingResults(true);
       setCurrentPage('results');
     } catch (err) {
@@ -228,7 +234,7 @@ function Scanner() {
     <div className="relative flex-1 flex flex-col items-center justify-center px-4 overflow-hidden transition-colors duration-300">
       <div className="w-full max-w-5xl flex flex-col items-center relative z-10 transition-all duration-500">
         <div className="mb-8 transform hover:scale-105 transition-transform duration-500">
-           <img src="/bluecheck_mascot.png" alt="CYBERSHIELD" className="h-32 w-32 object-contain" />
+          <img src="/bluecheck_mascot.png" alt="CYBERSHIELD" className="h-32 w-32 object-contain" />
         </div>
 
         <div className="text-center mb-12">
@@ -241,66 +247,66 @@ function Scanner() {
         {!showScanner ? (
           <div className="flex flex-wrap justify-center gap-6 w-full max-w-5xl animate-in fade-in zoom-in duration-300">
             {[
-              { 
-                id: 'guest', 
-                name: isAuthenticated ? "Full Scanner" : "Limited Scanner", 
-                desc: isAuthenticated ? "Deep Analysis ?" : "Basic Scan ?", 
-                icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>, 
-                color: "text-blue-400", 
+              {
+                id: 'guest',
+                name: isAuthenticated ? "Full Scanner" : "Limited Scanner",
+                desc: isAuthenticated ? "Deep Analysis ?" : "Basic Scan ?",
+                icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>,
+                color: "text-blue-400",
                 handler: () => setShowScanner(true),
-                visible: true 
+                visible: true
               },
-              { 
-                id: 'user', 
-                name: "User Login", 
-                desc: "Member Login ?", 
-                icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>, 
-                color: "text-orange-400", 
+              {
+                id: 'user',
+                name: "User Login",
+                desc: "Member Login ?",
+                icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
+                color: "text-orange-400",
                 handler: () => navigate('/login'),
                 visible: !isAuthenticated
               },
-              { 
-                id: 'admin', 
-                name: "Admin Access", 
-                desc: isAdmin ? "Admin Panel ?" : "System Entry ?", 
-                icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02(003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>, 
-                color: "text-purple-400", 
+              {
+                id: 'admin',
+                name: "Admin Access",
+                desc: isAdmin ? "Admin Panel ?" : "System Entry ?",
+                icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02(003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>,
+                color: "text-purple-400",
                 handler: () => navigate(isAdmin ? '/admin' : '/login'),
                 visible: !isAuthenticated || isAdmin
               },
-              { 
-                id: 'archive', 
-                name: "Scan Archive", 
-                desc: "Your History ?", 
-                icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>, 
-                color: "text-green-400", 
+              {
+                id: 'archive',
+                name: "Scan Archive",
+                desc: "Your History ?",
+                icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+                color: "text-green-400",
                 handler: () => navigate('/history'),
                 visible: isAuthenticated
               },
-              { 
-                id: 'stats', 
-                name: "Statistics", 
-                desc: "Global Intel ?", 
-                icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>, 
-                color: "text-cyan-400", 
+              {
+                id: 'stats',
+                name: "Statistics",
+                desc: "Global Intel ?",
+                icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>,
+                color: "text-cyan-400",
                 handler: () => navigate('/statistics'),
                 visible: isAuthenticated
               },
-              { 
-                id: 'bulk', 
-                name: "Bulk Scanner", 
-                desc: "Dataset Control ?", 
-                icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>, 
-                color: "text-red-400", 
+              {
+                id: 'bulk',
+                name: "Bulk Scanner",
+                desc: "Dataset Control ?",
+                icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>,
+                color: "text-red-400",
                 handler: () => navigate('/bulk-scan'),
                 visible: isAuthenticated
               },
-              { 
-                id: 'soc', 
-                name: "SOC Dashboard", 
-                desc: "Phishing Reports ?", 
-                icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>, 
-                color: "text-amber-400", 
+              {
+                id: 'soc',
+                name: "SOC Dashboard",
+                desc: "Phishing Reports ?",
+                icon: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>,
+                color: "text-amber-400",
                 handler: () => navigate('/soc'),
                 visible: isAdmin
               }
@@ -318,18 +324,18 @@ function Scanner() {
               <div className="hidden md:flex items-center">
                 <svg className="w-6 h-6 text-[#555] group-focus-within:text-[#00e5ff] mr-4 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
               </div>
-              <input 
-                value={url} 
-                onChange={e => setUrl(e.target.value)} 
-                placeholder="Paste the suspicious URL here..." 
-                className="flex-1 text-base md:text-lg bg-transparent text-[var(--text-primary)] placeholder-gray-400 dark:placeholder-gray-600 outline-none py-3 px-4 md:px-0" 
-                onKeyPress={e => e.key === 'Enter' && onScan()} 
-                disabled={loading} 
-                autoFocus 
+              <input
+                value={url}
+                onChange={e => setUrl(e.target.value)}
+                placeholder="Paste the suspicious URL here..."
+                className="flex-1 text-base md:text-lg bg-transparent text-[var(--text-primary)] placeholder-gray-400 dark:placeholder-gray-600 outline-none py-3 px-4 md:px-0"
+                onKeyPress={e => e.key === 'Enter' && onScan()}
+                disabled={loading}
+                autoFocus
               />
-              <button 
-                onClick={onScan} 
-                disabled={loading || !url.trim()} 
+              <button
+                onClick={onScan}
+                disabled={loading || !url.trim()}
                 className="px-6 md:px-10 py-3.5 md:py-4 bg-[#00e5ff] hover:bg-[#00ccf0] disabled:bg-[#1a3d3c] disabled:text-[#006e66] text-[#0e0e0e] font-black rounded-3xl md:rounded-full transition-all duration-300 shadow-lg hover:shadow-[#00e5ff]/30 disabled:cursor-not-allowed uppercase tracking-widest text-[10px] md:text-xs"
               >
                 {loading ? 'Analyzing...' : 'Secure Scan'}

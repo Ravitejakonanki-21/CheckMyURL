@@ -75,71 +75,65 @@ function ResultsPage({
             {result.url}
           </h2>
 
-          <div className="flex items-center space-x-4 mb-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400">
-              Risk Score:
-            </span>
-            <span
-              className={`text-2xl font-bold ${result.riskScore >= 70
-                  ? "text-red-600 dark:text-red-400"
-                  : result.riskScore >= 40
-                    ? "text-yellow-600 dark:text-yellow-400"
-                    : "text-green-600 dark:text-green-400"
-                }`}
-            >
-              {result.riskScore}
-            </span>
-            <span className="text-sm text-gray-600 dark:text-gray-400">
-              Total Score:
-            </span>
-            <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              {securityScores.overall}%
-            </span>
-          </div>
-
-          <div className="flex items-center space-x-4 mb-4">
-            <span className="text-sm text-gray-600 dark:text-gray-400">
-              Classification:
-            </span>
-            <span
-              className={`text-lg font-semibold ${result.classification === "High Risk"
-                  ? "text-red-600 dark:text-red-400"
-                  : result.classification === "Medium Risk"
-                    ? "text-yellow-600 dark:text-yellow-400"
-                    : "text-green-600 dark:text-green-400"
-                }`}
-            >
-              {result.classification}
-            </span>
-          </div>
-
-          <div className="border-t border-gray-300 dark:border-gray-700 pt-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
-              Risk Analysis
-            </h3>
-            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-              Overall risk score is {result.riskScore} classifying as{" "}
-              {result.classification}.{" "}
-              {result.details.keywords?.length > 0
-                ? `Detected risky keywords: ${result.details.keywords.join(", ")}.`
-                : "No suspicious keywords detected."}
-            </p>
-            <div className="mt-4 grid grid-cols-1 gap-3">
-              <div className="rounded-lg border border-[#00e5ff]/20 dark:border-[#00e5ff]/40 p-3 bg-[#00e5ff]/5 dark:bg-[#00e5ff]/10">
-                <p className="text-xs uppercase tracking-wide text-[#00e5ff] dark:text-[#00e5ff]">
-                  Average (Final Score)
-                </p>
-                <p className={`text-lg font-semibold ${averageWeightScore >= 70
-                    ? "text-red-600 dark:text-red-400"
-                    : averageWeightScore >= 40
-                      ? "text-yellow-600 dark:text-yellow-400"
-                      : "text-green-600 dark:text-green-400"
-                  }`}>
-                  {Number.isFinite(averageWeightScore) ? `${averageWeightScore}%` : "N/A"}
-                </p>
+          <div className="space-y-3 mb-6">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600 dark:text-gray-400">Risk Score</span>
+              <div className="flex items-center gap-2">
+                <span className={`font-bold ${result.riskScore >= 70 ? "text-red-600 dark:text-red-400" : result.riskScore >= 40 ? "text-yellow-600 dark:text-yellow-400" : "text-green-600 dark:text-green-400"}`}>
+                  {result.riskScore}
+                </span>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${result.riskScore >= 70 ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" : result.riskScore >= 40 ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"}`}>
+                  ({result.classification})
+                </span>
+                <span className="text-xs text-gray-400 italic">← risk of being phishing</span>
               </div>
             </div>
+
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600 dark:text-gray-400">Security Score</span>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-green-600 dark:text-green-400">{securityScores.overall}%</span>
+                <span className="text-xs text-gray-400 italic">← how many checks passed</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600 dark:text-gray-400">Classification</span>
+              <span className={`font-semibold ${result.classification === "High Risk" ? "text-red-600 dark:text-red-400" : result.classification === "Medium Risk" ? "text-yellow-600 dark:text-yellow-400" : "text-green-600 dark:text-green-400"}`}>
+                {result.classification}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600 dark:text-gray-400">Keywords</span>
+              <span className="text-right font-medium text-gray-900 dark:text-gray-100">
+                {(() => {
+                  const suspiciousOnly = (result.details.keywords || []).filter(k =>
+                    !["google", "microsoft", "apple", "amazon", "facebook",
+                      "twitter", "linkedin", "github", "netflix", "youtube",
+                      "instagram", "reddit", "wikipedia"].includes(k.toLowerCase())
+                  );
+                  return suspiciousOnly.length > 0
+                    ? `Detected: ${suspiciousOnly.join(", ")}`
+                    : "No suspicious keywords detected";
+                })()}
+              </span>
+            </div>
           </div>
+
+          {/* Score explanation */}
+          <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 space-y-1">
+            <p>
+              <span className="font-medium">Risk Score</span> — 
+              0–39 = Low Risk, 40–69 = Medium Risk, 70+ = High Risk
+            </p>
+            <p>
+              <span className="font-medium">Security Score</span> — 
+              how many security checks passed (higher = better)
+            </p>
+          </div>
+
+
         </div>
 
         {/* Card 2 */}
