@@ -19,10 +19,11 @@ from services.keyword_check import check_url_for_keywords
 from services.content_rules import check_keywords
 from services.headers_check import check_headers
 from services.risk_engine import compute_risk
-from services.ml_scoring import score_url_with_model, ModelNotAvailableError
+from services.ml_scoring import _extract_feature_values
 from services.ascii_unicode_check import validate_ascii_unicode
 from services.simple_cache import cache
 from services.utils import timed_call
+from utils.ml_predictor import load_production_model, predict_url_risk
 
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import (
@@ -57,6 +58,17 @@ jwt = JWTManager(app)
 bcrypt = Bcrypt(app)
 mail = Mail(app)
 serializer = URLSafeTimedSerializer(app.config["JWT_SECRET_KEY"])
+
+# Load production ML model once at startup
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "models", "phishing_rf_production.pkl")
+META_PATH = os.path.join(os.path.dirname(__file__), "models", "model_metadata.json")
+
+try:
+    model, metadata = load_production_model(MODEL_PATH, META_PATH)
+    app.logger.info(f"Production ML model loaded from {MODEL_PATH}")
+except Exception as e:
+    app.logger.error(f"Failed to load production ML model: {e}")
+    model, metadata = None, None
 
 # Rate limiter — uses Redis when available, falls back to in-memory
 _redis_url = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
@@ -206,12 +218,24 @@ def analyze():
     heuristic_score, heuristic_label, heuristic_reasons = compute_risk(results)
 
     ml_output = None
-    try:
-        ml_output = score_url_with_model(url, results)
-    except ModelNotAvailableError as e:
-        app.logger.warning(f"ML model unavailable: {e}")
-    except Exception as e:
-        app.logger.exception(f"ML scoring failed for {url}: {e}")
+    if model and metadata:
+        try:
+            # Extract features using existing service logic
+            features = _extract_feature_values(url, results)
+            # Predict using production model
+            ml_output = predict_url_risk(features, model, metadata)
+            
+            # Map new output to existing API format to avoid breaking frontend
+            ml_output["score"] = ml_output["ml_score"]
+            ml_output["probability"] = ml_output["ml_probability"]
+            ml_output["label"] = "High Risk" if ml_output["is_phishing"] else ("Medium Risk" if ml_output["ml_score"] >= 40 else "Low Risk")
+            ml_output["reasons"] = ["Production ML model analysis complete"]
+            if ml_output["is_phishing"]:
+                ml_output["reasons"].append("ML model predicts high probability of phishing")
+        except Exception as e:
+            app.logger.exception(f"ML scoring failed for {url}: {e}")
+    else:
+        app.logger.warning("ML model or metadata not loaded, skipping prediction")
 
     # Compute weightages and averaged risk score
     ml_weightage = ml_output["score"] if ml_output else None

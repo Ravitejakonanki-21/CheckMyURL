@@ -8,7 +8,7 @@ from urllib.parse import parse_qs, urlparse
 import joblib
 import numpy as np
 
-MODEL_FILENAME = "phishing_rf_phiusiil.pkl"
+MODEL_FILENAME = "phishing_rf_production.pkl"
 MODEL_PATH = os.path.join(os.path.dirname(__file__), MODEL_FILENAME)
 COLS_PATH  = os.path.join(os.path.dirname(__file__), "feature_cols.json")
 RANDOM_TOKEN_RE = re.compile(r"[A-Za-z0-9]{15,}")
