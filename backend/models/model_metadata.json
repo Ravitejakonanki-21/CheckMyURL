@@ -1,12 +1,12 @@
 {
   "roc_auc": 0.9973,
   "avg_precision": 0.9975,
-  "f1_score": 0.9741,
-  "accuracy": 0.9745,
-  "phishing_recall": 0.958,
-  "false_negative_rate": 0.042,
-  "false_positive_rate": 0.009,
-  "decision_threshold": 0.7502164502164502,
+  "f1_score": 0.9489,
+  "accuracy": 0.9465,
+  "phishing_recall": 0.993,
+  "false_negative_rate": 0.007,
+  "false_positive_rate": 0.1,
+  "decision_threshold": 0.1,
   "threshold_tuned_on": "validation_set",
   "feature_cols": [
     "PctExtHyperlinks",
