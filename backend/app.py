@@ -5,6 +5,7 @@ import logging
 from datetime import datetime, timedelta
 from urllib.parse import urlparse
 from dotenv import load_dotenv
+from concurrent.futures import ThreadPoolExecutor
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from flask_mail import Mail, Message
 from flask_limiter import Limiter
@@ -58,6 +59,9 @@ jwt = JWTManager(app)
 bcrypt = Bcrypt(app)
 mail = Mail(app)
 serializer = URLSafeTimedSerializer(app.config["JWT_SECRET_KEY"])
+
+# Global thread pool for I/O tasks (parallelizing scans and background DB saves)
+executor = ThreadPoolExecutor(max_workers=20)
 
 # Load production ML model once at startup
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "models", "phishing_rf_production.pkl")
@@ -159,142 +163,177 @@ def analyze():
     if not url:
         return jsonify({"error": "url required"}), 400
 
-    cache_key = url.lower()
-    cached = cache.get(cache_key)
-    if cached:
-        return jsonify(cached)
+    try:
+        cache_key = url.lower()
+        cached = cache.get(cache_key)
+        if cached:
+            return jsonify(cached)
 
-    parsed = urlparse(url if "://" in url else "https://" + url)
-    hostname = parsed.hostname or url
-    is_http_url = parsed.scheme == "http"
+        parsed = urlparse(url if "://" in url else "https://" + url)
+        hostname = parsed.hostname or url
+        is_http_url = parsed.scheme == "http"
 
-    ssl_info, t_ssl, e_ssl = timed_call(check_ssl, hostname)
-    if ssl_info and is_http_url:
-        # URL was explicitly submitted as http:// — treat as no secure channel,
-        # regardless of what is reachable on port 443.
-        ssl_info["https_ok"] = False
-        ssl_info["is_http_only"] = True
-        ssl_info.setdefault("errors", []).append("url_scheme_is_http_not_https")
-    whois_info, t_whois, e_whois = timed_call(check_whois, hostname)
-    idn_info, t_idn, e_idn = timed_call(check_unicode_domain, hostname, url)  # Pass full URL for encoded char check
-    ascii_unicode_info, t_ascii, e_ascii = timed_call(validate_ascii_unicode, url)
-    keyword_info, t_keyword, e_keyword = timed_call(check_url_for_keywords, url)
-    rules_info, t_rules, e_rules = timed_call(check_keywords, url)
-    headers_info, t_head, e_head = timed_call(check_headers, url)
+        # Parallelize all independent service checks
+        future_ssl = executor.submit(timed_call, check_ssl, hostname)
+        future_whois = executor.submit(timed_call, check_whois, hostname)
+        future_idn = executor.submit(timed_call, check_unicode_domain, hostname, url)
+        future_ascii = executor.submit(timed_call, validate_ascii_unicode, url)
+        future_keyword = executor.submit(timed_call, check_url_for_keywords, url)
+        future_rules = executor.submit(timed_call, check_keywords, url)
+        future_headers = executor.submit(timed_call, check_headers, url)
 
-    whois_info = ensure_whois_fields_complete(whois_info)
+        # Harvest results (wait for all to complete in parallel)
+        ssl_info, t_ssl, e_ssl = future_ssl.result()
+        whois_info, t_whois, e_whois = future_whois.result()
+        idn_info, t_idn, e_idn = future_idn.result()
+        ascii_unicode_info, t_ascii, e_ascii = future_ascii.result()
+        keyword_info, t_keyword, e_keyword = future_keyword.result()
+        rules_info, t_rules, e_rules = future_rules.result()
+        headers_info, t_head, e_head = future_headers.result()
 
-    timings = {
-        "ssl_ms": int(t_ssl * 1000),
-        "whois_ms": int(t_whois * 1000),
-        "idn_ms": int(t_idn * 1000),
-        "ascii_unicode_ms": int(t_ascii * 1000),
-        "keyword_ms": int(t_keyword * 1000),
-        "rules_ms": int(t_rules * 1000),
-        "headers_ms": int(t_head * 1000),
-    }
-    errors = {
-        "ssl": e_ssl,
-        "whois": e_whois,
-        "idn": e_idn,
-        "ascii_unicode": e_ascii,
-        "keyword": e_keyword,
-        "rules": e_rules,
-        "headers": e_head,
-    }
+        if ssl_info and is_http_url:
+            # URL was explicitly submitted as http:// — treat as no secure channel,
+            # regardless of what is reachable on port 443.
+            ssl_info["https_ok"] = False
+            ssl_info["is_http_only"] = True
+            ssl_info.setdefault("errors", []).append("url_scheme_is_http_not_https")
 
-    results = {
-        "ssl": ssl_info,
-        "whois": whois_info,
-        "idn": idn_info,
-        "ascii_unicode": ascii_unicode_info,
-        "keyword": keyword_info,
-        "rules": rules_info,
-        "headers": headers_info,
-        "timings": timings,
-        "errors": errors,
-    }
+        whois_info = ensure_whois_fields_complete(whois_info)
 
-    heuristic_score, heuristic_label, heuristic_reasons = compute_risk(results)
+        timings = {
+            "ssl_ms": int(t_ssl * 1000),
+            "whois_ms": int(t_whois * 1000),
+            "idn_ms": int(t_idn * 1000),
+            "ascii_unicode_ms": int(t_ascii * 1000),
+            "keyword_ms": int(t_keyword * 1000),
+            "rules_ms": int(t_rules * 1000),
+            "headers_ms": int(t_head * 1000),
+        }
+        errors = {
+            "ssl": e_ssl,
+            "whois": e_whois,
+            "idn": e_idn,
+            "ascii_unicode": e_ascii,
+            "keyword": e_keyword,
+            "rules": e_rules,
+            "headers": e_head,
+        }
 
-    ml_output = None
-    if model and metadata:
+        results = {
+            "ssl": ssl_info,
+            "whois": whois_info,
+            "idn": idn_info,
+            "ascii_unicode": ascii_unicode_info,
+            "keyword": keyword_info,
+            "rules": rules_info,
+            "headers": headers_info,
+            "timings": timings,
+            "errors": errors,
+        }
+
+        heuristic_score, heuristic_label, heuristic_reasons = compute_risk(results)
+
+        ml_output = None
+        if model and metadata:
+            try:
+                # Extract features using existing service logic
+                features = _extract_feature_values(url, results)
+                # Predict using production model
+                ml_result = predict_url_risk(features, model, metadata)
+                
+                # Map new output to existing API format (internal compatibility)
+                ml_output = {
+                    "ml_probability": ml_result["ml_probability"],
+                    "ml_score": ml_result["ml_score"],
+                    "is_phishing": ml_result["is_phishing"],
+                    "score": ml_result["ml_score"],
+                    "probability": ml_result["ml_probability"],
+                    "label": "High Risk" if ml_result["is_phishing"] else ("Medium Risk" if ml_result["ml_score"] >= 40 else "Low Risk"),
+                    "reasons": ["Production ML model analysis complete"]
+                }
+                
+                if ml_result["is_phishing"]:
+                    ml_output["reasons"].append(f"ML model predicts high probability of phishing ({ml_result['ml_probability']})")
+                
+                app.logger.info(f"ML Analysis for {url}: score={ml_result['ml_score']}, is_phishing={ml_result['is_phishing']}")
+            except Exception as e:
+                app.logger.exception(f"ML scoring critically failed for {url}: {e}")
+                ml_output = None
+        else:
+            app.logger.warning("ML model or metadata not loaded, skipping prediction")
+
+        # Compute weightages and averaged risk score. Safe handling of missing ML results.
+        ml_weightage = ml_output.get("score") if ml_output else None
+        checks_weightage = heuristic_score
+
+        scores_for_average = [checks_weightage]
+        if ml_weightage is not None:
+            scores_for_average.append(ml_weightage)
+
+        # Average the scores (heuristic vs ML)
+        averaged_risk_score = int(round(sum(scores_for_average) / len(scores_for_average)))
+
+        def label_from_score(score: int) -> str:
+            if score >= 70:
+                return "High Risk"
+            if score >= 40:
+                return "Medium Risk"
+            return "Low Risk"
+
+        label = label_from_score(averaged_risk_score)
+
+        combined_reasons = []
+        if ml_output:
+            combined_reasons.extend(ml_output.get("reasons") or [])
+        combined_reasons.extend(heuristic_reasons)
+
+        response = {
+            "url": url,
+            "results": results,
+            "heuristic": {
+                "risk_score": heuristic_score,
+                "label": heuristic_label,
+                "reasons": heuristic_reasons,
+            },
+            "ml": ml_output,
+            "weightages": {
+                "ml_score": ml_weightage,
+                "checks_score": checks_weightage,
+                "average_score": averaged_risk_score,
+            },
+            "reasons": combined_reasons,
+            "risk_score": averaged_risk_score,
+            "label": label,
+        }
+        cache.set(cache_key, response)
+
+        # Persist scan result to MongoDB for authenticated users in background
+        email = None
         try:
-            # Extract features using existing service logic
-            features = _extract_feature_values(url, results)
-            # Predict using production model
-            ml_output = predict_url_risk(features, model, metadata)
-            
-            # Map new output to existing API format to avoid breaking frontend
-            ml_output["score"] = ml_output["ml_score"]
-            ml_output["probability"] = ml_output["ml_probability"]
-            ml_output["label"] = "High Risk" if ml_output["is_phishing"] else ("Medium Risk" if ml_output["ml_score"] >= 40 else "Low Risk")
-            ml_output["reasons"] = ["Production ML model analysis complete"]
-            if ml_output["is_phishing"]:
-                ml_output["reasons"].append("ML model predicts high probability of phishing")
-        except Exception as e:
-            app.logger.exception(f"ML scoring failed for {url}: {e}")
-    else:
-        app.logger.warning("ML model or metadata not loaded, skipping prediction")
+            from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+            verify_jwt_in_request(optional=True)
+            email = get_jwt_identity()
+        except Exception:
+            pass
+    
+        executor.submit(_persist_scan_result, url, response, email)
 
-    # Compute weightages and averaged risk score
-    ml_weightage = ml_output["score"] if ml_output else None
-    checks_weightage = heuristic_score
+        return jsonify(response)
+    except Exception as e:
+        app.logger.exception(f"Fatal error during /analyze for {url}: {e}")
+        return jsonify({
+            "url": url,
+            "error": "Internal analysis error",
+            "risk_score": 0,
+            "label": "Error",
+            "reasons": [f"An unexpected error occurred: {str(e)}"]
+        }), 500
 
-    scores_for_average = [checks_weightage]
-    if ml_weightage is not None:
-        scores_for_average.append(ml_weightage)
-
-    averaged_risk_score = int(round(sum(scores_for_average) / len(scores_for_average)))
-
-    def label_from_score(score: int) -> str:
-        if score >= 70:
-            return "High Risk"
-        if score >= 40:
-            return "Medium Risk"
-        return "Low Risk"
-
-    label = label_from_score(averaged_risk_score)
-
-    combined_reasons = []
-    if ml_output:
-        combined_reasons.extend(ml_output.get("reasons") or [])
-    combined_reasons.extend(heuristic_reasons)
-
-    response = {
-        "url": url,
-        "results": results,
-        "heuristic": {
-            "risk_score": heuristic_score,
-            "label": heuristic_label,
-            "reasons": heuristic_reasons,
-        },
-        "ml": ml_output,
-        "weightages": {
-            "ml_score": ml_weightage,
-            "checks_score": checks_weightage,
-            "average_score": averaged_risk_score,
-        },
-        "reasons": combined_reasons,
-        "risk_score": averaged_risk_score,
-        "label": label,
-    }
-    cache.set(cache_key, response)
-
-    # Persist scan result to MongoDB for authenticated users
-    _persist_scan_result(url, response)
-
-    return jsonify(response)
-
-def _persist_scan_result(url: str, response: dict) -> None:
+def _persist_scan_result(url: str, response: dict, email: str | None = None) -> None:
     """
-    If the current request has a valid JWT, save the scan result to MongoDB.
-    Fires silently — never raises so it cannot break the /analyze response.
+    Save the scan result to MongoDB in the background.
     """
     try:
-        from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
-        verify_jwt_in_request(optional=True)
-        email = get_jwt_identity()
         if not email:
             return
         from models.user_model import get_user_by_email
@@ -309,7 +348,7 @@ def _persist_scan_result(url: str, response: dict) -> None:
         from models.scan_model import update_scan_state
         update_scan_state(scan_id, "SCANNED")
     except Exception as exc:
-        app.logger.debug(f"scan persistence skipped: {exc}")
+        logging.debug(f"scan persistence skipped: {exc}")
 
 
 def ensure_whois_fields_complete(whois_info):

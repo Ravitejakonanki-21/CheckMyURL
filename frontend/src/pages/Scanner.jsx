@@ -189,23 +189,30 @@ function Scanner() {
 
   const onScan = async () => {
     if (!url.trim()) return setError('Please enter a URL to scan');
-    setLoading(true); setError(null);
+    setLoading(true); 
+    setError(null);
+    setResult(null);
+    setHeaderResult(null);
+    
     try {
-      const [fullScan, headerScan] = await Promise.all([
-        analyzeUrl(url.trim()),
-        checkHeadersUrl(url.trim())
-      ]);
-      if (fullScan && fullScan.results && fullScan.results.headers) {
-        fullScan.results.headers.headers_check_api = headerScan;
-      }
-      setHeaderResult(headerScan);
+      const fullScan = await analyzeUrl(url.trim());
+      
+      // The backend /analyze includes headers information. 
+      // We extract it here to keep ResultsPage compatible.
+      const headersFromScan = fullScan?.results?.headers || {};
+      setHeaderResult(headersFromScan);
+      
       const res = transformBackendResponse(fullScan);
-      setResult(res); recordScan?.(res);
+      setResult(res); 
+      recordScan?.(res);
       setIsShowingResults(true);
       setCurrentPage('results');
     } catch (err) {
-      setError(`Analysis failed: ${err.message}.`);
-    } finally { setLoading(false); }
+      console.error('Scan Error:', err);
+      setError(`Analysis failed: ${err.message || 'Unknown error'}. Please verify the URL and try again.`);
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   const onNewScan = () => setShowNewScanModal(true);
@@ -317,6 +324,14 @@ function Scanner() {
                 <div className="text-[var(--text-secondary)] text-xs md:text-sm font-bold group-hover:text-[var(--text-primary)] transition-colors">{box.desc}</div>
               </button>
             ))}
+            {error && (
+              <div className="w-full mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="bg-red-500/20 p-2 rounded-full">
+                  <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+                <p className="text-red-500 text-sm font-bold truncate">{error}</p>
+              </div>
+            )}
           </div>
         ) : (
           <div className="w-full max-w-2xl animate-in fade-in slide-in-from-bottom-8 duration-500 px-2 sm:px-0">
