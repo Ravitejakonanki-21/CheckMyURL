@@ -42,12 +42,6 @@ def send_otp():
     if get_user_by_email(email):
         return jsonify({"error": "Email is already registered. Please log in instead."}), 409
 
-    # Check mail configuration — use Flask config (set by app.py from env vars)
-    mail_user = current_app.config.get("MAIL_USERNAME") or ""
-    mail_pass = current_app.config.get("MAIL_PASSWORD") or ""
-    if not mail_user or not mail_pass:
-        return jsonify({"error": "Email service is not configured. Please contact the administrator."}), 503
-
     # Rate limit: max 3 OTPs per email in 10 minutes
     recent_count = _otp_tokens.count_documents({
         "email": email,
@@ -66,9 +60,12 @@ def send_otp():
         "created_at": datetime.utcnow(),
     })
 
-    # Send OTP email
+    # Send OTP email using Flask-Mail (configured in app.py)
     from flask_mail import Mail
     mail = Mail(current_app)
+
+    # Debug: log mail config
+    current_app.logger.info(f"[OTP] MAIL_USERNAME={current_app.config.get('MAIL_USERNAME')}, MAIL_SERVER={current_app.config.get('MAIL_SERVER')}")
 
     msg = Message("Your CYBERSHIELD Registration OTP", recipients=[email])
     msg.body = f"Your OTP for CYBERSHIELD registration is: {otp_code}\n\nThis code expires in 10 minutes."
@@ -92,7 +89,11 @@ def send_otp():
         mail.send(msg)
     except Exception as e:
         current_app.logger.error(f"Failed to send OTP email to {email}: {e}")
-        return jsonify({"error": f"Failed to send OTP email. Please check server mail configuration. Details: {str(e)}"}), 500
+        err_msg = str(e)
+        if "authentication" in err_msg.lower() or "535" in err_msg:
+            return jsonify({"error": "Email auth failed. Use a Gmail App Password, not your regular password."}), 500
+        else:
+            return jsonify({"error": f"Failed to send OTP: {err_msg}"}), 500
 
     return jsonify({"message": f"OTP sent to {email}. Please check your inbox."}), 200
 
