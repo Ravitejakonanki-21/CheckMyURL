@@ -11,7 +11,9 @@ from flask_mail import Mail, Message
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-load_dotenv()
+load_dotenv()  # tries CWD and walks up
+# Also try loading from parent directory explicitly (for when CWD is backend/)
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '.env'))
 
 from services.ssl_check import check_ssl
 from services.whois_check import check_whois
@@ -54,6 +56,12 @@ app.config["MAIL_USERNAME"] = os.getenv("MAIL_USERNAME")
 app.config["MAIL_PASSWORD"] = os.getenv("MAIL_PASSWORD")
 # Gmail SMTP requires the sender to match the authenticated account
 app.config["MAIL_DEFAULT_SENDER"] = os.getenv("MAIL_USERNAME", "noreply@checkmyurl.com")
+
+# Log mail config status at startup
+if app.config["MAIL_USERNAME"]:
+    print(f"[MAIL] Configured with sender: {app.config['MAIL_USERNAME']}")
+else:
+    print("[MAIL] WARNING: MAIL_USERNAME not set — email features (OTP, password reset) will not work!")
 
 jwt = JWTManager(app)
 bcrypt = Bcrypt(app)
