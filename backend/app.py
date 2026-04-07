@@ -481,6 +481,7 @@ def get_scan_history():
             "classification": risk.get("severity_level", "UNKNOWN"),
             "scannedAt":     d.get("submitted_at", "").isoformat() if hasattr(d.get("submitted_at", ""), "isoformat") else str(d.get("submitted_at", "")),
             "state":         d.get("state", "SCANNED"),
+            "userEmail":     email,
             "tools": {
                 "SSL":      1 if (d.get("raw_results") or {}).get("ssl", {}).get("https_ok") else 0,
                 "WHOIS":    1 if (d.get("raw_results") or {}).get("whois", {}).get("age_days") else 0,
@@ -585,7 +586,13 @@ def forgot_password():
         mail.send(msg)
     except Exception as e:
         app.logger.error(f"Failed to send reset email to {email}: {e}")
-        return jsonify({"error": "Failed to send email. Check server mail configuration."}), 500
+        err_msg = str(e)
+        if "authentication" in err_msg.lower() or "535" in err_msg:
+            return jsonify({"error": "Email authentication failed. Please check MAIL_USERNAME and MAIL_PASSWORD (use Gmail App Password, not regular password)."}), 500
+        elif "connection" in err_msg.lower() or "timeout" in err_msg.lower():
+            return jsonify({"error": "Could not connect to email server. Please check MAIL_SERVER and MAIL_PORT settings."}), 500
+        else:
+            return jsonify({"error": f"Failed to send email: {err_msg}"}), 500
 
     return jsonify({"message": f"Reset instructions sent to {email}."}), 200
 

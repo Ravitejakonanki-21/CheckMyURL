@@ -60,13 +60,13 @@ const Navbar = () => {
         <div className="hidden md:flex items-center gap-4 lg:gap-6 absolute left-1/2 transform -translate-x-1/2">
           <NavLink to="/scanner" className={navClass}>Explore</NavLink>
           {isAuthenticated && (
-            <NavLink to="/history" className={navClass}>History</NavLink>
-          )}
-          {isAdmin && (
             <>
-              <NavLink to="/admin" className={navClass}>Users</NavLink>
+              <NavLink to="/history" className={navClass}>History</NavLink>
               <NavLink to="/statistics" className={navClass}>Statistics</NavLink>
             </>
+          )}
+          {isAdmin && (
+            <NavLink to="/admin" className={navClass}>Users</NavLink>
           )}
         </div>
 
@@ -132,13 +132,13 @@ const Navbar = () => {
           <div className="flex flex-col p-4 space-y-1">
             <NavLink to="/scanner" onClick={() => setMobileMenuOpen(false)} className={navClass}>Explore</NavLink>
             {isAuthenticated && (
-              <NavLink to="/history" onClick={() => setMobileMenuOpen(false)} className={navClass}>History</NavLink>
-            )}
-            {isAdmin && (
               <>
-                <NavLink to="/admin" onClick={() => setMobileMenuOpen(false)} className={navClass}>Users</NavLink>
+                <NavLink to="/history" onClick={() => setMobileMenuOpen(false)} className={navClass}>History</NavLink>
                 <NavLink to="/statistics" onClick={() => setMobileMenuOpen(false)} className={navClass}>Statistics</NavLink>
               </>
+            )}
+            {isAdmin && (
+              <NavLink to="/admin" onClick={() => setMobileMenuOpen(false)} className={navClass}>Users</NavLink>
             )}
             {!isAuthenticated && (
               <NavLink to="/register" onClick={() => setMobileMenuOpen(false)} className={navClass}>Register</NavLink>

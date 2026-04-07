@@ -36,21 +36,53 @@ function exportHistoryPDF(items) {
 
     autoTable(doc, {
         startY: 80,
-        head: [['URL', 'Risk Score', 'Classification', 'Scanned At']],
+        head: [['URL', 'Risk Score', 'Classification', 'User', 'Scanned At']],
         body: items.map(h => [
             h.url,
             h.riskScore ?? '—',
             h.classification ?? '—',
+            h.userEmail ?? '—',
             h.scannedAt ? new Date(h.scannedAt).toLocaleString() : '—',
         ]),
         styles: { fontSize: 9, cellPadding: 5 },
         headStyles: { fillColor: [0, 229, 255] },
         theme: 'grid',
         margin: { left: 40, right: 40 },
-        columnStyles: { 0: { cellWidth: 240 } },
+        columnStyles: { 0: { cellWidth: 200 } },
     });
 
     doc.save(`scan-history-${Date.now()}.pdf`);
+}
+
+// Mini stats bar component
+function StatsBar({ items }) {
+    const totalScans = items.length;
+    const avgRisk = totalScans
+        ? Math.round(items.reduce((sum, e) => sum + (e.riskScore || 0), 0) / totalScans)
+        : 0;
+    const highRiskCount = items.filter(e => (e.riskScore || 0) >= 70).length;
+    const safeCount = items.filter(e => (e.riskScore || 0) < 40).length;
+
+    const stats = [
+        { label: 'Total Scans', value: totalScans, icon: '🔍', color: 'text-[#00e5ff]' },
+        { label: 'Avg Risk', value: avgRisk, icon: '⚡', color: avgRisk >= 70 ? 'text-red-500' : avgRisk >= 40 ? 'text-yellow-500' : 'text-green-500' },
+        { label: 'High Risk', value: highRiskCount, icon: '⚠️', color: 'text-red-500' },
+        { label: 'Safe', value: safeCount, icon: '✅', color: 'text-green-500' },
+    ];
+
+    return (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            {stats.map((s, i) => (
+                <div key={i} className="bg-white dark:bg-[#181818] border border-gray-200 dark:border-[#333] rounded-xl p-4 shadow-sm transition-all duration-300 hover:shadow-md">
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="text-lg">{s.icon}</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider font-semibold">{s.label}</span>
+                    </div>
+                    <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
+                </div>
+            ))}
+        </div>
+    );
 }
 
 export default function History() {
@@ -58,6 +90,12 @@ export default function History() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [search, setSearch] = useState('');
+    const [viewMode, setViewMode] = useState('my'); // 'my' or 'all'
+    const [allHistory, setAllHistory] = useState([]);
+    const [allLoading, setAllLoading] = useState(false);
+    const [userFilter, setUserFilter] = useState('');
+
+    const isAdmin = (localStorage.getItem('role') ?? 'USER').toUpperCase() === 'ADMIN';
 
     useEffect(() => {
         const isAuth = localStorage.getItem('isAuthenticated') === 'true';
@@ -65,11 +103,10 @@ export default function History() {
 
         const localHistory = JSON.parse(localStorage.getItem('cmu_scan_history') || '[]');
 
-        // Try to also fetch from backend
+        // Fetch user's own history from backend
         fetch(`${API}/api/history`, { headers: authHeader() })
             .then(r => r.ok ? r.json() : [])
             .then(serverItems => {
-                // Merge: server items take precedence; de-dup by url+scannedAt
                 const merged = [...serverItems];
                 const serverUrls = new Set(serverItems.map(i => i.url + '|' + i.scannedAt));
                 for (const loc of localHistory) {
@@ -80,31 +117,77 @@ export default function History() {
                 setHistory(merged);
             })
             .catch(() => {
-                // Fall back to localStorage only
                 const sorted = [...localHistory].sort((a, b) => new Date(b.scannedAt) - new Date(a.scannedAt));
                 setHistory(sorted);
             })
             .finally(() => setLoading(false));
     }, []);
 
-    const filtered = history.filter(h =>
-        !search || h.url?.toLowerCase().includes(search.toLowerCase())
-    );
+    // Fetch all users' history (admin only)
+    useEffect(() => {
+        if (viewMode === 'all' && isAdmin && allHistory.length === 0) {
+            setAllLoading(true);
+            fetch(`${API}/api/admin/history`, { headers: authHeader() })
+                .then(r => r.ok ? r.json() : [])
+                .then(items => {
+                    items.sort((a, b) => new Date(b.scannedAt) - new Date(a.scannedAt));
+                    setAllHistory(items);
+                })
+                .catch(() => setAllHistory([]))
+                .finally(() => setAllLoading(false));
+        }
+    }, [viewMode, isAdmin]);
+
+    const activeHistory = viewMode === 'all' ? allHistory : history;
+    const activeLoading = viewMode === 'all' ? allLoading : loading;
+
+    // Get unique users from all history
+    const uniqueUsers = [...new Set(allHistory.map(h => h.userEmail).filter(Boolean))];
+
+    const filtered = activeHistory.filter(h => {
+        const matchSearch = !search || h.url?.toLowerCase().includes(search.toLowerCase());
+        const matchUser = !userFilter || h.userEmail === userFilter;
+        return matchSearch && matchUser;
+    });
 
     return (
         <div className="min-h-screen bg-[var(--bg-primary)] px-4 py-10 transition-colors duration-300">
             <div className="max-w-6xl mx-auto">
                 {/* Header */}
-                <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
+                <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
                             📋 Scan <span className="text-[#00e5ff]">History</span>
                         </h1>
                         <p className="text-gray-500 dark:text-gray-400 mt-1">
-                            {history.length} scan{history.length !== 1 ? 's' : ''} recorded
+                            {filtered.length} scan{filtered.length !== 1 ? 's' : ''} recorded
+                            {viewMode === 'all' && ' (all users)'}
                         </p>
                     </div>
-                    <div className="flex gap-3">
+                    <div className="flex gap-3 flex-wrap">
+                        {/* Admin: View Mode Toggle */}
+                        {isAdmin && (
+                            <div className="flex bg-gray-100 dark:bg-[#0e0e0e] border border-gray-200 dark:border-[#333] rounded-lg p-0.5">
+                                <button
+                                    onClick={() => { setViewMode('my'); setUserFilter(''); }}
+                                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${viewMode === 'my'
+                                        ? 'bg-white dark:bg-[#181818] text-gray-900 dark:text-white shadow-sm'
+                                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                                    }`}
+                                >
+                                    My History
+                                </button>
+                                <button
+                                    onClick={() => setViewMode('all')}
+                                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${viewMode === 'all'
+                                        ? 'bg-white dark:bg-[#181818] text-gray-900 dark:text-white shadow-sm'
+                                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                                    }`}
+                                >
+                                    All Users
+                                </button>
+                            </div>
+                        )}
                         <button
                             onClick={() => exportHistoryPDF(filtered)}
                             disabled={filtered.length === 0}
@@ -116,7 +199,7 @@ export default function History() {
                             Export PDF
                         </button>
                         <button
-                            onClick={() => { localStorage.removeItem('scanHistory'); setHistory([]); }}
+                            onClick={() => { localStorage.removeItem('cmu_scan_history'); setHistory([]); }}
                             disabled={history.length === 0}
                             className="px-4 py-2 rounded-lg border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-medium disabled:opacity-40"
                         >
@@ -125,20 +208,35 @@ export default function History() {
                     </div>
                 </div>
 
-                {/* Search */}
-                <div className="mb-4">
+                {/* Stats Bar */}
+                <StatsBar items={filtered} />
+
+                {/* Search + User Filter */}
+                <div className="flex flex-wrap gap-3 mb-4">
                     <input
                         type="text"
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Search by URL…"
-                        className="w-full max-w-sm px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-[#00e5ff] focus:outline-none"
+                        className="flex-1 min-w-[200px] max-w-sm px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-[#00e5ff] focus:outline-none"
                     />
+                    {viewMode === 'all' && uniqueUsers.length > 0 && (
+                        <select
+                            value={userFilter}
+                            onChange={e => setUserFilter(e.target.value)}
+                            className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-[#00e5ff] focus:outline-none"
+                        >
+                            <option value="">All Users</option>
+                            {uniqueUsers.map(u => (
+                                <option key={u} value={u}>{u}</option>
+                            ))}
+                        </select>
+                    )}
                 </div>
 
                 {/* Table */}
                 <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-x-auto shadow-sm">
-                    {loading ? (
+                    {activeLoading ? (
                         <div className="flex items-center justify-center h-48 text-gray-400">Loading history…</div>
                     ) : error ? (
                         <div className="flex items-center justify-center h-48 text-red-500">{error}</div>
@@ -154,6 +252,9 @@ export default function History() {
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">URL</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Risk Score</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Classification</th>
+                                    {viewMode === 'all' && (
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">User</th>
+                                    )}
                                     <th className="hidden sm:table-cell px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Scanned At</th>
                                 </tr>
                             </thead>
@@ -173,6 +274,13 @@ export default function History() {
                                                 {h.classification ?? '—'}
                                             </span>
                                         </td>
+                                        {viewMode === 'all' && (
+                                            <td className="px-4 py-3">
+                                                <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate block max-w-[150px]" title={h.userEmail}>
+                                                    {h.userEmail ?? '—'}
+                                                </span>
+                                            </td>
+                                        )}
                                         <td className="hidden sm:table-cell px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                                             {h.scannedAt ? new Date(h.scannedAt).toLocaleString() : '—'}
                                         </td>

@@ -1,11 +1,58 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import LineCard from "../components/LineCard";
 import BarCard from "../components/BarCard";
 import ToolsPanel from "../components/ToolsPanel";
 import { useScan } from "../context/ScanContext";
 
+function authHeader() {
+  const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+function classColor(cls = '') {
+  const c = cls.toUpperCase();
+  if (c.includes('HIGH') || c.includes('CRITICAL') || c.includes('PHISH')) return 'text-red-500';
+  if (c.includes('MEDIUM') || c.includes('SUSPICIOUS')) return 'text-yellow-500';
+  return 'text-[#00e5ff]';
+}
+
+function badge(cls = '') {
+  const c = cls.toUpperCase();
+  if (c.includes('HIGH') || c.includes('CRITICAL') || c.includes('PHISH'))
+    return 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300';
+  if (c.includes('MEDIUM') || c.includes('SUSPICIOUS'))
+    return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300';
+  return 'bg-[#00e5ff]/10 text-[#00e5ff] border border-[#00e5ff]/20';
+}
+
 function Statistics() {
-  const { history = [] } = useScan?.() ?? { history: [] };
+  const { history: localHistory = [] } = useScan?.() ?? { history: [] };
+  const [serverHistory, setServerHistory] = useState([]);
+  const [urlSearch, setUrlSearch] = useState('');
+
+  // Fetch server history for richer data
+  useEffect(() => {
+    const isAuth = localStorage.getItem('isAuthenticated') === 'true';
+    if (!isAuth) return;
+    fetch('/api/history', { headers: authHeader() })
+      .then(r => r.ok ? r.json() : [])
+      .then(items => setServerHistory(items))
+      .catch(() => {});
+  }, []);
+
+  // Merge local + server history, prefer server data
+  const history = useMemo(() => {
+    if (serverHistory.length > 0) {
+      const merged = [...serverHistory];
+      const serverUrls = new Set(serverHistory.map(i => i.url + '|' + i.scannedAt));
+      for (const loc of localHistory) {
+        const key = loc.url + '|' + (loc.scannedAt || '');
+        if (!serverUrls.has(key)) merged.push(loc);
+      }
+      return merged.sort((a, b) => new Date(b.scannedAt) - new Date(a.scannedAt));
+    }
+    return localHistory;
+  }, [localHistory, serverHistory]);
 
   // last 12 scans; ensure at least one point for initial render
   const last = useMemo(() => (history.length ? history.slice(-12) : [{ riskScore: 0 }]), [history]);
@@ -14,7 +61,7 @@ function Statistics() {
     [last, history.length]
   );
 
-  // Risk trend line - Updated colors for neon theme
+  // Risk trend line
   const riskSeries = useMemo(
     () => [{ name: "Risk", data: last.map((e) => (Number.isFinite(e.riskScore) ? e.riskScore : 0)) }],
     [last]
@@ -178,6 +225,11 @@ function Statistics() {
   const highRiskCount = history.filter(e => (e.riskScore || 0) >= 70).length;
   const safeCount = history.filter(e => (e.riskScore || 0) < 40).length;
 
+  // Filtered URLs for the table
+  const filteredUrls = history.filter(h =>
+    !urlSearch || h.url?.toLowerCase().includes(urlSearch.toLowerCase())
+  );
+
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] p-6 transition-colors duration-300">
       {/* Header Section */}
@@ -245,6 +297,63 @@ function Statistics() {
           </div>
           <div className="text-3xl font-bold text-[var(--text-primary)] mb-1">{safeCount}</div>
           <div className="text-sm text-[var(--text-secondary)]">Safe URLs</div>
+        </div>
+      </div>
+
+      {/* Scanned URLs Table */}
+      <div className="bg-white dark:bg-[#181818] border border-gray-200 dark:border-[#333] rounded-xl shadow-lg overflow-hidden transition-all duration-300 mb-6">
+        <div className="p-5 border-b border-gray-200 dark:border-[#333] flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-[#00e5ff] animate-pulse"></div>
+            <h3 className="text-lg font-semibold text-[var(--text-primary)]">Scanned URLs</h3>
+            <span className="text-xs text-[var(--text-secondary)] ml-1">({filteredUrls.length} URLs)</span>
+          </div>
+          <input
+            type="text"
+            value={urlSearch}
+            onChange={e => setUrlSearch(e.target.value)}
+            placeholder="Search URLs…"
+            className="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#0e0e0e] text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-[#00e5ff] focus:outline-none w-full sm:w-64"
+          />
+        </div>
+        <div className="overflow-x-auto">
+          {filteredUrls.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-32 text-gray-400">
+              <span className="text-2xl mb-1">🔍</span>
+              <p className="text-sm">{urlSearch ? 'No URLs match your search.' : 'No scans yet — run your first scan!'}</p>
+            </div>
+          ) : (
+            <table className="w-full min-w-max">
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">URL</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Risk</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Class</th>
+                  <th className="hidden sm:table-cell px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Scanned</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUrls.slice(0, 50).map((h, i) => (
+                  <tr key={i} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+                    <td className="px-4 py-2.5 max-w-[200px]">
+                      <span className="font-mono text-xs text-gray-900 dark:text-white truncate block" title={h.url}>{h.url}</span>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <span className={`text-lg font-bold ${classColor(h.classification)}`}>{h.riskScore ?? '—'}</span>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${badge(h.classification)} uppercase tracking-widest`}>
+                        {h.classification ?? '—'}
+                      </span>
+                    </td>
+                    <td className="hidden sm:table-cell px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400">
+                      {h.scannedAt ? new Date(h.scannedAt).toLocaleString() : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 

@@ -25,7 +25,13 @@ export default function ForgotPassword() {
         setStatus(data.message || "If the email exists, reset instructions have been sent.");
       } else {
         setIsSuccess(false);
-        setStatus(data.error || "Failed to send reset instructions.");
+        if (response.status === 503) {
+          setStatus("Email service is not configured. Please contact the administrator to set up MAIL_USERNAME and MAIL_PASSWORD.");
+        } else if (response.status === 500) {
+          setStatus(data.error || "Failed to send email. The server mail configuration may be incorrect. Please verify the Gmail App Password.");
+        } else {
+          setStatus(data.error || "Failed to send reset instructions.");
+        }
       }
     } catch {
       setStatus("Network error — make sure the server is running.");

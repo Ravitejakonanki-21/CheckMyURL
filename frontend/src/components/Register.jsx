@@ -33,7 +33,7 @@ function PasswordField({ id, label, value, onChange, placeholder = "Enter your p
         <button
           type="button"
           onClick={() => setShow(p => !p)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
           tabIndex={-1}
           aria-label={show ? "Hide password" : "Show password"}
         >
@@ -44,17 +44,115 @@ function PasswordField({ id, label, value, onChange, placeholder = "Enter your p
   );
 }
 
+// Step indicator component
+function StepIndicator({ currentStep }) {
+  const steps = [
+    { num: 1, label: 'Email' },
+    { num: 2, label: 'Verify OTP' },
+    { num: 3, label: 'Password' },
+  ];
+  return (
+    <div className="flex items-center justify-center gap-2 mb-6">
+      {steps.map((step, i) => (
+        <React.Fragment key={step.num}>
+          <div className="flex flex-col items-center">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+              currentStep === step.num
+                ? 'bg-[#00e5ff] text-[#0e0e0e] shadow-lg shadow-[#00e5ff]/30'
+                : currentStep > step.num
+                  ? 'bg-green-500 text-white'
+                  : 'bg-gray-200 dark:bg-[#333] text-gray-500 dark:text-gray-400'
+            }`}>
+              {currentStep > step.num ? (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                </svg>
+              ) : step.num}
+            </div>
+            <span className={`text-[10px] mt-1 font-medium ${
+              currentStep >= step.num ? 'text-[#00e5ff]' : 'text-gray-400'
+            }`}>{step.label}</span>
+          </div>
+          {i < steps.length - 1 && (
+            <div className={`flex-1 h-0.5 mb-4 rounded transition-all duration-300 ${
+              currentStep > step.num ? 'bg-green-500' : 'bg-gray-200 dark:bg-[#333]'
+            }`} style={{ minWidth: '40px', maxWidth: '80px' }} />
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
 export default function Register() {
+  const [step, setStep] = useState(1); // 1: Email, 2: OTP, 3: Password
   const [email, setEmail] = useState('');
+  const [otp, setOtp] = useState('');
+  const [verificationToken, setVerificationToken] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [status, setStatus] = useState('');
+  const [isSuccess, setIsSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  // Step 1: Send OTP
+  const handleSendOTP = async (e) => {
+    e.preventDefault();
+    setStatus(''); setIsSuccess(false); setLoading(true);
+    try {
+      const response = await fetch('/api/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setIsSuccess(true);
+        setStatus(data.message || 'OTP sent to your email!');
+        setStep(2);
+      } else {
+        setIsSuccess(false);
+        setStatus(data.error || 'Failed to send OTP.');
+      }
+    } catch {
+      setStatus('Network error — make sure the server is running.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Step 2: Verify OTP
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault();
+    setStatus(''); setIsSuccess(false); setLoading(true);
+    try {
+      const response = await fetch('/api/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setIsSuccess(true);
+        setStatus(data.message || 'OTP verified!');
+        setVerificationToken(data.verification_token);
+        setStep(3);
+      } else {
+        setIsSuccess(false);
+        setStatus(data.error || 'Invalid OTP.');
+      }
+    } catch {
+      setStatus('Network error — make sure the server is running.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Step 3: Complete Registration
   const handleRegister = async (e) => {
     e.preventDefault();
-    setStatus('');
+    setStatus(''); setIsSuccess(false);
 
     if (password !== confirmPassword) {
       setStatus('Passwords do not match.');
@@ -67,31 +165,53 @@ export default function Register() {
 
     setLoading(true);
     try {
-      const response = await fetch('/api/register', {
+      const response = await fetch('/api/register-with-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ verification_token: verificationToken, password }),
       });
       const data = await response.json();
       if (response.ok) {
-        setStatus('Registration successful! Please log in.');
-        setTimeout(() => navigate('/login'), 1500);
+        setIsSuccess(true);
+        setStatus('Registration successful! Redirecting to login...');
+        setTimeout(() => navigate('/login'), 2000);
       } else {
-        setStatus(data.error || 'Registration failed');
+        setIsSuccess(false);
+        setStatus(data.error || 'Registration failed.');
       }
     } catch {
-      setStatus('Network error');
+      setStatus('Network error.');
     } finally {
       setLoading(false);
     }
   };
 
-  const isSuccess = status.toLowerCase().includes('success');
+  // Resend OTP
+  const handleResendOTP = async () => {
+    setStatus(''); setIsSuccess(false); setLoading(true);
+    try {
+      const response = await fetch('/api/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setIsSuccess(true);
+        setStatus('New OTP sent to your email!');
+      } else {
+        setIsSuccess(false);
+        setStatus(data.error || 'Failed to resend OTP.');
+      }
+    } catch {
+      setStatus('Network error.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div
-      className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center px-4 transition-colors duration-300"
-    >
+    <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center px-4 transition-colors duration-300">
       <div className="max-w-md w-full">
         <div className="text-center mb-2">
           <div className="flex items-center justify-center gap-2 sm:gap-3 mb-2">
@@ -102,44 +222,113 @@ export default function Register() {
         </div>
 
         <div className="bg-white dark:bg-[#181818] rounded-2xl shadow-lg border border-gray-200 dark:border-[#333] p-8">
-          <form onSubmit={handleRegister} className="space-y-6">
-            {/* Email */}
-            <div>
-              <label htmlFor="reg-email" className="block text-sm font-medium text-[var(--text-primary)] mb-3">Email</label>
-              <input
-                id="reg-email" type="email" value={email}
-                onChange={e => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-[#333] rounded-lg focus:ring-2 focus:ring-[#00e5ff] bg-gray-50 dark:bg-[#0e0e0e] text-[var(--text-primary)]"
-                placeholder="Enter your email" required
-              />
-            </div>
+          <StepIndicator currentStep={step} />
 
-            {/* Password */}
-            <PasswordField
-              id="reg-password" label="Password"
-              value={password} onChange={e => setPassword(e.target.value)}
-              placeholder="Create a password" minLength={6}
-            />
-
-            {/* Confirm Password */}
-            <PasswordField
-              id="reg-confirm" label="Confirm Password"
-              value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
-              placeholder="Re-enter your password" minLength={6}
-            />
-
-            {/* Status */}
-            {status && (
-              <div className={`p-3 border rounded-lg ${isSuccess ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                <p className={`text-sm text-center ${isSuccess ? 'text-green-700' : 'text-red-600'}`}>{status}</p>
+          {/* Step 1: Enter Email */}
+          {step === 1 && (
+            <form onSubmit={handleSendOTP} className="space-y-6">
+              <div>
+                <label htmlFor="reg-email" className="block text-sm font-medium text-[var(--text-primary)] mb-3">Email</label>
+                <input
+                  id="reg-email" type="email" value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-[#333] rounded-lg focus:ring-2 focus:ring-[#00e5ff] bg-gray-50 dark:bg-[#0e0e0e] text-[var(--text-primary)]"
+                  placeholder="Enter your email" required autoFocus
+                />
               </div>
-            )}
 
-            <button type="submit" disabled={loading}
-              className="w-full py-3 bg-[#00e5ff] hover:bg-[#00ccf0] text-[#0e0e0e] font-semibold rounded-lg transition-colors disabled:opacity-50 shadow-md">
-              {loading ? 'REGISTERING...' : 'REGISTER'}
-            </button>
-          </form>
+              {status && (
+                <div className={`p-3 border rounded-lg ${isSuccess ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'}`}>
+                  <p className={`text-sm text-center ${isSuccess ? 'text-green-700 dark:text-green-300' : 'text-red-600 dark:text-red-400'}`}>{status}</p>
+                </div>
+              )}
+
+              <button type="submit" disabled={loading}
+                className="w-full py-3 bg-[#00e5ff] hover:bg-[#00ccf0] text-[#0e0e0e] font-semibold rounded-lg transition-colors disabled:opacity-50 shadow-md">
+                {loading ? 'SENDING OTP...' : 'SEND OTP'}
+              </button>
+            </form>
+          )}
+
+          {/* Step 2: Verify OTP */}
+          {step === 2 && (
+            <form onSubmit={handleVerifyOTP} className="space-y-6">
+              <div className="text-center mb-2">
+                <p className="text-sm text-[var(--text-secondary)]">
+                  OTP sent to <span className="font-semibold text-[#00e5ff]">{email}</span>
+                </p>
+              </div>
+
+              <div>
+                <label htmlFor="reg-otp" className="block text-sm font-medium text-[var(--text-primary)] mb-3">Enter OTP</label>
+                <input
+                  id="reg-otp" type="text" value={otp}
+                  onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  className="w-full px-4 py-4 border border-gray-300 dark:border-[#333] rounded-lg focus:ring-2 focus:ring-[#00e5ff] bg-gray-50 dark:bg-[#0e0e0e] text-[var(--text-primary)] text-center text-2xl font-bold tracking-[0.5em]"
+                  placeholder="••••••" required maxLength={6} autoFocus
+                />
+              </div>
+
+              {status && (
+                <div className={`p-3 border rounded-lg ${isSuccess ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'}`}>
+                  <p className={`text-sm text-center ${isSuccess ? 'text-green-700 dark:text-green-300' : 'text-red-600 dark:text-red-400'}`}>{status}</p>
+                </div>
+              )}
+
+              <button type="submit" disabled={loading || otp.length < 6}
+                className="w-full py-3 bg-[#00e5ff] hover:bg-[#00ccf0] text-[#0e0e0e] font-semibold rounded-lg transition-colors disabled:opacity-50 shadow-md">
+                {loading ? 'VERIFYING...' : 'VERIFY OTP'}
+              </button>
+
+              <div className="flex items-center justify-between text-sm">
+                <button type="button" onClick={() => { setStep(1); setStatus(''); setOtp(''); }}
+                  className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
+                  ← Change email
+                </button>
+                <button type="button" onClick={handleResendOTP} disabled={loading}
+                  className="text-[#00e5ff] hover:text-[#00ccf0] font-medium disabled:opacity-50">
+                  Resend OTP
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Step 3: Set Password */}
+          {step === 3 && (
+            <form onSubmit={handleRegister} className="space-y-6">
+              <div className="text-center mb-2">
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-full">
+                  <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-xs font-medium text-green-700 dark:text-green-300">Email verified: {email}</span>
+                </div>
+              </div>
+
+              <PasswordField
+                id="reg-password" label="Password"
+                value={password} onChange={e => setPassword(e.target.value)}
+                placeholder="Create a password" minLength={6}
+              />
+
+              <PasswordField
+                id="reg-confirm" label="Confirm Password"
+                value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter your password" minLength={6}
+              />
+
+              {status && (
+                <div className={`p-3 border rounded-lg ${isSuccess ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'}`}>
+                  <p className={`text-sm text-center ${isSuccess ? 'text-green-700 dark:text-green-300' : 'text-red-600 dark:text-red-400'}`}>{status}</p>
+                </div>
+              )}
+
+              <button type="submit" disabled={loading}
+                className="w-full py-3 bg-[#00e5ff] hover:bg-[#00ccf0] text-[#0e0e0e] font-semibold rounded-lg transition-colors disabled:opacity-50 shadow-md">
+                {loading ? 'REGISTERING...' : 'COMPLETE REGISTRATION'}
+              </button>
+            </form>
+          )}
         </div>
 
         <div className="text-center mt-8">
