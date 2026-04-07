@@ -32,10 +32,11 @@ function PasswordField({ id, label, value, onChange, placeholder = "Enter your p
         />
         <button
           type="button"
-          onClick={() => setShow(p => !p)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShow(p => !p); }}
+          className="absolute right-3 top-1/2 -translate-y-1/2 z-10 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer"
           tabIndex={-1}
           aria-label={show ? "Hide password" : "Show password"}
+          style={{ pointerEvents: 'auto' }}
         >
           <EyeIcon open={show} />
         </button>

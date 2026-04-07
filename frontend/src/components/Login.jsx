@@ -98,10 +98,11 @@ export default function Login({ onLogin }) {
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword(p => !p)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowPassword(p => !p); }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 z-10 p-1 text-gray-400 hover:text-gray-600 cursor-pointer"
                   tabIndex={-1}
                   aria-label={showPassword ? "Hide password" : "Show password"}
+                  style={{ pointerEvents: 'auto' }}
                 >
                   <EyeIcon open={showPassword} />
                 </button>
