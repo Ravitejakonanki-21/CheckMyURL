@@ -42,9 +42,9 @@ def send_otp():
     if get_user_by_email(email):
         return jsonify({"error": "Email is already registered. Please log in instead."}), 409
 
-    # Check mail configuration
-    mail_user = os.getenv("MAIL_USERNAME", "")
-    mail_pass = os.getenv("MAIL_PASSWORD", "")
+    # Check mail configuration — use Flask config (set by app.py from env vars)
+    mail_user = current_app.config.get("MAIL_USERNAME") or ""
+    mail_pass = current_app.config.get("MAIL_PASSWORD") or ""
     if not mail_user or not mail_pass:
         return jsonify({"error": "Email service is not configured. Please contact the administrator."}), 503
 

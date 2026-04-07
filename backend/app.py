@@ -556,9 +556,9 @@ def forgot_password():
     if not email:
         return jsonify({"error": "Email is required"}), 400
 
-    # Check mail is configured
-    mail_user = os.getenv("MAIL_USERNAME", "")
-    mail_pass = os.getenv("MAIL_PASSWORD", "")
+    # Check mail is configured — use Flask config (set from env vars at startup)
+    mail_user = app.config.get("MAIL_USERNAME") or ""
+    mail_pass = app.config.get("MAIL_PASSWORD") or ""
     if not mail_user or not mail_pass:
         return jsonify({"error": "Email service is not configured. Please contact the administrator."}), 503
 
