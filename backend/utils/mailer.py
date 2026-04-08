@@ -2,14 +2,18 @@
 Email helper that forces IPv4 connections to Gmail SMTP.
 Works around Render/Docker containers where IPv6 is unreachable.
 
-Uses the hostname for SSL certificate verification (not the raw IP),
-which avoids "certificate is not valid for <IP>" errors.
+Key fix: connects to the resolved IPv4 address but uses the real hostname
+for SSL/TLS certificate verification (SNI), avoiding both IPv6 failures
+and "certificate not valid for IP" errors.
 """
 import smtplib
 import socket
 import ssl
+import logging
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+
+log = logging.getLogger(__name__)
 
 
 def _resolve_ipv4(hostname: str, port: int) -> str:
@@ -32,7 +36,7 @@ def send_email(
 ):
     """
     Send an email using direct SMTP with forced IPv4.
-    Falls back to port 465 (SSL) if port 587 (TLS) fails.
+    Tries multiple connection strategies for maximum compatibility.
     """
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
@@ -43,54 +47,89 @@ def send_email(
 
     # Resolve to IPv4 to avoid "Network is unreachable" on IPv6-only DNS
     ipv4_addr = _resolve_ipv4(mail_server, mail_port)
+    log.info(f"[MAILER] Resolved {mail_server} -> {ipv4_addr}")
 
-    # Build SSL context that verifies against the hostname (not the IP)
-    ctx = ssl.create_default_context()
+    errors = []
 
-    last_error = None
-
-    # Attempt 1: STARTTLS on port 587 — connect to IP, verify cert against hostname
+    # ── Attempt 1: STARTTLS on port 587, connect to IPv4, verify cert
+    #    against the real hostname (not the IP).
     try:
-        smtp = smtplib.SMTP(ipv4_addr, 587, timeout=15)
+        log.info("[MAILER] Attempt 1: STARTTLS 587 via IPv4")
+        ctx = ssl.create_default_context()
+        smtp = smtplib.SMTP(timeout=15)
+        smtp.connect(ipv4_addr, 587)
+        # Override _host so starttls() uses the real hostname for SNI
+        # and certificate verification instead of the IP address.
+        smtp._host = mail_server
         smtp.ehlo(mail_server)
         smtp.starttls(context=ctx)
-        # After STARTTLS, re-ehlo with the real hostname so the server
-        # sees a valid EHLO and the TLS cert matches
         smtp.ehlo(mail_server)
         smtp.login(mail_username, mail_password)
         smtp.sendmail(mail_username, to_email, msg.as_string())
         smtp.quit()
-        return  # Success
+        log.info("[MAILER] Attempt 1 succeeded")
+        return
     except Exception as e:
-        last_error = e
+        log.warning(f"[MAILER] Attempt 1 failed: {e}")
+        errors.append(f"STARTTLS-587-IPv4: {e}")
 
-    # Attempt 2: Direct TLS on port 465 — connect to hostname directly
-    # (smtplib.SMTP_SSL does the TLS handshake at connect time)
+    # ── Attempt 2: SMTP_SSL on port 465, connect to IPv4 with proper SNI
     try:
+        log.info("[MAILER] Attempt 2: SSL 465 via IPv4")
+        ctx = ssl.create_default_context()
+        # Manually create an IPv4 socket, then wrap with SSL using the
+        # real hostname for certificate verification.
+        raw_sock = socket.create_connection((ipv4_addr, 465), timeout=15)
+        ssl_sock = ctx.wrap_socket(raw_sock, server_hostname=mail_server)
+        smtp = smtplib.SMTP_SSL(host=mail_server, context=ctx)
+        smtp.sock = ssl_sock
+        smtp.ehlo(mail_server)
+        smtp.login(mail_username, mail_password)
+        smtp.sendmail(mail_username, to_email, msg.as_string())
+        smtp.quit()
+        log.info("[MAILER] Attempt 2 succeeded")
+        return
+    except Exception as e:
+        log.warning(f"[MAILER] Attempt 2 failed: {e}")
+        errors.append(f"SSL-465-IPv4: {e}")
+
+    # ── Attempt 3: STARTTLS on 587 with relaxed SSL (no cert verification)
+    #    Last resort for environments with broken CA bundles or proxies.
+    try:
+        log.info("[MAILER] Attempt 3: STARTTLS 587 no-verify")
+        ctx_nv = ssl.create_default_context()
+        ctx_nv.check_hostname = False
+        ctx_nv.verify_mode = ssl.CERT_NONE
+        smtp = smtplib.SMTP(timeout=15)
+        smtp.connect(ipv4_addr, 587)
+        smtp._host = mail_server
+        smtp.ehlo(mail_server)
+        smtp.starttls(context=ctx_nv)
+        smtp.ehlo(mail_server)
+        smtp.login(mail_username, mail_password)
+        smtp.sendmail(mail_username, to_email, msg.as_string())
+        smtp.quit()
+        log.info("[MAILER] Attempt 3 succeeded")
+        return
+    except Exception as e:
+        log.warning(f"[MAILER] Attempt 3 failed: {e}")
+        errors.append(f"STARTTLS-587-noverify: {e}")
+
+    # ── Attempt 4: Direct hostname connection (port 465 SSL)
+    #    Let Python resolve DNS naturally (works if IPv4 is preferred).
+    try:
+        log.info("[MAILER] Attempt 4: SSL 465 via hostname")
+        ctx = ssl.create_default_context()
         smtp = smtplib.SMTP_SSL(mail_server, 465, timeout=15, context=ctx)
         smtp.ehlo(mail_server)
         smtp.login(mail_username, mail_password)
         smtp.sendmail(mail_username, to_email, msg.as_string())
         smtp.quit()
-        return  # Success
+        log.info("[MAILER] Attempt 4 succeeded")
+        return
     except Exception as e:
-        last_error = e
+        log.warning(f"[MAILER] Attempt 4 failed: {e}")
+        errors.append(f"SSL-465-hostname: {e}")
 
-    # Attempt 3: STARTTLS on port 587 with relaxed SSL (skip cert verification)
-    # This is a last resort for environments with broken CA bundles
-    try:
-        ctx_noverify = ssl.create_default_context()
-        ctx_noverify.check_hostname = False
-        ctx_noverify.verify_mode = ssl.CERT_NONE
-        smtp = smtplib.SMTP(ipv4_addr, 587, timeout=15)
-        smtp.ehlo(mail_server)
-        smtp.starttls(context=ctx_noverify)
-        smtp.ehlo(mail_server)
-        smtp.login(mail_username, mail_password)
-        smtp.sendmail(mail_username, to_email, msg.as_string())
-        smtp.quit()
-        return  # Success
-    except Exception as e:
-        last_error = e
-
-    raise RuntimeError(f"All SMTP connection methods failed. Last error: {last_error}")
+    error_detail = " | ".join(errors)
+    raise RuntimeError(f"All SMTP methods failed: {error_detail}")
