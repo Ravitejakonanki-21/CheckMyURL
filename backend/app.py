@@ -564,8 +564,15 @@ def forgot_password():
     if not email:
         return jsonify({"error": "Email is required"}), 400
 
+    mail_user = app.config.get("MAIL_USERNAME") or ""
+    mail_pass = app.config.get("MAIL_PASSWORD") or ""
+
     # Debug: log mail config
-    app.logger.info(f"[FORGOT-PW] MAIL_USERNAME={app.config.get('MAIL_USERNAME')}, MAIL_SERVER={app.config.get('MAIL_SERVER')}")
+    app.logger.info(f"[FORGOT-PW] MAIL_USERNAME={mail_user}, has_password={'yes' if mail_pass else 'NO'}")
+
+    if not mail_user or not mail_pass:
+        app.logger.error("[FORGOT-PW] MAIL_USERNAME or MAIL_PASSWORD not set!")
+        return jsonify({"error": "Email service is not configured. Please set MAIL_USERNAME and MAIL_PASSWORD environment variables."}), 503
 
     user = get_user_by_email(email)
     if not user:
@@ -576,11 +583,10 @@ def forgot_password():
     frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")  # default to Vite port
     reset_link = f"{frontend_url}/reset-password/{token}"
 
-    msg = Message("Password Reset Request", recipients=[email])
-    msg.body = f"To reset your password, click the link:\n{reset_link}\n\nThis link expires in 1 hour."
-    msg.html = f"""
+    body_text = f"To reset your password, click the link:\n{reset_link}\n\nThis link expires in 1 hour."
+    body_html = f"""
     <div style="font-family:sans-serif;max-width:480px;margin:auto">
-      <h2 style="color:#0891b2">CheckMyURL Password Reset</h2>
+      <h2 style="color:#0891b2">CYBERSHIELD Password Reset</h2>
       <p>Click the button below to reset your password. This link expires in <strong>1 hour</strong>.</p>
       <a href="{reset_link}" style="display:inline-block;padding:12px 24px;background:#0891b2;color:#fff;border-radius:8px;text-decoration:none;font-weight:bold">Reset Password</a>
       <p style="margin-top:24px;color:#6b7280;font-size:13px">If you didn't request this, you can safely ignore this email.</p>
@@ -588,7 +594,15 @@ def forgot_password():
     """
 
     try:
-        mail.send(msg)
+        from utils.mailer import send_email
+        send_email(
+            subject="CYBERSHIELD Password Reset",
+            to_email=email,
+            body_text=body_text,
+            body_html=body_html,
+            mail_username=mail_user,
+            mail_password=mail_pass,
+        )
     except Exception as e:
         app.logger.error(f"Failed to send reset email to {email}: {e}")
         err_msg = str(e)

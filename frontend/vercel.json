@@ -1,5 +1,11 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "https://checkmyurl-backend.onrender.com/api/:path*" },
+    { "source": "/analyze", "destination": "https://checkmyurl-backend.onrender.com/analyze" },
+    { "source": "/whois_check", "destination": "https://checkmyurl-backend.onrender.com/whois_check" },
+    { "source": "/health", "destination": "https://checkmyurl-backend.onrender.com/health" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": "vite"

@@ -60,16 +60,17 @@ def send_otp():
         "created_at": datetime.utcnow(),
     })
 
-    # Send OTP email using Flask-Mail (configured in app.py)
-    from flask_mail import Mail
-    mail = Mail(current_app)
+    # Send OTP email using direct SMTP (IPv4 forced — works on Render)
+    mail_user = current_app.config.get("MAIL_USERNAME") or ""
+    mail_pass = current_app.config.get("MAIL_PASSWORD") or ""
+    current_app.logger.info(f"[OTP] Sending to {email}, MAIL_USERNAME={mail_user}, has_password={'yes' if mail_pass else 'NO'}")
 
-    # Debug: log mail config
-    current_app.logger.info(f"[OTP] MAIL_USERNAME={current_app.config.get('MAIL_USERNAME')}, MAIL_SERVER={current_app.config.get('MAIL_SERVER')}")
+    if not mail_user or not mail_pass:
+        current_app.logger.error("[OTP] MAIL_USERNAME or MAIL_PASSWORD not set!")
+        return jsonify({"error": "Email service is not configured. Please set MAIL_USERNAME and MAIL_PASSWORD on the server."}), 503
 
-    msg = Message("Your CYBERSHIELD Registration OTP", recipients=[email])
-    msg.body = f"Your OTP for CYBERSHIELD registration is: {otp_code}\n\nThis code expires in 10 minutes."
-    msg.html = f"""
+    body_text = f"Your OTP for CYBERSHIELD registration is: {otp_code}\n\nThis code expires in 10 minutes."
+    body_html = f"""
     <div style="font-family:sans-serif;max-width:480px;margin:auto">
       <h2 style="color:#0891b2">CYBERSHIELD Registration</h2>
       <p>Your one-time password (OTP) is:</p>
@@ -86,7 +87,15 @@ def send_otp():
     """
 
     try:
-        mail.send(msg)
+        from utils.mailer import send_email
+        send_email(
+            subject="Your CYBERSHIELD Registration OTP",
+            to_email=email,
+            body_text=body_text,
+            body_html=body_html,
+            mail_username=mail_user,
+            mail_password=mail_pass,
+        )
     except Exception as e:
         current_app.logger.error(f"Failed to send OTP email to {email}: {e}")
         err_msg = str(e)
