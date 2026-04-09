@@ -57,6 +57,10 @@ def _get_client() -> MongoClient:
             serverSelectionTimeoutMS=timeout_ms,
             connectTimeoutMS=10000,
             socketTimeoutMS=10000,
+            # Defer DNS/SRV resolution and TCP connect until first actual query.
+            # Without this, MongoClient.__init__ resolves SRV records synchronously
+            # which causes a fatal DNS timeout crash on Render free tier at startup.
+            connect=False,
         )
         if uri.startswith("mongodb+srv"):
             import certifi

@@ -7,7 +7,7 @@ from datetime import datetime
 from bson import ObjectId
 from flask import Blueprint, jsonify, request
 
-from models.audit_log_model import _audit_logs
+from models.audit_log_model import _audit_logs_col
 from models.mongo_client import get_collection
 from models.threat_report_model import list_threat_reports
 from utils.rbac import roles_required
@@ -15,8 +15,8 @@ from utils.rbac import roles_required
 
 bp = Blueprint("admin", __name__, url_prefix="/api/admin")
 
-_users = get_collection("users")
-_scans = get_collection("scans")
+def _get_users(): return get_collection("users")
+def _get_scans(): return get_collection("scans")
 
 VALID_ROLES = {"GUEST", "USER", "ADMIN"}
 
@@ -25,7 +25,7 @@ VALID_ROLES = {"GUEST", "USER", "ADMIN"}
 @roles_required(["ADMIN"])
 def list_users():
     """Return all users (admin only)."""
-    docs = list(_users.find({}, {"password_hash": 0}))
+    docs = list(_get_users().find({}, {"password_hash": 0}))
     for d in docs:
         d["_id"] = str(d["_id"])
     return jsonify(docs), 200
@@ -40,7 +40,7 @@ def update_user_role(user_id: str):
     if new_role not in VALID_ROLES:
         return jsonify({"error": "invalid_role", "valid": sorted(VALID_ROLES)}), 400
 
-    result = _users.update_one(
+    result = _get_users().update_one(
         {"_id": ObjectId(user_id)},
         {"$set": {"role": new_role, "updated_at": datetime.utcnow()}},
     )
@@ -54,7 +54,7 @@ def update_user_role(user_id: str):
 @roles_required(["ADMIN"])
 def get_audit_logs():
     """Return the most recent 200 audit log entries (admin only)."""
-    cursor = _audit_logs.find({}).sort("timestamp", -1).limit(200)
+    cursor = _audit_logs_col().find({}).sort("timestamp", -1).limit(200)
     docs = list(cursor)
     for d in docs:
         d["_id"] = str(d["_id"])
@@ -74,10 +74,10 @@ def get_threat_reports():
 @roles_required(["ADMIN"])
 def get_system_stats():
     """High-level system statistics for the admin dashboard."""
-    total_users = _users.count_documents({})
-    total_scans = _scans.count_documents({})
+    total_users = _get_users().count_documents({})
+    total_scans = _get_scans().count_documents({})
     scans_by_state = list(
-        _scans.aggregate([{"$group": {"_id": "$state", "count": {"$sum": 1}}}])
+        _get_scans().aggregate([{"$group": {"_id": "$state", "count": {"$sum": 1}}}])
     )
     return jsonify({
         "total_users": total_users,
@@ -91,9 +91,9 @@ def get_system_stats():
 def get_all_history():
     """Return ALL users' scan history (admin only), with user email attached."""
     # Build a user_id -> email lookup
-    all_users = {u["_id"]: u["email"] for u in _users.find({}, {"email": 1})}
+    all_users = {u["_id"]: u["email"] for u in _get_users().find({}, {"email": 1})}
 
-    docs = list(_scans.find({}).sort("submitted_at", -1).limit(500))
+    docs = list(_get_scans().find({}).sort("submitted_at", -1).limit(500))
     serialised = []
     for d in docs:
         user_email = all_users.get(d.get("submitted_by"), "unknown")
@@ -127,10 +127,10 @@ def get_user_history(user_id: str):
     except Exception:
         return jsonify({"error": "invalid_user_id"}), 400
 
-    user_doc = _users.find_one({"_id": uid}, {"email": 1})
+    user_doc = _get_users().find_one({"_id": uid}, {"email": 1})
     user_email = user_doc["email"] if user_doc else "unknown"
 
-    docs = list(_scans.find({"submitted_by": uid}).sort("submitted_at", -1).limit(100))
+    docs = list(_get_scans().find({"submitted_by": uid}).sort("submitted_at", -1).limit(100))
     serialised = []
     for d in docs:
         risk = d.get("risk") or {}

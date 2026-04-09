@@ -9,7 +9,7 @@ from bson import ObjectId
 
 from .mongo_client import get_collection
 
-_reports = get_collection("threat_reports")
+def _reports_col(): return get_collection("threat_reports")
 
 
 def create_threat_report(
@@ -26,13 +26,13 @@ def create_threat_report(
         "notes": notes,
         "created_at": datetime.utcnow(),
     }
-    result = _reports.insert_one(doc)
+    result = _reports_col().insert_one(doc)
     return result.inserted_id
 
 
 def list_threat_reports(limit: int = 100) -> List[Dict[str, Any]]:
     """Return most recent threat reports, most recent first."""
-    cursor = _reports.find({}).sort("created_at", -1).limit(limit)
+    cursor = _reports_col().find({}).sort("created_at", -1).limit(limit)
     docs = list(cursor)
     for d in docs:
         d["_id"] = str(d["_id"])
@@ -41,4 +41,4 @@ def list_threat_reports(limit: int = 100) -> List[Dict[str, Any]]:
 
 
 def get_report_for_scan(scan_id: ObjectId) -> Optional[Dict[str, Any]]:
-    return _reports.find_one({"scan_id": scan_id})
+    return _reports_col().find_one({"scan_id": scan_id})

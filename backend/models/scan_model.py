@@ -6,7 +6,7 @@ from bson import ObjectId
 from .mongo_client import get_collection
 
 
-_scans = get_collection("scans")
+def _scans_col(): return get_collection("scans")
 
 
 def create_scan(url: str, user_id: ObjectId) -> ObjectId:
@@ -24,7 +24,7 @@ def create_scan(url: str, user_id: ObjectId) -> ObjectId:
         "created_at": now,
         "updated_at": now,
     }
-    result = _scans.insert_one(doc)
+    result = _scans_col().insert_one(doc)
     return result.inserted_id
 
 
@@ -34,13 +34,13 @@ def update_scan_state(
     update: Dict[str, Any] = {"state": new_state, "updated_at": datetime.utcnow()}
     if extra_fields:
         update.update(extra_fields)
-    _scans.update_one({"_id": scan_id}, {"$set": update})
+    _scans_col().update_one({"_id": scan_id}, {"$set": update})
 
 
 def save_scan_results(
     scan_id: ObjectId, risk: Dict[str, Any], raw_results: Dict[str, Any]
 ) -> None:
-    _scans.update_one(
+    _scans_col().update_one(
         {"_id": scan_id},
         {
             "$set": {
@@ -55,12 +55,12 @@ def save_scan_results(
 def get_scan_for_user(
     scan_id: ObjectId, user_id: ObjectId
 ) -> Optional[Dict[str, Any]]:
-    return _scans.find_one({"_id": scan_id, "submitted_by": user_id})
+    return _scans_col().find_one({"_id": scan_id, "submitted_by": user_id})
 
 
 def list_scans_for_user(user_id: ObjectId, limit: int = 50) -> List[Dict[str, Any]]:
     cursor = (
-        _scans.find({"submitted_by": user_id})
+        _scans_col().find({"submitted_by": user_id})
         .sort("submitted_at", -1)
         .limit(limit)
     )
@@ -68,5 +68,5 @@ def list_scans_for_user(user_id: ObjectId, limit: int = 50) -> List[Dict[str, An
 
 
 def get_scan_by_id(scan_id: ObjectId) -> Optional[Dict[str, Any]]:
-    return _scans.find_one({"_id": scan_id})
+    return _scans_col().find_one({"_id": scan_id})
 

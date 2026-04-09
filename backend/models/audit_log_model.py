@@ -7,7 +7,7 @@ from flask import Request
 from .mongo_client import get_collection
 
 
-_audit_logs = get_collection("audit_logs")
+def _audit_logs_col(): return get_collection("audit_logs")
 
 
 def _actor_from_request(request: Request) -> Dict[str, Any]:
@@ -50,5 +50,5 @@ def log_state_transition(
         },
         **base,
     }
-    _audit_logs.insert_one(doc)
+    _audit_logs_col().insert_one(doc)
 
