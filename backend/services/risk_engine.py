@@ -58,10 +58,12 @@ def compute_risk(results: dict) -> tuple:
     # ── Keyword / brand checks (skip for known-legitimate domains) ────────────
     if not is_whitelisted:
         if rules.get("has_suspicious_words"):
-            # Reduced from 15 → 10 since word list is now tighter
+            # Phishing-specific compound keyword in URL path/hostname
             score += 10; reasons.append("phishy_words")
         if rules.get("has_brand_words_in_host"):
-            score += 20; reasons.append("brand_in_host")
+            # Brand impersonation: e.g. google.verify-account.com
+            # Raised to 30 — detection is now precise (skips real brand domains)
+            score += 30; reasons.append("brand_impersonation")
 
     # Clamp 0..100
     score = max(0, min(100, score))
