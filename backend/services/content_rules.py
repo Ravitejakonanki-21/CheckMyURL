@@ -1,17 +1,20 @@
 import re
 from urllib.parse import urlparse
 
+# Only words that are genuinely phishing-specific in a URL context.
+# Broad words like 'login', 'account', 'secure', 'support', 'update', 'password'
+# exist on virtually ALL legitimate sites — do NOT include them here.
 SUSPICIOUS_WORDS = [
-    "login", "verify", "update", "confirm", "unlock",
-    "password", "credential", "billing", "invoice",
-    "urgent", "suspend", "limited", "gift", "prize",
-    "support", "helpdesk", "secure", "security",
-    "account", "wallet"
+    "verify-account", "account-verify", "update-account", "secure-login",
+    "bank-login", "free-gift", "account-locked", "account-suspend",
+    "credential", "reactivate", "unauthorized", "validate-id",
+    "signin-confirm", "reset-verify"
 ]
 
+# Brand impersonation — only flag if brand appears in the HOST (not the real domain)
 BRAND_WORDS = [
-    "apple", "microsoft", "google", "facebook", "amazon",
-    "paypal", "netflix", "instagram", "whatsapp", "outlook"
+    "paypal", "netflix", "instagram", "whatsapp",
+    "apple-id", "microsoft-login", "google-verify", "amazon-security"
 ]
 
 def check_keywords(url: str):
