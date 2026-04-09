@@ -1,0 +1,40 @@
+services:
+  # ─── Flask API + Celery Worker (combined, fits Render free plan) ──
+  - type: web
+    name: checkmyurl-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: MONGO_DB_NAME
+        value: url_checker
+      - key: MONGO_MAX_POOL_SIZE
+        value: 10
+      - key: MONGO_SERVER_SELECTION_TIMEOUT_MS
+        value: 5000
+      - key: CELERY_BROKER_URL
+        sync: false
+      - key: CELERY_RESULT_BACKEND
+        sync: false
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: JWT_ACCESS_TOKEN_EXPIRES
+        value: 1800
+      - key: FRONTEND_URL
+        sync: false
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: FLASK_RUN_HOST
+        value: "0.0.0.0"
+      # PORT is set by Render (default 10000) - app binds to it automatically
+      - key: REDIS_SSL_CERT_REQS
+        value: "CERT_NONE"
+      - key: MONGO_TLS_ALLOW_INVALID_CERTIFICATES
+        value: "false"
