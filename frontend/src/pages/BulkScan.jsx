@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
+import { API_BASE_URL } from '../config/api';
 
-const API = '/';
+const API = API_BASE_URL;
 
 function authHeader() {
     const token = localStorage.getItem('access_token') || localStorage.getItem('token');
