@@ -11,7 +11,11 @@ import AsciiDetails from "./AsciiDetails.jsx";
 function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setExpandedRows }) {
   const toggleRowExpansion = (key) => setExpandedRows(prev => ({ ...prev, [key]: !prev[key] }));
   const [copiedStates, setCopiedStates] = useState({});
-  const [whoisData, setWhoisData] = useState(null);
+  const [whoisData, setWhoisData] = useState(
+    result.details.whoisData && Object.keys(result.details.whoisData).length > 0
+      ? result.details.whoisData
+      : null
+  );
   const [loadingWhois, setLoadingWhois] = useState(false);
   const [whoisError, setWhoisError] = useState(null);
   const [securityHeadersExpanded, setSecurityHeadersExpanded] = useState(false);
@@ -35,28 +39,22 @@ function ResultsTable({ result, securityScores, lastUpdated, expandedRows, setEx
  
 
   useEffect(() => {
-    // Use WHOIS data from the scan result if available, otherwise fetch it
+    // Only fetch from API if not already loaded from scan result
     if (expandedRows['whois'] && !whoisData && !loadingWhois) {
-      if (result.details.whoisData && Object.keys(result.details.whoisData).length > 0) {
-        // Use WHOIS data from the scan result
-        setWhoisData(result.details.whoisData);
-      } else {
-        // Fallback: fetch WHOIS data separately
-        setLoadingWhois(true);
-        setWhoisError(null);
-        checkWhois(result.url)
-          .then(data => {
-            setWhoisData(data);
-            setLoadingWhois(false);
-          })
-          .catch(error => {
-            console.error('Failed to fetch WHOIS data:', error);
-            setWhoisError(error.message || 'Failed to fetch domain information');
-            setLoadingWhois(false);
-          });
-      }
+      setLoadingWhois(true);
+      setWhoisError(null);
+      checkWhois(result.url)
+        .then(data => {
+          setWhoisData(data);
+          setLoadingWhois(false);
+        })
+        .catch(error => {
+          console.error('Failed to fetch WHOIS data:', error);
+          setWhoisError(error.message || 'Failed to fetch domain information');
+          setLoadingWhois(false);
+        });
     }
-  }, [expandedRows['whois'], result.url, result.details.whoisData, whoisData, loadingWhois]);
+  }, [expandedRows['whois'], result.url, whoisData, loadingWhois]);
 
 
   const handleCopy = (text, field) => {
