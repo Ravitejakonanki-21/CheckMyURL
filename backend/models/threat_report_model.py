@@ -37,6 +37,8 @@ def list_threat_reports(limit: int = 100) -> List[Dict[str, Any]]:
     for d in docs:
         d["_id"] = str(d["_id"])
         d["scan_id"] = str(d["scan_id"])
+        if hasattr(d.get("created_at"), "isoformat"):
+            d["created_at"] = d["created_at"].isoformat()
     return docs
 
 

@@ -92,12 +92,13 @@ export default function History() {
     const [error, setError] = useState('');
     const [search, setSearch] = useState('');
     const [allHistory, setAllHistory] = useState([]);
-    const [allLoading, setAllLoading] = useState(false);
     const [userFilter, setUserFilter] = useState('');
     const isAdmin = (localStorage.getItem('role') ?? 'USER').toUpperCase() === 'ADMIN';
     const navigate = useNavigate();
-    // Admin defaults to 'all' (all users view); regular users default to 'my'
+    // Admin defaults to 'all'; regular users default to 'my'
     const [viewMode, setViewMode] = useState(isAdmin ? 'all' : 'my');
+    // allLoading starts true for admin to prevent empty-table flash on mount
+    const [allLoading, setAllLoading] = useState(isAdmin);
 
     useEffect(() => {
         const isAuth = localStorage.getItem('isAuthenticated') === 'true';
@@ -127,9 +128,11 @@ export default function History() {
 
     // Fetch all users' history (admin only)
     // Runs on mount (admin defaults to 'all') and whenever viewMode flips to 'all'
+    // Also clears any stale error from the personal-history fetch
     useEffect(() => {
         if (!isAdmin) return;
         if (viewMode !== 'all') return;
+        setError('');          // ← clear personal-history error
         setAllLoading(true);
         fetch(`${API}/api/admin/history`, { headers: authHeader() })
             .then(r => r.ok ? r.json() : Promise.reject(r.status))
@@ -205,8 +208,9 @@ export default function History() {
                         </button>
                         <button
                             onClick={() => { localStorage.removeItem('cmu_scan_history'); setHistory([]); }}
-                            disabled={history.length === 0}
-                            className="px-4 py-2 rounded-lg border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-medium disabled:opacity-40"
+                            disabled={history.length === 0 || viewMode === 'all'}
+                            title={viewMode === 'all' ? 'Switch to My History to clear' : ''}
+                            className="px-4 py-2 rounded-lg border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             Clear History
                         </button>

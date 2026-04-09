@@ -26,13 +26,14 @@ function UsersTab() {
     const [error, setError] = useState('');
     const [saving, setSaving] = useState({});
 
-    useEffect(() => {
-        setLoading(true);
+    const load = () => {
+        setLoading(true); setError('');
         adminApi('GET', '/users')
             .then(setUsers)
             .catch(e => setError(e.message))
             .finally(() => setLoading(false));
-    }, []);
+    };
+    useEffect(() => { load(); }, []);
 
     const changeRole = async (userId, newRole) => {
         setSaving(s => ({ ...s, [userId]: true }));
@@ -47,10 +48,18 @@ function UsersTab() {
     };
 
     if (loading) return <div className="flex items-center justify-center h-48 text-gray-400">Loading users…</div>;
-    if (error) return <div className="text-red-500 p-4">{error}</div>;
+    if (error) return (
+        <div className="flex flex-col items-center justify-center h-48 gap-3">
+            <p className="text-red-500">{error}</p>
+            <button onClick={load} className="px-4 py-2 text-sm rounded-lg bg-[#00e5ff]/10 text-[#00e5ff] hover:bg-[#00e5ff]/20">Retry</button>
+        </div>
+    );
 
     return (
         <div className="overflow-x-auto">
+            <div className="flex justify-end p-3 border-b border-gray-100 dark:border-gray-800">
+                <button onClick={load} className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-[#00e5ff]/10 text-[#00e5ff] hover:bg-[#00e5ff]/20 font-medium">🔄 Refresh</button>
+            </div>
             <table className="w-full">
                 <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
@@ -99,18 +108,28 @@ function AuditLogsTab() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
-    useEffect(() => {
+    const load = () => {
+        setLoading(true); setError('');
         adminApi('GET', '/logs')
             .then(setLogs)
             .catch(e => setError(e.message))
             .finally(() => setLoading(false));
-    }, []);
+    };
+    useEffect(() => { load(); }, []);
 
     if (loading) return <div className="flex items-center justify-center h-48 text-gray-400">Loading logs…</div>;
-    if (error) return <div className="text-red-500 p-4">{error}</div>;
+    if (error) return (
+        <div className="flex flex-col items-center justify-center h-48 gap-3">
+            <p className="text-red-500">{error}</p>
+            <button onClick={load} className="px-4 py-2 text-sm rounded-lg bg-[#00e5ff]/10 text-[#00e5ff] hover:bg-[#00e5ff]/20">Retry</button>
+        </div>
+    );
 
     return (
         <div className="overflow-x-auto">
+            <div className="flex justify-end p-3 border-b border-gray-100 dark:border-gray-800">
+                <button onClick={load} className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-[#00e5ff]/10 text-[#00e5ff] hover:bg-[#00e5ff]/20 font-medium">🔄 Refresh</button>
+            </div>
             <table className="w-full">
                 <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
@@ -148,18 +167,28 @@ function ThreatReportsTab() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
-    useEffect(() => {
+    const load = () => {
+        setLoading(true); setError('');
         adminApi('GET', '/threat-reports')
             .then(setReports)
             .catch(e => setError(e.message))
             .finally(() => setLoading(false));
-    }, []);
+    };
+    useEffect(() => { load(); }, []);
 
     if (loading) return <div className="flex items-center justify-center h-48 text-gray-400">Loading reports…</div>;
-    if (error) return <div className="text-red-500 p-4">{error}</div>;
+    if (error) return (
+        <div className="flex flex-col items-center justify-center h-48 gap-3">
+            <p className="text-red-500">{error}</p>
+            <button onClick={load} className="px-4 py-2 text-sm rounded-lg bg-[#00e5ff]/10 text-[#00e5ff] hover:bg-[#00e5ff]/20">Retry</button>
+        </div>
+    );
 
     return (
         <div className="overflow-x-auto">
+            <div className="flex justify-end p-3 border-b border-gray-100 dark:border-gray-800">
+                <button onClick={load} className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-[#00e5ff]/10 text-[#00e5ff] hover:bg-[#00e5ff]/20 font-medium">🔄 Refresh</button>
+            </div>
             <table className="w-full">
                 <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">

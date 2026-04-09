@@ -97,15 +97,17 @@ function ReportModal({ scan, onClose, onDone }) {
 // ---------- Queue Row ----------
 function QueueRow({ scan, onRefresh }) {
     const [loading, setLoading] = useState('');
+    const [actionError, setActionError] = useState('');
     const [reportTarget, setReportTarget] = useState(null);
 
     const act = async (action) => {
-        setLoading(action);
+        setLoading(action); setActionError('');
         try {
             await socApi('POST', `/scans/${scan._id}/${action}`, {});
             onRefresh();
-        } catch (e) { console.error(e); }
-        finally { setLoading(''); }
+        } catch (e) {
+            setActionError(e.message || 'Action failed');
+        } finally { setLoading(''); }
     };
 
     const severity = scan.risk?.severity_level ?? '—';
@@ -175,6 +177,15 @@ function QueueRow({ scan, onRefresh }) {
                     </div>
                 </td>
             </tr>
+            {actionError && (
+                <tr>
+                    <td colSpan={5} className="px-4 py-2">
+                        <p className="text-xs text-red-500 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-1.5">
+                            ⚠️ {actionError}
+                        </p>
+                    </td>
+                </tr>
+            )}
 
             {reportTarget && (
                 <ReportModal
