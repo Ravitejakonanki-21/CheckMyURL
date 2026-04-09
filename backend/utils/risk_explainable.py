@@ -42,11 +42,12 @@ def _score_keywords(keyword: Dict[str, Any]) -> Tuple[int, List[str]]:
     score = 0
     reasons: List[str] = []
     if keyword.get("has_suspicious_words"):
-        score += 60
-        reasons.append("Contains phishing-related keywords")
+        score += 40
+        reasons.append("Phishing keyword detected in URL")
     if keyword.get("has_brand_words_in_host"):
-        score += 80
-        reasons.append("Brand impersonation in hostname")
+        # Precise detection: brand in subdomain/path of non-official domain
+        score += 60
+        reasons.append("Brand impersonation detected in URL")
     return min(score, 100), reasons
 
 
@@ -104,9 +105,7 @@ def build_explainable_risk(
         )
     )
 
-    if total >= 90:
-        severity = "CRITICAL"
-    elif total >= 70:
+    if total >= 70:
         severity = "HIGH"
     elif total >= 40:
         severity = "MEDIUM"
