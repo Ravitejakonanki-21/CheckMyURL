@@ -270,16 +270,25 @@ def analyze():
         else:
             app.logger.warning("ML model or metadata not loaded, skipping prediction")
 
-        # Compute weightages and averaged risk score. Safe handling of missing ML results.
-        ml_weightage = ml_output.get("score") if ml_output else None
-        checks_weightage = heuristic_score
+        # Weighted blend: heuristic carries more weight because it encodes
+        # explicit security rules; ML can underestimate brand-new phishing domains.
+        #   • If ML is available  → 70 % heuristic + 30 % ML
+        #   • If ML is unavailable → heuristic score only
+        ml_weightage       = ml_output.get("score") if ml_output else None
+        checks_weightage   = heuristic_score
 
-        scores_for_average = [checks_weightage]
         if ml_weightage is not None:
-            scores_for_average.append(ml_weightage)
+            blended = 0.70 * checks_weightage + 0.30 * ml_weightage
+        else:
+            blended = float(checks_weightage)
 
-        # Average the scores (heuristic vs ML)
-        averaged_risk_score = int(round(sum(scores_for_average) / len(scores_for_average)))
+        averaged_risk_score = int(round(blended))
+
+        # Safety floor: if the heuristic alone classifies as High Risk (≥70),
+        # never let the final score fall below 65 — guarantees ≥ Medium Risk
+        # even when the ML model hasn't seen this phishing pattern before.
+        if checks_weightage >= 70:
+            averaged_risk_score = max(averaged_risk_score, 65)
 
         def label_from_score(score: int) -> str:
             if score >= 70:
@@ -289,6 +298,7 @@ def analyze():
             return "Low Risk"
 
         label = label_from_score(averaged_risk_score)
+
 
         combined_reasons = []
         if ml_output:
