@@ -1,6 +1,6 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import ThemeToggle from "./ThemeToggle";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 function navClass({ isActive }) {
   return `text-sm font-bold px-4 py-2 rounded-full transition-all duration-300 ${isActive
@@ -18,6 +18,18 @@ const Navbar = () => {
 
   const username = userEmail ? userEmail.split("@")[0] : "";
   const isAdmin = userRole === "ADMIN";
+  const dropdownRef = useRef(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handler = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("isAuthenticated");
@@ -63,10 +75,14 @@ const Navbar = () => {
             <>
               <NavLink to="/history" className={navClass}>History</NavLink>
               <NavLink to="/statistics" className={navClass}>Statistics</NavLink>
+              <NavLink to="/bulk-scan" className={navClass}>Bulk Scan</NavLink>
             </>
           )}
           {isAdmin && (
-            <NavLink to="/admin" className={navClass}>Users</NavLink>
+            <>
+              <NavLink to="/soc" className={navClass}>SOC</NavLink>
+              <NavLink to="/admin" className={navClass}>Admin</NavLink>
+            </>
           )}
         </div>
 
@@ -91,7 +107,7 @@ const Navbar = () => {
             </div>
           ) : (
             /* User Avatar Dropdown (Desktop/Mobile) */
-            <div className="relative">
+            <div className="relative" ref={dropdownRef}>
               <button
                 className="flex items-center gap-2 px-2 md:px-3 py-1.5 bg-[#181818] border border-[#333] rounded-full hover:border-[#00e5ff]/50 transition-all"
                 onClick={() => setMenuOpen(prev => !prev)}
@@ -135,10 +151,14 @@ const Navbar = () => {
               <>
                 <NavLink to="/history" onClick={() => setMobileMenuOpen(false)} className={navClass}>History</NavLink>
                 <NavLink to="/statistics" onClick={() => setMobileMenuOpen(false)} className={navClass}>Statistics</NavLink>
+                <NavLink to="/bulk-scan" onClick={() => setMobileMenuOpen(false)} className={navClass}>Bulk Scan</NavLink>
               </>
             )}
             {isAdmin && (
-              <NavLink to="/admin" onClick={() => setMobileMenuOpen(false)} className={navClass}>Users</NavLink>
+              <>
+                <NavLink to="/soc" onClick={() => setMobileMenuOpen(false)} className={navClass}>SOC Dashboard</NavLink>
+                <NavLink to="/admin" onClick={() => setMobileMenuOpen(false)} className={navClass}>Admin Panel</NavLink>
+              </>
             )}
             {!isAuthenticated && (
               <NavLink to="/register" onClick={() => setMobileMenuOpen(false)} className={navClass}>Register</NavLink>

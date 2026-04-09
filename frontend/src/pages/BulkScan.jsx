@@ -102,8 +102,9 @@ export default function BulkScan() {
                         ? {
                             ...r,
                             status: 'done',
-                            score: data.riskScore ?? data.score ?? 0,
-                            label: data.classification ?? data.label ?? 'Unknown',
+                            // API returns risk_score (snake_case), not riskScore
+                            score: data.risk_score ?? data.riskScore ?? data.score ?? 0,
+                            label: data.label ?? data.classification ?? 'Unknown',
                             reasons: data.reasons || data.explanation || [],
                         }
                         : r
@@ -125,6 +126,20 @@ export default function BulkScan() {
     const safe = done.filter(r => (r.score ?? 0) < 40).length;
     const medium = done.filter(r => (r.score ?? 0) >= 40 && (r.score ?? 0) < 70).length;
     const high = done.filter(r => (r.score ?? 0) >= 70).length;
+
+    const exportCSV = () => {
+        const header = ['#', 'URL', 'Risk Score', 'Classification', 'Key Findings'];
+        const rows = done.map((r, i) => [
+            i + 1, r.url, r.score, r.label,
+            (r.reasons || []).slice(0, 2).join(' | ')
+        ]);
+        const csv = [header, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `bulk-scan-${Date.now()}.csv`;
+        a.click();
+    };
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-950 px-4 py-10">
@@ -212,6 +227,17 @@ export default function BulkScan() {
                 {/* Results table */}
                 {results.length > 0 && (
                     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
+                        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{done.length} / {results.length} completed</span>
+                            {done.length > 0 && (
+                                <button
+                                    onClick={exportCSV}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-[#00e5ff]/10 text-[#00e5ff] hover:bg-[#00e5ff]/20 font-medium"
+                                >
+                                    ⬇️ Export CSV
+                                </button>
+                            )}
+                        </div>
                         <table className="w-full">
                             <thead>
                                 <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
