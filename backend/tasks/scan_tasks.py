@@ -17,7 +17,7 @@ from utils.risk_explainable import build_explainable_risk
 from .celery_app import celery_app
 
 
-_scans = get_collection("scans")
+def _scans_col(): return get_collection("scans")
 
 
 def enqueue_scan_task(scan_id: str) -> str:
@@ -27,7 +27,7 @@ def enqueue_scan_task(scan_id: str) -> str:
 
 @celery_app.task(bind=True, name="run_deep_scan")
 def run_deep_scan(self, scan_id: str):
-    doc = _scans.find_one({"_id": ObjectId(scan_id)})
+    doc = _scans_col().find_one({"_id": ObjectId(scan_id)})
     if not doc:
         return {"error": "scan_not_found"}
 

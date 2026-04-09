@@ -16,17 +16,17 @@ from utils.rbac import roles_required
 
 bp = Blueprint("soc", __name__, url_prefix="/api/soc")
 
-_scans = get_collection("scans")
+def _scans_col(): return get_collection("scans")
 
 
 def _transition_scan(scan_id: ObjectId, from_states, to_state: str, reason: str, actor_req):
-    doc = _scans.find_one({"_id": scan_id})
+    doc = _scans_col().find_one({"_id": scan_id})
     if not doc:
         return None, ("scan_not_found", 404)
     if doc.get("state") not in from_states:
         return None, ("invalid_state_transition", 409)
 
-    _scans.update_one(
+    _scans_col().update_one(
         {"_id": scan_id},
         {"$set": {"state": to_state, "updated_at": datetime.utcnow()}},
     )
@@ -37,7 +37,7 @@ def _transition_scan(scan_id: ObjectId, from_states, to_state: str, reason: str,
         to_state=to_state,
         reason=reason,
     )
-    return _scans.find_one({"_id": scan_id}), None
+    return _scans_col().find_one({"_id": scan_id}), None
 
 
 @bp.get("/queue")
@@ -48,7 +48,7 @@ def analyst_queue():
     ordered by severity and age — for the SOC analyst dashboard.
     """
     cursor = (
-        _scans.find({"state": {"$in": ["SCANNED", "UNDER_REVIEW", "ESCALATED"]}})
+        _scans_col().find({"state": {"$in": ["SCANNED", "UNDER_REVIEW", "ESCALATED"]}})
         .sort([("risk.severity_level", -1), ("submitted_at", 1)])
         .limit(100)
     )
@@ -143,7 +143,7 @@ def report_threat(scan_id: str):
     )
 
     new_state = "CONFIRMED_PHISHING" if verdict == "CONFIRMED_PHISHING" else "FALSE_POSITIVE"
-    _scans.update_one(
+    _scans_col().update_one(
         {"_id": ObjectId(scan_id)},
         {"$set": {"state": new_state, "updated_at": datetime.utcnow()}},
     )
