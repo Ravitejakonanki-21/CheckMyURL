@@ -116,3 +116,39 @@ def get_all_history():
             },
         })
     return jsonify(serialised), 200
+
+
+@bp.get("/history/<user_id>")
+@roles_required(["ADMIN"])
+def get_user_history(user_id: str):
+    """Return scan history for a specific user (admin only)."""
+    try:
+        uid = ObjectId(user_id)
+    except Exception:
+        return jsonify({"error": "invalid_user_id"}), 400
+
+    user_doc = _users.find_one({"_id": uid}, {"email": 1})
+    user_email = user_doc["email"] if user_doc else "unknown"
+
+    docs = list(_scans.find({"submitted_by": uid}).sort("submitted_at", -1).limit(100))
+    serialised = []
+    for d in docs:
+        risk = d.get("risk") or {}
+        serialised.append({
+            "scanId":         str(d["_id"]),
+            "url":            d.get("url", ""),
+            "riskScore":      risk.get("total_score", 0),
+            "classification": risk.get("severity_level", "UNKNOWN"),
+            "scannedAt":      d.get("submitted_at", "").isoformat() if hasattr(d.get("submitted_at", ""), "isoformat") else str(d.get("submitted_at", "")),
+            "state":          d.get("state", "SCANNED"),
+            "userEmail":      user_email,
+            "tools": {
+                "SSL":      1 if (d.get("raw_results") or {}).get("ssl", {}).get("https_ok") else 0,
+                "WHOIS":    1 if (d.get("raw_results") or {}).get("whois", {}).get("age_days") else 0,
+                "Headers":  len(((d.get("raw_results") or {}).get("headers") or {}).get("security_headers") or {}),
+                "Keywords": len(((d.get("raw_results") or {}).get("keyword") or {}).get("keywords_found") or []),
+                "Ports":    0,
+                "ML":       1 if (d.get("raw_results") or {}).get("ml") else 0,
+            },
+        })
+    return jsonify(serialised), 200

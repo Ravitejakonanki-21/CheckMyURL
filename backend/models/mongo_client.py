@@ -2,15 +2,18 @@ import os
 from typing import Any
 from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 
+from dotenv import load_dotenv
 from pymongo import MongoClient, ASCENDING, DESCENDING
 from pymongo.collection import Collection
 
-
-_MONGO_URI = os.getenv("MONGO_URI", "mongodb://mongo:27017/url_checker")
-_MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "url_checker")
+# Load .env files early so MONGO_URI is available even when imported standalone
+load_dotenv()  # CWD
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '.env'))  # root
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '.env'))  # backend/
 
 _client: MongoClient | None = None
 _client_pid: int | None = None
+
 
 
 def _normalize_atlas_uri(uri: str) -> str:
@@ -47,7 +50,7 @@ def _get_client() -> MongoClient:
     global _client, _client_pid
     pid = os.getpid()
     if _client is None or _client_pid != pid:
-        uri = _normalize_atlas_uri(_MONGO_URI.strip())
+        uri = _normalize_atlas_uri(os.getenv("MONGO_URI", "mongodb://mongo:27017/url_checker").strip())
         timeout_ms = int(os.getenv("MONGO_SERVER_SELECTION_TIMEOUT_MS", "10000"))
         kwargs: dict = dict(
             maxPoolSize=int(os.getenv("MONGO_MAX_POOL_SIZE", "10")),
@@ -65,20 +68,20 @@ def _get_client() -> MongoClient:
 
         _client = MongoClient(uri, **kwargs)
         
-        # Force connection test early to catch issues directly instead of letting them surface on query
+        # Test connection early — but don't crash if DB is temporarily unreachable
         try:
             _client.admin.command("ping")
+            print(f"[MongoDB] Connected successfully to {uri[:50]}...")
         except Exception as e:
-            # Let it raise to be visible in logs, or handled during start
-            print(f"MongoDB Ping Failed: {e}")
-            raise e
+            print(f"[MongoDB] WARNING: Ping failed ({e}). The app will start but DB features may fail until connection is restored.")
+            # Don't raise — allow the app to start; queries will retry automatically
             
         _client_pid = pid
     return _client
 
 
 def get_db() -> Any:
-    return _get_client()[_MONGO_DB_NAME]
+    return _get_client()[os.getenv("MONGO_DB_NAME", "url_checker")]
 
 
 def get_collection(name: str) -> Collection:

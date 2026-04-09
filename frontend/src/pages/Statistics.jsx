@@ -57,7 +57,18 @@ function Statistics() {
   // last 12 scans; ensure at least one point for initial render
   const last = useMemo(() => (history.length ? history.slice(-12) : [{ riskScore: 0 }]), [history]);
   const labels = useMemo(
-    () => (history.length ? last.map((_, i) => `#${history.length - last.length + i + 1}`) : ["1"]),
+    () => (history.length
+      ? last.map((e, i) => {
+          // Show truncated URL as label, fallback to scan number
+          if (e.url) {
+            try {
+              const u = new URL(e.url.startsWith('http') ? e.url : 'https://' + e.url);
+              return u.hostname.length > 18 ? u.hostname.slice(0, 16) + '…' : u.hostname;
+            } catch { return e.url.slice(0, 18); }
+          }
+          return `#${history.length - last.length + i + 1}`;
+        })
+      : ["—"]),
     [last, history.length]
   );
 
@@ -101,6 +112,12 @@ function Statistics() {
         theme: 'dark',
         style: {
           fontSize: '12px'
+        },
+        x: {
+          formatter: (val, { dataPointIndex }) => {
+            const item = last[dataPointIndex];
+            return item?.url || val;
+          }
         }
       }
     }),
