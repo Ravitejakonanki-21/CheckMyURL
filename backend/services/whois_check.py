@@ -313,17 +313,13 @@ def check_whois(url: str):
                 out["privacy_protected"] = any(keyword in out["registrant_organization"].lower() for keyword in privacy_keywords)
 
             if out["privacy_protected"]:
-                out["risk_score"] += 15
-                out["risk_factors"].append("WHOIS privacy protection enabled")
-            if not out["registrar"]:
-                out["risk_score"] += 10
-                out["risk_factors"].append("Registrar information not available")
-            if not out["creation_date"]:
-                out["risk_score"] += 20
-                out["risk_factors"].append("Domain creation date not available")
-            if out["dnssec"] == "unsigned":
+                # Privacy protection alone is NOT a strong risk signal — many
+                # legitimate domains (GitHub, Google...) use WHOIS privacy.
+                # Only add a small signal, not 15.
                 out["risk_score"] += 5
-                out["risk_factors"].append("DNSSEC not enabled")
+                out["risk_factors"].append("WHOIS privacy protection enabled")
+            # NOTE: Do NOT penalise for missing registrar/creation_date or DNSSEC —
+            # these frequently fail on Render due to RDAP limits, not actual risk.
 
             if out["risk_score"] >= 60:
                 out["classification"] = "High Risk"
