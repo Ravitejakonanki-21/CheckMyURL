@@ -91,13 +91,13 @@ export default function History() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [search, setSearch] = useState('');
-    const [viewMode, setViewMode] = useState('my'); // 'my' or 'all'
     const [allHistory, setAllHistory] = useState([]);
     const [allLoading, setAllLoading] = useState(false);
     const [userFilter, setUserFilter] = useState('');
-
     const isAdmin = (localStorage.getItem('role') ?? 'USER').toUpperCase() === 'ADMIN';
     const navigate = useNavigate();
+    // Admin defaults to 'all' (all users view); regular users default to 'my'
+    const [viewMode, setViewMode] = useState(isAdmin ? 'all' : 'my');
 
     useEffect(() => {
         const isAuth = localStorage.getItem('isAuthenticated') === 'true';
@@ -125,7 +125,7 @@ export default function History() {
             .finally(() => setLoading(false));
     }, []);
 
-    // Fetch all users' history (admin only)
+    // Fetch all users' history (admin only) — triggered when switching to 'all' view
     useEffect(() => {
         if (viewMode === 'all' && isAdmin && allHistory.length === 0) {
             setAllLoading(true);
@@ -140,8 +140,9 @@ export default function History() {
         }
     }, [viewMode, isAdmin]);
 
-    const activeHistory = viewMode === 'all' ? allHistory : history;
-    const activeLoading = viewMode === 'all' ? allLoading : loading;
+    // 'my' → own scans (history), 'all' → every user's scans (allHistory)
+    const activeHistory = viewMode === 'my' ? history : allHistory;
+    const activeLoading = viewMode === 'my' ? loading : allLoading;
 
     // Get unique users from all history
     const uniqueUsers = [...new Set(allHistory.map(h => h.userEmail).filter(Boolean))];
@@ -180,7 +181,7 @@ export default function History() {
                                     My History
                                 </button>
                                 <button
-                                    onClick={() => setViewMode('all')}
+                                    onClick={() => { setViewMode('all'); setUserFilter(''); }}
                                     className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${viewMode === 'all'
                                         ? 'bg-white dark:bg-[#181818] text-gray-900 dark:text-white shadow-sm'
                                         : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
