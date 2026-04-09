@@ -125,20 +125,22 @@ export default function History() {
             .finally(() => setLoading(false));
     }, []);
 
-    // Fetch all users' history (admin only) — triggered when switching to 'all' view
+    // Fetch all users' history (admin only)
+    // Runs on mount (admin defaults to 'all') and whenever viewMode flips to 'all'
     useEffect(() => {
-        if (viewMode === 'all' && isAdmin && allHistory.length === 0) {
-            setAllLoading(true);
-            fetch(`${API}/api/admin/history`, { headers: authHeader() })
-                .then(r => r.ok ? r.json() : [])
-                .then(items => {
-                    items.sort((a, b) => new Date(b.scannedAt) - new Date(a.scannedAt));
-                    setAllHistory(items);
-                })
-                .catch(() => setAllHistory([]))
-                .finally(() => setAllLoading(false));
-        }
-    }, [viewMode, isAdmin]);
+        if (!isAdmin) return;
+        if (viewMode !== 'all') return;
+        setAllLoading(true);
+        fetch(`${API}/api/admin/history`, { headers: authHeader() })
+            .then(r => r.ok ? r.json() : Promise.reject(r.status))
+            .then(items => {
+                items.sort((a, b) => new Date(b.scannedAt) - new Date(a.scannedAt));
+                setAllHistory(items);
+            })
+            .catch(() => setAllHistory([]))
+            .finally(() => setAllLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [viewMode]);
 
     // 'my' → own scans (history), 'all' → every user's scans (allHistory)
     const activeHistory = viewMode === 'my' ? history : allHistory;
