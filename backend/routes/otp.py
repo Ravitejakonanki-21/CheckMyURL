@@ -16,13 +16,20 @@ from models.user_model import get_user_by_email
 
 bp = Blueprint("otp", __name__, url_prefix="/api")
 
-_otp_tokens = get_collection("otp_tokens")
+_otp_col_instance = None
 
-# Ensure TTL index so expired OTPs auto-delete after 15 minutes
-try:
-    _otp_tokens.create_index("created_at", expireAfterSeconds=900)
-except Exception:
-    pass  # index may already exist
+def _otp_col():
+    """Lazy getter — defers DNS/SRV resolution until first request."""
+    global _otp_col_instance
+    if _otp_col_instance is None:
+        _otp_col_instance = get_collection("otp_tokens")
+        # Ensure TTL index so expired OTPs auto-delete after 15 minutes
+        try:
+            _otp_col_instance.create_index("created_at", expireAfterSeconds=900)
+        except Exception:
+            pass  # index may already exist
+    return _otp_col_instance
+
 
 
 def _generate_otp(length: int = 6) -> str:
@@ -43,7 +50,8 @@ def send_otp():
         return jsonify({"error": "Email is already registered. Please log in instead."}), 409
 
     # Rate limit: max 3 OTPs per email in 10 minutes
-    recent_count = _otp_tokens.count_documents({
+    recent_count = _otp_col().count_documents({
+
         "email": email,
         "created_at": {"$gte": datetime.utcnow() - timedelta(minutes=10)},
     })
@@ -53,7 +61,8 @@ def send_otp():
     otp_code = _generate_otp()
 
     # Store OTP in MongoDB
-    _otp_tokens.insert_one({
+    _otp_col().insert_one({
+
         "email": email,
         "otp": otp_code,
         "verified": False,
@@ -118,7 +127,8 @@ def verify_otp():
         return jsonify({"error": "Email and OTP are required"}), 400
 
     # Find the most recent unverified OTP for this email (within 10 min)
-    otp_doc = _otp_tokens.find_one(
+    otp_doc = _otp_col().find_one(
+
         {
             "email": email,
             "verified": False,
@@ -134,7 +144,8 @@ def verify_otp():
         return jsonify({"error": "Invalid OTP. Please check and try again."}), 400
 
     # Mark as verified
-    _otp_tokens.update_one({"_id": otp_doc["_id"]}, {"$set": {"verified": True}})
+    _otp_col().update_one({"_id": otp_doc["_id"]}, {"$set": {"verified": True}})
+
 
     # Generate a short-lived verification token
     serializer = URLSafeTimedSerializer(current_app.config["JWT_SECRET_KEY"])
@@ -182,6 +193,7 @@ def register_with_otp():
     create_user(email, hashed, role="USER")
 
     # Clean up OTP tokens for this email
-    _otp_tokens.delete_many({"email": email})
+    _otp_col().delete_many({"email": email})
+
 
     return jsonify({"message": "Registration successful! Please log in."}), 201

@@ -92,6 +92,8 @@ export default function History() {
     const [error, setError] = useState('');
     const [search, setSearch] = useState('');
     const [allHistory, setAllHistory] = useState([]);
+    const [allError, setAllError] = useState('');   // separate error for admin history fetch
+
     const [userFilter, setUserFilter] = useState('');
     const isAdmin = (localStorage.getItem('role') ?? 'USER').toUpperCase() === 'ADMIN';
     const navigate = useNavigate();
@@ -99,6 +101,33 @@ export default function History() {
     const [viewMode, setViewMode] = useState(isAdmin ? 'all' : 'my');
     // allLoading starts true for admin to prevent empty-table flash on mount
     const [allLoading, setAllLoading] = useState(isAdmin);
+
+    // Helper to fetch admin history — extracted so we can call it from a Retry button
+    const fetchAllHistory = () => {
+        setAllError('');
+        setAllLoading(true);
+        fetch(`${API}/api/admin/history`, { headers: authHeader() })
+            .then(r => {
+                if (r.status === 401) throw new Error('Session expired — please log out and log back in.');
+                if (r.status === 403) throw new Error('Access denied (403) — your JWT has the wrong role. Please log out and log back in to get a fresh token with ADMIN role.');
+                if (!r.ok) throw new Error(`Server error ${r.status} — the backend may still be starting up. Click Retry in 30 seconds.`);
+                return r.json();
+            })
+            .then(items => {
+                items.sort((a, b) => new Date(b.scannedAt) - new Date(a.scannedAt));
+                setAllHistory(items);
+            })
+            .catch(e => {
+                const msg = e.message || '';
+                if (msg.includes('Load failed') || msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+                    setAllError('Cannot reach the backend server. It may still be starting up on Render (free tier takes ~60s). Click Retry in a moment.');
+                } else {
+                    setAllError(msg);
+                }
+            })
+            .finally(() => setAllLoading(false));
+    };
+
 
     useEffect(() => {
         const isAuth = localStorage.getItem('isAuthenticated') === 'true';
@@ -132,22 +161,17 @@ export default function History() {
     useEffect(() => {
         if (!isAdmin) return;
         if (viewMode !== 'all') return;
-        setError('');          // ← clear personal-history error
-        setAllLoading(true);
-        fetch(`${API}/api/admin/history`, { headers: authHeader() })
-            .then(r => r.ok ? r.json() : Promise.reject(r.status))
-            .then(items => {
-                items.sort((a, b) => new Date(b.scannedAt) - new Date(a.scannedAt));
-                setAllHistory(items);
-            })
-            .catch(() => setAllHistory([]))
-            .finally(() => setAllLoading(false));
+        setError('');   // clear personal-history error
+        fetchAllHistory();
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [viewMode]);
 
     // 'my' → own scans (history), 'all' → every user's scans (allHistory)
     const activeHistory = viewMode === 'my' ? history : allHistory;
     const activeLoading = viewMode === 'my' ? loading : allLoading;
+    const activeError   = viewMode === 'my' ? error   : allError;
+
 
     // Get unique users from all history
     const uniqueUsers = [...new Set(allHistory.map(h => h.userEmail).filter(Boolean))];
@@ -256,8 +280,18 @@ export default function History() {
                 <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-x-auto shadow-sm">
                     {activeLoading ? (
                         <div className="flex items-center justify-center h-48 text-gray-400">Loading history…</div>
-                    ) : error ? (
-                        <div className="flex items-center justify-center h-48 text-red-500">{error}</div>
+                    ) : activeError ? (
+                        <div className="flex flex-col items-center justify-center h-48 gap-4 px-6 text-center">
+                            <span className="text-3xl">⚠️</span>
+                            <p className="text-red-500 text-sm max-w-md">{activeError}</p>
+                            <button
+                                onClick={viewMode === 'all' ? fetchAllHistory : undefined}
+                                className="px-4 py-2 rounded-lg bg-[#00e5ff]/10 text-[#00e5ff] hover:bg-[#00e5ff]/20 text-sm font-medium"
+                            >
+                                🔄 Retry
+                            </button>
+                        </div>
+
                     ) : filtered.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-48 text-gray-400">
                             <span className="text-4xl mb-2">🔍</span>

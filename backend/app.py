@@ -93,36 +93,41 @@ if _redis_url.startswith("rediss://"):
         _cert_reqs = query["ssl_cert_reqs"][0].lower()
     else:
         _cert_reqs = os.getenv("REDIS_SSL_CERT_REQS", "none").lower()
-        
+
     if _cert_reqs in ("cert_none", "none"): _cert_reqs = "none"
     elif _cert_reqs in ("cert_required", "required"): _cert_reqs = "required"
     elif _cert_reqs in ("cert_optional", "optional"): _cert_reqs = "optional"
-        
+
     query["ssl_cert_reqs"] = [_cert_reqs]
     new_query = urlencode(query, doseq=True)
     _redis_url = urlunparse(parsed._replace(query=new_query))
 
-# Simple check to see if we should fallback to memory://
+# Determine storage URI — fall back to memory:// when Redis is unavailable locally
+
 storage_uri = _redis_url
 if "localhost" in _redis_url or "127.0.0.1" in _redis_url:
     try:
         import socket
-        # Quick check if something is on 6379
-        with socket.create_connection(("localhost", 6379), timeout=0.1):
+        with socket.create_connection(("localhost", 6379), timeout=0.3):
             pass
     except (ConnectionRefusedError, socket.timeout, OSError):
         storage_uri = "memory://"
-        app.logger.warning("Redis not found on localhost, falling back to in-memory rate limiting")
+        app.logger.warning("Redis not found on localhost — rate limiter using in-memory storage")
+
 
 limiter = Limiter(
     key_func=get_remote_address,
     app=app,
     storage_uri=storage_uri,
     default_limits=["200/minute"],
+    # swallow_errors=True prevents Redis quota/connection errors from crashing requests
+    # (e.g. Upstash free-tier limit exceeded). Requests are allowed through when storage fails.
+    swallow_errors=True,
 )
 
-# Use the shared MongoDB client from models layer (respects MONGO_URI env var)
-_users_col = get_collection("users")
+# Lazy getter — defers DNS/SRV resolution until first request
+def _get_users_col(): return get_collection("users")
+
 
 # Ensure DB indexes for SOC collections
 try:
@@ -637,7 +642,8 @@ def reset_password():
     except BadSignature:
         return jsonify({"error": "Invalid or tampered link"}), 400
     hashed_pw = bcrypt.generate_password_hash(new_password).decode('utf-8')
-    _users_col.update_one({"email": email}, {"$set": {"password_hash": hashed_pw}})
+    _get_users_col().update_one({"email": email}, {"$set": {"password_hash": hashed_pw}})
+
     return jsonify({"message": "Password reset successful!"}), 200
 
 @app.get('/api/profile')
