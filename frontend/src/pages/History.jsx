@@ -133,24 +133,15 @@ export default function History() {
         const isAuth = localStorage.getItem('isAuthenticated') === 'true';
         if (!isAuth) { setLoading(false); setError('Please log in to view history.'); return; }
 
-        const localHistory = JSON.parse(localStorage.getItem('cmu_scan_history') || '[]');
-
         // Fetch user's own history from backend
         fetch(`${API}/api/history`, { headers: authHeader() })
             .then(r => r.ok ? r.json() : [])
             .then(serverItems => {
-                const merged = [...serverItems];
-                const serverUrls = new Set(serverItems.map(i => i.url + '|' + i.scannedAt));
-                for (const loc of localHistory) {
-                    const key = loc.url + '|' + (loc.scannedAt || '');
-                    if (!serverUrls.has(key)) merged.push(loc);
-                }
-                merged.sort((a, b) => new Date(b.scannedAt) - new Date(a.scannedAt));
-                setHistory(merged);
+                const sorted = [...serverItems].sort((a, b) => new Date(b.scannedAt) - new Date(a.scannedAt));
+                setHistory(sorted);
             })
             .catch(() => {
-                const sorted = [...localHistory].sort((a, b) => new Date(b.scannedAt) - new Date(a.scannedAt));
-                setHistory(sorted);
+                setHistory([]);
             })
             .finally(() => setLoading(false));
     }, []);
