@@ -115,8 +115,22 @@ export default function History() {
                 return r.json();
             })
             .then(items => {
-                items.sort((a, b) => new Date(b.scannedAt) - new Date(a.scannedAt));
-                setAllHistory(items);
+                const localHistory = JSON.parse(localStorage.getItem('cmu_scan_history') || '[]');
+                const merged = [...items];
+                const serverUrls = new Set(items.map(i => i.url + '|' + (i.scannedAt || '')));
+                const currentEmail = localStorage.getItem('email') || 'admin';
+                for (const loc of localHistory) {
+                    const key = loc.url + '|' + (loc.scannedAt || '');
+                    if (!serverUrls.has(key) && (!loc.userEmail || loc.userEmail === currentEmail)) {
+                        const locItem = { ...loc };
+                        if (!locItem.userEmail) {
+                            locItem.userEmail = currentEmail; // Attribute unassigned local scans to current admin
+                        }
+                        merged.push(locItem);
+                    }
+                }
+                merged.sort((a, b) => new Date(b.scannedAt) - new Date(a.scannedAt));
+                setAllHistory(merged);
             })
             .catch(e => {
                 const msg = e.message || '';
@@ -215,9 +229,16 @@ export default function History() {
                             Export PDF
                         </button>
                         <button
-                            onClick={() => { localStorage.removeItem('cmu_scan_history'); setHistory([]); }}
-                            disabled={history.length === 0 || viewMode === 'all'}
-                            title={viewMode === 'all' ? 'Switch to My History to clear' : ''}
+                            onClick={() => {
+                                localStorage.removeItem('cmu_scan_history');
+                                if (viewMode === 'my') {
+                                    setHistory(prev => prev.filter(h => h.scanId));
+                                } else {
+                                    setAllHistory(prev => prev.filter(h => h.scanId));
+                                }
+                            }}
+                            disabled={activeHistory.length === 0}
+                            title="Clear local browser history"
                             className="px-4 py-2 rounded-lg border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             Clear History
