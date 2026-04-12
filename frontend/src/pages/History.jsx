@@ -195,7 +195,7 @@ export default function History() {
                 <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                            📋 Scan <span className="text-[#00e5ff]">History</span>
+                            📋 {isAdmin ? "All User " : "Scan "}<span className="text-[#00e5ff]">History</span>
                         </h1>
                         <p className="text-gray-500 dark:text-gray-400 mt-1">
                             {filtered.length} scan{filtered.length !== 1 ? 's' : ''} recorded
@@ -203,29 +203,7 @@ export default function History() {
                         </p>
                     </div>
                     <div className="flex gap-3 flex-wrap">
-                        {/* Admin: View Mode Toggle */}
-                        {isAdmin && (
-                            <div className="flex bg-gray-100 dark:bg-[#0e0e0e] border border-gray-200 dark:border-[#333] rounded-lg p-0.5">
-                                <button
-                                    onClick={() => { setViewMode('my'); setUserFilter(''); }}
-                                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${viewMode === 'my'
-                                        ? 'bg-white dark:bg-[#181818] text-gray-900 dark:text-white shadow-sm'
-                                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-                                    }`}
-                                >
-                                    My History
-                                </button>
-                                <button
-                                    onClick={() => { setViewMode('all'); setUserFilter(''); }}
-                                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${viewMode === 'all'
-                                        ? 'bg-white dark:bg-[#181818] text-gray-900 dark:text-white shadow-sm'
-                                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-                                    }`}
-                                >
-                                    All Users
-                                </button>
-                            </div>
-                        )}
+                        {/* Admin view toggle removed; admins permanently see all user history */}
                         <button
                             onClick={() => exportHistoryPDF(filtered)}
                             disabled={filtered.length === 0}
