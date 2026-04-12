@@ -118,13 +118,13 @@ export default function History() {
                 const localHistory = JSON.parse(localStorage.getItem('cmu_scan_history') || '[]');
                 const merged = [...items];
                 const serverUrls = new Set(items.map(i => i.url + '|' + (i.scannedAt || '')));
-                const currentEmail = localStorage.getItem('email') || 'admin';
+                
                 for (const loc of localHistory) {
                     const key = loc.url + '|' + (loc.scannedAt || '');
-                    if (!serverUrls.has(key) && (!loc.userEmail || loc.userEmail === currentEmail)) {
+                    if (!serverUrls.has(key)) {
                         const locItem = { ...loc };
                         if (!locItem.userEmail) {
-                            locItem.userEmail = currentEmail; // Attribute unassigned local scans to current admin
+                            locItem.userEmail = 'Anonymous (Local)'; // Mark unassigned local scans clearly
                         }
                         merged.push(locItem);
                     }
