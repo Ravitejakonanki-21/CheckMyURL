@@ -142,15 +142,20 @@ export default function History() {
             .then(serverItems => {
                 const merged = [...serverItems];
                 const serverUrls = new Set(serverItems.map(i => i.url + '|' + i.scannedAt));
+                const currentEmail = localStorage.getItem('email');
                 for (const loc of localHistory) {
                     const key = loc.url + '|' + (loc.scannedAt || '');
-                    if (!serverUrls.has(key)) merged.push(loc);
+                    if (!serverUrls.has(key) && (!loc.userEmail || loc.userEmail === currentEmail)) {
+                        merged.push(loc);
+                    }
                 }
                 merged.sort((a, b) => new Date(b.scannedAt) - new Date(a.scannedAt));
                 setHistory(merged);
             })
             .catch(() => {
-                const sorted = [...localHistory].sort((a, b) => new Date(b.scannedAt) - new Date(a.scannedAt));
+                const currentEmail = localStorage.getItem('email');
+                const filteredLocal = localHistory.filter(loc => !loc.userEmail || loc.userEmail === currentEmail);
+                const sorted = [...filteredLocal].sort((a, b) => new Date(b.scannedAt) - new Date(a.scannedAt));
                 setHistory(sorted);
             })
             .finally(() => setLoading(false));

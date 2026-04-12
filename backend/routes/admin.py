@@ -91,12 +91,12 @@ def get_system_stats():
 def get_all_history():
     """Return ALL users' scan history (admin only), with user email attached."""
     # Build a user_id -> email lookup
-    all_users = {u["_id"]: u["email"] for u in _get_users().find({}, {"email": 1})}
+    all_users = {str(u["_id"]): u["email"] for u in _get_users().find({}, {"email": 1})}
 
     docs = list(_get_scans().find({}).sort("submitted_at", -1).limit(500))
     serialised = []
     for d in docs:
-        user_email = all_users.get(d.get("submitted_by"), "unknown")
+        user_email = all_users.get(str(d.get("submitted_by")), "unknown")
         risk = d.get("risk") or {}
         serialised.append({
             "scanId":         str(d["_id"]),
