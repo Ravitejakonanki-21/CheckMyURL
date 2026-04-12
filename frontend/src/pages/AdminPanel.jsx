@@ -14,6 +14,7 @@ async function adminApi(method, path, body) {
         headers: { 'Content-Type': 'application/json', ...authHeader() },
         body: body ? JSON.stringify(body) : undefined,
     });
+    if (res.status === 401) throw new Error('Session expired — please log out and log back in.');
     if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
     return res.json();
 }

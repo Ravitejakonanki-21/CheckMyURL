@@ -30,6 +30,7 @@ async function socApi(method, path, body) {
         headers: { 'Content-Type': 'application/json', ...authHeader() },
         body: body ? JSON.stringify(body) : undefined,
     });
+    if (res.status === 401) throw new Error('Session expired — please log out and log back in.');
     if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         throw new Error(errData.error || errData.reason || `${res.status} ${res.statusText}`);
