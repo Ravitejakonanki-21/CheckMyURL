@@ -515,9 +515,6 @@ def get_scan_history():
         })
     return jsonify(serialised), 200
 
-from routes.admin import bp as admin_bp
-app.register_blueprint(admin_bp)
-
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve_static(path):
