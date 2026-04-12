@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-const API = '';
+import { API_BASE_URL } from '../config/api';
+const API = API_BASE_URL;
 
 function authHeader() {
     const token = localStorage.getItem('access_token') || localStorage.getItem('token');

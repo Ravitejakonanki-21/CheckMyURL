@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 
-const API = '';
+import { API_BASE_URL } from '../config/api';
+const API = API_BASE_URL;
 
 const SEVERITY_COLORS = {
     CRITICAL: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
