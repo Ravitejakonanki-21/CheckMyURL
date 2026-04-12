@@ -74,8 +74,8 @@ Copy `.env.example` (if provided) or create `.env` files. Minimum backend vars:
 
 | Variable             | Description                               |
 | -------------------- | ----------------------------------------- |
-| `MAIL_USERNAME`      | SMTP username for notification emails     |
-| `MAIL_PASSWORD`      | SMTP password or app password             |
+| `SENDGRID_API_KEY`   | SendGrid API key for transactional emails |
+| `MAIL_USERNAME`      | Verified sender email on SendGrid         |
 | `JWT_SECRET_KEY`     | Secret for Flask JWT                      |
 | `MONGO_URI` (opt.)   | Mongo connection string                   |
 

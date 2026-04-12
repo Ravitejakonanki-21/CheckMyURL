@@ -8,7 +8,6 @@ import string
 from datetime import datetime, timedelta
 
 from flask import Blueprint, jsonify, request, current_app
-from flask_mail import Message
 from itsdangerous import URLSafeTimedSerializer
 
 from models.mongo_client import get_collection
@@ -69,14 +68,13 @@ def send_otp():
         "created_at": datetime.utcnow(),
     })
 
-    # Send OTP email using direct SMTP (IPv4 forced — works on Render)
+    # Send OTP email via SendGrid
     mail_user = current_app.config.get("MAIL_USERNAME") or ""
-    mail_pass = current_app.config.get("MAIL_PASSWORD") or ""
-    current_app.logger.info(f"[OTP] Sending to {email}, MAIL_USERNAME={mail_user}, has_password={'yes' if mail_pass else 'NO'}")
+    current_app.logger.info(f"[OTP] Sending to {email}, MAIL_USERNAME={mail_user}")
 
-    if not mail_user or not mail_pass:
-        current_app.logger.error("[OTP] MAIL_USERNAME or MAIL_PASSWORD not set!")
-        return jsonify({"error": "Email service is not configured. Please set MAIL_USERNAME and MAIL_PASSWORD on the server."}), 503
+    if not mail_user:
+        current_app.logger.error("[OTP] MAIL_USERNAME not set!")
+        return jsonify({"error": "Email service is not configured. Please set MAIL_USERNAME on the server."}), 503
 
     body_text = f"Your OTP for CYBERSHIELD registration is: {otp_code}\n\nThis code expires in 10 minutes."
     body_html = f"""
@@ -103,15 +101,10 @@ def send_otp():
             body_text=body_text,
             body_html=body_html,
             mail_username=mail_user,
-            mail_password=mail_pass,
         )
     except Exception as e:
         current_app.logger.error(f"Failed to send OTP email to {email}: {e}")
-        err_msg = str(e)
-        if "authentication" in err_msg.lower() or "535" in err_msg:
-            return jsonify({"error": "Email auth failed. Use a Gmail App Password, not your regular password."}), 500
-        else:
-            return jsonify({"error": f"Failed to send OTP: {err_msg}"}), 500
+        return jsonify({"error": f"Failed to send OTP: {str(e)}"}), 500
 
     return jsonify({"message": f"OTP sent to {email}. Please check your inbox."}), 200
 

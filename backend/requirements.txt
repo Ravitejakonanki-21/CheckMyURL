@@ -5,7 +5,7 @@ click==8.3.0
 colorama==0.4.6
 filelock==3.19.1
 Flask==3.1.2
-Flask-Mail
+sendgrid
 flask-cors
 flask-bcrypt
 flask-jwt-extended

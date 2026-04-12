@@ -7,7 +7,6 @@ from urllib.parse import urlparse
 from dotenv import load_dotenv
 from concurrent.futures import ThreadPoolExecutor
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
-from flask_mail import Mail, Message
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
@@ -49,12 +48,8 @@ app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "super-secret-key")
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(
     seconds=int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES", "1800"))
 )
-app.config["MAIL_SERVER"] = "smtp.gmail.com"
-app.config["MAIL_PORT"] = 587
-app.config["MAIL_USE_TLS"] = True
 app.config["MAIL_USERNAME"] = os.getenv("MAIL_USERNAME")
-app.config["MAIL_PASSWORD"] = os.getenv("MAIL_PASSWORD")
-# Gmail SMTP requires the sender to match the authenticated account
+# MAIL_DEFAULT_SENDER is used as the from_email for SendGrid
 app.config["MAIL_DEFAULT_SENDER"] = os.getenv("MAIL_USERNAME", "noreply@checkmyurl.com")
 
 # Log mail config status at startup
@@ -63,9 +58,13 @@ if app.config["MAIL_USERNAME"]:
 else:
     print("[MAIL] WARNING: MAIL_USERNAME not set — email features (OTP, password reset) will not work!")
 
+if os.getenv("SENDGRID_API_KEY"):
+    print("[MAIL] SendGrid API key is set")
+else:
+    print("[MAIL] WARNING: SENDGRID_API_KEY not set — emails will fail in production!")
+
 jwt = JWTManager(app)
 bcrypt = Bcrypt(app)
-mail = Mail(app)
 serializer = URLSafeTimedSerializer(app.config["JWT_SECRET_KEY"])
 
 # Global thread pool for I/O tasks (parallelizing scans and background DB saves)
@@ -580,14 +579,13 @@ def forgot_password():
         return jsonify({"error": "Email is required"}), 400
 
     mail_user = app.config.get("MAIL_USERNAME") or ""
-    mail_pass = app.config.get("MAIL_PASSWORD") or ""
 
     # Debug: log mail config
-    app.logger.info(f"[FORGOT-PW] MAIL_USERNAME={mail_user}, has_password={'yes' if mail_pass else 'NO'}")
+    app.logger.info(f"[FORGOT-PW] MAIL_USERNAME={mail_user}")
 
-    if not mail_user or not mail_pass:
-        app.logger.error("[FORGOT-PW] MAIL_USERNAME or MAIL_PASSWORD not set!")
-        return jsonify({"error": "Email service is not configured. Please set MAIL_USERNAME and MAIL_PASSWORD environment variables."}), 503
+    if not mail_user:
+        app.logger.error("[FORGOT-PW] MAIL_USERNAME not set!")
+        return jsonify({"error": "Email service is not configured. Please set MAIL_USERNAME environment variable."}), 503
 
     user = get_user_by_email(email)
     if not user:
@@ -616,17 +614,10 @@ def forgot_password():
             body_text=body_text,
             body_html=body_html,
             mail_username=mail_user,
-            mail_password=mail_pass,
         )
     except Exception as e:
         app.logger.error(f"Failed to send reset email to {email}: {e}")
-        err_msg = str(e)
-        if "authentication" in err_msg.lower() or "535" in err_msg:
-            return jsonify({"error": "Email authentication failed. Please check MAIL_USERNAME and MAIL_PASSWORD (use Gmail App Password, not regular password)."}), 500
-        elif "connection" in err_msg.lower() or "timeout" in err_msg.lower():
-            return jsonify({"error": "Could not connect to email server. Please check MAIL_SERVER and MAIL_PORT settings."}), 500
-        else:
-            return jsonify({"error": f"Failed to send email: {err_msg}"}), 500
+        return jsonify({"error": f"Failed to send email: {str(e)}"}), 500
 
     return jsonify({"message": f"Reset instructions sent to {email}."}), 200
 
