@@ -25,17 +25,25 @@ function authHeader() {
 }
 
 async function socApi(method, path, body) {
-    const res = await fetch(`/api/soc${path}`, {
-        method,
-        headers: { 'Content-Type': 'application/json', ...authHeader() },
-        body: body ? JSON.stringify(body) : undefined,
-    });
-    if (res.status === 401) throw new Error('Session expired — please log out and log back in.');
-    if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || errData.reason || `${res.status} ${res.statusText}`);
+    try {
+        const res = await fetch(`/api/soc${path}`, {
+            method,
+            headers: { 'Content-Type': 'application/json', ...authHeader() },
+            body: body ? JSON.stringify(body) : undefined,
+        });
+        if (res.status === 401) throw new Error('Session expired — please log out and log back in.');
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || errData.reason || `${res.status} ${res.statusText}`);
+        }
+        return await res.json();
+    } catch (e) {
+        const msg = e.message || '';
+        if (msg.includes('Load failed') || msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+            throw new Error('Cannot reach the backend server. It may still be starting up on Render. Click Retry in a moment.');
+        }
+        throw e;
     }
-    return res.json();
 }
 
 // ---------- Report Modal ----------
@@ -262,7 +270,13 @@ export default function SOCDashboard() {
                     {loading ? (
                         <div className="flex items-center justify-center h-48 text-gray-400">Loading queue…</div>
                     ) : error ? (
-                        <div className="flex items-center justify-center h-48 text-red-500">{error}</div>
+                        <div className="flex flex-col items-center justify-center h-48 gap-4 px-6 text-center">
+                            <span className="text-3xl">⚠️</span>
+                            <p className="text-red-500 text-sm max-w-md">{error}</p>
+                            <button onClick={fetchQueue} className="px-4 py-2 rounded-lg bg-[#00e5ff]/10 text-[#00e5ff] hover:bg-[#00e5ff]/20 text-sm font-medium">
+                                🔄 Retry
+                            </button>
+                        </div>
                     ) : queue.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-48 text-gray-400">
                             <span className="text-4xl mb-2">✅</span>

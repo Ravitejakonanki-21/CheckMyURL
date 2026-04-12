@@ -9,14 +9,22 @@ function authHeader() {
 }
 
 async function adminApi(method, path, body) {
-    const res = await fetch(`${API}/api/admin${path}`, {
-        method,
-        headers: { 'Content-Type': 'application/json', ...authHeader() },
-        body: body ? JSON.stringify(body) : undefined,
-    });
-    if (res.status === 401) throw new Error('Session expired — please log out and log back in.');
-    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-    return res.json();
+    try {
+        const res = await fetch(`${API}/api/admin${path}`, {
+            method,
+            headers: { 'Content-Type': 'application/json', ...authHeader() },
+            body: body ? JSON.stringify(body) : undefined,
+        });
+        if (res.status === 401) throw new Error('Session expired — please log out and log back in.');
+        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+        return await res.json();
+    } catch (e) {
+        const msg = e.message || '';
+        if (msg.includes('Load failed') || msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+            throw new Error('Cannot reach the backend server. It may still be starting up on Render. Click Retry in a moment.');
+        }
+        throw e;
+    }
 }
 
 const ROLES = ['GUEST', 'USER', 'ADMIN'];
@@ -51,9 +59,12 @@ function UsersTab() {
 
     if (loading) return <div className="flex items-center justify-center h-48 text-gray-400">Loading users…</div>;
     if (error) return (
-        <div className="flex flex-col items-center justify-center h-48 gap-3">
-            <p className="text-red-500">{error}</p>
-            <button onClick={load} className="px-4 py-2 text-sm rounded-lg bg-[#00e5ff]/10 text-[#00e5ff] hover:bg-[#00e5ff]/20">Retry</button>
+        <div className="flex flex-col items-center justify-center h-48 gap-4 px-6 text-center">
+            <span className="text-3xl">⚠️</span>
+            <p className="text-red-500 text-sm max-w-md">{error}</p>
+            <button onClick={load} className="px-4 py-2 rounded-lg bg-[#00e5ff]/10 text-[#00e5ff] hover:bg-[#00e5ff]/20 text-sm font-medium">
+                🔄 Retry
+            </button>
         </div>
     );
 
@@ -121,9 +132,12 @@ function AuditLogsTab() {
 
     if (loading) return <div className="flex items-center justify-center h-48 text-gray-400">Loading logs…</div>;
     if (error) return (
-        <div className="flex flex-col items-center justify-center h-48 gap-3">
-            <p className="text-red-500">{error}</p>
-            <button onClick={load} className="px-4 py-2 text-sm rounded-lg bg-[#00e5ff]/10 text-[#00e5ff] hover:bg-[#00e5ff]/20">Retry</button>
+        <div className="flex flex-col items-center justify-center h-48 gap-4 px-6 text-center">
+            <span className="text-3xl">⚠️</span>
+            <p className="text-red-500 text-sm max-w-md">{error}</p>
+            <button onClick={load} className="px-4 py-2 rounded-lg bg-[#00e5ff]/10 text-[#00e5ff] hover:bg-[#00e5ff]/20 text-sm font-medium">
+                🔄 Retry
+            </button>
         </div>
     );
 
@@ -180,9 +194,12 @@ function ThreatReportsTab() {
 
     if (loading) return <div className="flex items-center justify-center h-48 text-gray-400">Loading reports…</div>;
     if (error) return (
-        <div className="flex flex-col items-center justify-center h-48 gap-3">
-            <p className="text-red-500">{error}</p>
-            <button onClick={load} className="px-4 py-2 text-sm rounded-lg bg-[#00e5ff]/10 text-[#00e5ff] hover:bg-[#00e5ff]/20">Retry</button>
+        <div className="flex flex-col items-center justify-center h-48 gap-4 px-6 text-center">
+            <span className="text-3xl">⚠️</span>
+            <p className="text-red-500 text-sm max-w-md">{error}</p>
+            <button onClick={load} className="px-4 py-2 rounded-lg bg-[#00e5ff]/10 text-[#00e5ff] hover:bg-[#00e5ff]/20 text-sm font-medium">
+                🔄 Retry
+            </button>
         </div>
     );
 
