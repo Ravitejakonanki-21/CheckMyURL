@@ -48,9 +48,13 @@ function Scanner() {
 
   const analyzeUrl = async (inputUrl) => {
     try {
+      const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       const res = await fetch('/analyze', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: headers,
         body: JSON.stringify({ url: inputUrl })
       });
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);

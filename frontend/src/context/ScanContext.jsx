@@ -51,6 +51,7 @@ export function ScanProvider({ children }) {
       riskScore:     typeof result.riskScore === 'number' ? result.riskScore : 0,
       classification: result.classification ?? 'Unknown',
       tools,
+      userEmail:     localStorage.getItem('email') || undefined,
       scannedAt:     new Date().toISOString(),
     };
 
