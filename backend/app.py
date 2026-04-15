@@ -351,6 +351,121 @@ def analyze():
             "reasons": [f"An unexpected error occurred: {str(e)}"]
         }), 500
 
+@app.post("/api/bulk-analyze")
+@limiter.limit("10/minute")
+def bulk_analyze():
+    """
+    Parallel server-side bulk analysis for high accuracy and performance.
+    Process up to 50 URLs in one batch.
+    """
+    data = request.get_json(force=True) or {}
+    urls = data.get("urls")
+    if not urls or not isinstance(urls, list):
+        return jsonify({"error": "urls list required"}), 400
+    if len(urls) > 50:
+        return jsonify({"error": "maximum 50 URLs allowed per bulk request"}), 400
+
+    def scan_single_url(url):
+        url = (url or "").strip()
+        if not url: return {"url": "", "error": "empty url"}
+        
+        try:
+            cache_key = url.lower()
+            cached = cache.get(cache_key)
+            if cached: return cached
+
+            parsed = urlparse(url if "://" in url else "https://" + url)
+            hostname = parsed.hostname or url
+            is_http_url = parsed.scheme == "http"
+
+            # Execute checks sequentially within this thread to avoid pool deadlock
+            # and ensure every piece of data is captured for the ML model.
+            ssl_i      = check_ssl(hostname)
+            whois_i    = check_whois(hostname)
+            idn_i      = check_unicode_domain(hostname, url)
+            ascii_i    = validate_ascii_unicode(url)
+            keyword_i  = check_url_for_keywords(url)
+            rules_i    = check_keywords(url)
+            headers_i  = check_headers(url)
+
+            if ssl_i and is_http_url:
+                ssl_i["https_ok"] = False
+                ssl_i["is_http_only"] = True
+            
+            whois_i = ensure_whois_fields_complete(whois_i)
+            combined_raw = {
+                "ssl": ssl_i, "whois": whois_i, "idn": idn_i,
+                "ascii_unicode": ascii_i, "keyword": keyword_i,
+                "rules": rules_i, "headers": headers_i
+            }
+
+            h_score, h_label, h_reasons = compute_risk(combined_raw)
+
+            ml_out = None
+            if model and metadata:
+                try:
+                    f_vals = _extract_feature_values(url, combined_raw)
+                    m_res = predict_url_risk(f_vals, model, metadata)
+                    
+                    m_prob = m_res["ml_probability"]
+                    m_score = m_res["ml_score"]
+                    
+                    # --- Parity with URL.ipynb Whitelist Logic ---
+                    from services.ml_scoring import LEGITIMATE_DOMAINS
+                    is_whitelisted = False
+                    if hostname in LEGITIMATE_DOMAINS or any(hostname.endswith(f".{d}") for d in LEGITIMATE_DOMAINS):
+                        is_whitelisted = True
+                        if m_score > 20:
+                            m_score = max(5, min(20, m_score // 3))
+                            m_prob = m_score / 100.0
+
+                    # --- Parity with URL.ipynb 4-Level Labeling ---
+                    if m_prob >= 0.75: ml_label = "CRITICAL"
+                    elif m_prob >= 0.50: ml_label = "HIGH"
+                    elif m_prob >= 0.25: ml_label = "MEDIUM"
+                    else: ml_label = "LOW"
+
+                    ml_out = {
+                        "ml_score": m_score,
+                        "ml_probability": m_prob,
+                        "is_phishing": m_prob >= metadata.get("decision_threshold", 0.1),
+                        "label": ml_label,
+                        "whitelisted": is_whitelisted,
+                        "reasons": ["ML model prediction successful (White-list checked)"]
+                    }
+                except Exception: ml_out = None
+
+            ml_s = ml_out.get("ml_score") if ml_out else None
+            h_s  = h_score
+            blended = 0.70 * h_s + 0.30 * ml_s if ml_s is not None else float(h_s)
+            f_score = int(round(blended))
+            if h_s >= 70: f_score = max(f_score, 65)
+
+            def slabel(s):
+                if s >= 75: return "CRITICAL"
+                if s >= 50: return "HIGH RISK"
+                if s >= 25: return "MEDIUM RISK"
+                return "LOW RISK"
+
+            res = {
+                "url": url,
+                "risk_score": f_score,
+                "label": slabel(f_score),
+                "reasons": (ml_out.get("reasons") or []) + h_reasons if ml_out else h_reasons,
+                "heuristic": {"risk_score": h_s, "label": h_label, "reasons": h_reasons},
+                "ml": ml_out,
+                "weightages": {"ml_score": ml_s, "checks_score": h_s, "average_score": f_score}
+            }
+            cache.set(cache_key, res)
+            return res
+        except Exception as e:
+            app.logger.error(f"Bulk scan error for {url}: {str(e)}")
+            return {"url": url, "error": str(e), "risk_score": 0, "label": "Error"}
+
+    # Process batch in parallel
+    results = list(executor.map(scan_single_url, urls))
+    return jsonify(results)
+
 def _persist_scan_result(url: str, response: dict, email: str | None = None) -> None:
     """
     Save the scan result to MongoDB in the background.

@@ -25,7 +25,10 @@ function getStyle(label = '') {
 
 function ResultRow({ item, index }) {
     const style = getStyle(item.label || '');
-    const score = item.score ?? '—';
+    const score = item.risk_score ?? item.score ?? '—';
+    const mlScore = item.ml?.ml_score ?? null;
+    const heuristicScore = item.heuristic?.risk_score ?? null;
+
     return (
         <tr className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/40">
             <td className="px-4 py-3 text-sm font-mono text-gray-600 dark:text-gray-400">{index + 1}</td>
@@ -39,17 +42,30 @@ function ResultRow({ item, index }) {
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                         </svg>
-                        Scanning…
+                        …
                     </span>
                 ) : item.status === 'error' ? (
-                    <span className="text-xs text-red-500">{item.error || 'Error'}</span>
+                    <span className="text-xs text-red-500">❌</span>
                 ) : (
                     <span className={`text-xl font-bold ${style.color}`}>{score}</span>
                 )}
             </td>
             <td className="px-4 py-3 text-center">
+                {item.status === 'done' && mlScore !== null ? (
+                    <div className="flex flex-col items-center">
+                        <span className="text-sm font-bold text-purple-500">{mlScore}</span>
+                        <span className="text-[10px] text-gray-400 font-mono">{(item.ml?.ml_probability * 100).toFixed(1)}%</span>
+                    </div>
+                ) : item.status === 'done' ? <span className="text-xs text-gray-500">N/A</span> : null}
+            </td>
+            <td className="px-4 py-3 text-center">
+                {item.status === 'done' ? (
+                    <span className="text-sm font-semibold text-blue-500">{heuristicScore ?? '—'}</span>
+                ) : null}
+            </td>
+            <td className="px-4 py-3 text-center">
                 {item.status === 'done' && (
-                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${style.badge}`}>
+                    <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${style.badge}`}>
                         {item.label}
                     </span>
                 )}
@@ -87,34 +103,27 @@ export default function BulkScan() {
         const initial = urls.map(url => ({ url, status: 'scanning', score: null, label: '', reasons: [], error: '' }));
         setResults(initial);
 
-        for (let i = 0; i < urls.length; i++) {
-            if (abortRef.current) break;
-            const url = urls[i];
-            try {
-                const res = await fetch(`${API}/analyze`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', ...authHeader() },
-                    body: JSON.stringify({ url }),
-                });
-                const data = await res.json();
-                setResults(prev => prev.map((r, idx) =>
-                    idx === i
-                        ? {
-                            ...r,
-                            status: 'done',
-                            // API returns risk_score (snake_case), not riskScore
-                            score: data.risk_score ?? data.riskScore ?? data.score ?? 0,
-                            label: data.label ?? data.classification ?? 'Unknown',
-                            reasons: data.reasons || data.explanation || [],
-                        }
-                        : r
-                ));
-            } catch (e) {
-                setResults(prev => prev.map((r, idx) =>
-                    idx === i ? { ...r, status: 'error', error: e.message } : r
-                ));
+        try {
+            const res = await fetch(`${API}/api/bulk-analyze`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...authHeader() },
+                body: JSON.stringify({ urls }),
+            });
+            const dataList = await res.json();
+            
+            if (Array.isArray(dataList)) {
+                setResults(dataList.map(item => ({
+                    ...item,
+                    status: item.error ? 'error' : 'done',
+                    score: item.risk_score ?? 0,
+                })));
+                setProgress(100);
+            } else {
+                throw new Error("Invalid response from server");
             }
-            setProgress(Math.round(((i + 1) / urls.length) * 100));
+        } catch (e) {
+            console.error(e);
+            setResults(prev => prev.map(r => ({ ...r, status: 'error', error: e.message })));
         }
 
         setScanning(false);
@@ -123,15 +132,21 @@ export default function BulkScan() {
     const stop = () => { abortRef.current = true; };
 
     const done = results.filter(r => r.status === 'done');
-    const safe = done.filter(r => (r.score ?? 0) < 40).length;
-    const medium = done.filter(r => (r.score ?? 0) >= 40 && (r.score ?? 0) < 70).length;
-    const high = done.filter(r => (r.score ?? 0) >= 70).length;
+    const safe = done.filter(r => (r.score ?? r.risk_score ?? 0) < 40).length;
+    const medium = done.filter(r => (r.score ?? r.risk_score ?? 0) >= 40 && (r.score ?? r.risk_score ?? 0) < 70).length;
+    const high = done.filter(r => (r.score ?? r.risk_score ?? 0) >= 70).length;
 
     const exportCSV = () => {
-        const header = ['#', 'URL', 'Risk Score', 'Classification', 'Key Findings'];
+        const header = ['#', 'URL', 'Accuracy Score', 'ML Score', 'Heuristic Score', 'ML Prob %', 'Classification', 'Key Findings'];
         const rows = done.map((r, i) => [
-            i + 1, r.url, r.score, r.label,
-            (r.reasons || []).slice(0, 2).join(' | ')
+            i + 1, 
+            r.url, 
+            r.risk_score, 
+            r.ml?.ml_score ?? 'N/A', 
+            r.heuristic?.risk_score ?? 'N/A', 
+            r.ml?.ml_probability ? (r.ml.ml_probability * 100).toFixed(1) : '0',
+            r.label,
+            (r.reasons || []).slice(0, 3).join(' | ')
         ]);
         const csv = [header, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
         const blob = new Blob([csv], { type: 'text/csv' });
@@ -241,7 +256,7 @@ export default function BulkScan() {
                         <table className="w-full">
                             <thead>
                                 <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                                    {['#', 'URL', 'Risk Score', 'Classification', 'Key Findings'].map(h => (
+                                    {['#', 'URL', 'Accuracy Score', '🤖 ML Score', '🛡️ Heuristic', 'Classification', 'Key Findings'].map(h => (
                                         <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{h}</th>
                                     ))}
                                 </tr>
