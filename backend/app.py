@@ -365,6 +365,15 @@ def bulk_analyze():
     if len(urls) > 50:
         return jsonify({"error": "maximum 50 URLs allowed per bulk request"}), 400
 
+    # Capture user identity once in the main request thread for persistence
+    email = None
+    try:
+        from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+        verify_jwt_in_request(optional=True)
+        email = get_jwt_identity()
+    except Exception:
+        pass
+
     def scan_single_url(url):
         url = (url or "").strip()
         if not url: return {"url": "", "error": "empty url"}
@@ -372,7 +381,10 @@ def bulk_analyze():
         try:
             cache_key = url.lower()
             cached = cache.get(cache_key)
-            if cached: return cached
+            if cached:
+                # Still persist even if cached, if it's a new request
+                executor.submit(_persist_scan_result, url, cached, email)
+                return cached
 
             parsed = urlparse(url if "://" in url else "https://" + url)
             hostname = parsed.hostname or url
@@ -457,7 +469,15 @@ def bulk_analyze():
                 "weightages": {"ml_score": ml_s, "checks_score": h_s, "average_score": f_score}
             }
             cache.set(cache_key, res)
+            
+            # Persist successful scan to history (if authenticated)
+            if email:
+                executor.submit(_persist_scan_result, url, res, email)
+                
             return res
+        except Exception as e:
+            app.logger.error(f"Bulk scan error for {url}: {str(e)}")
+            return {"url": url, "error": str(e), "risk_score": 0, "label": "Error"}
         except Exception as e:
             app.logger.error(f"Bulk scan error for {url}: {str(e)}")
             return {"url": url, "error": str(e), "risk_score": 0, "label": "Error"}
