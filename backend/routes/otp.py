@@ -76,32 +76,40 @@ def send_otp():
         current_app.logger.error("[OTP] MAIL_USERNAME not set!")
         return jsonify({"error": "Email service is not configured. Please set MAIL_USERNAME on the server."}), 503
 
-    body_text = f"Your OTP for CYBERSHIELD registration is: {otp_code}\n\nThis code expires in 10 minutes."
+    body_text = f"Hello,\n\nYour one-time password (OTP) for CheckMyURL registration is: {otp_code}\n\nThis code is valid for 10 minutes.\n\nIf you did not request this code, please ignore this email.\n\nBest regards,\nThe CheckMyURL Team"
     body_html = f"""
-    <div style="font-family:sans-serif;max-width:480px;margin:auto">
-      <h2 style="color:#0891b2">CYBERSHIELD Registration</h2>
-      <p>Your one-time password (OTP) is:</p>
-      <div style="font-size:32px;font-weight:bold;letter-spacing:8px;color:#0891b2;
-                  background:#f0fdfa;padding:16px 24px;border-radius:12px;text-align:center;
-                  margin:16px 0;border:2px dashed #0891b2">
-        {otp_code}
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 550px; margin: 0 auto; color: #1f2937; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+      <div style="background-color: #0891b2; padding: 24px; text-align: center;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;">CheckMyURL</h1>
       </div>
-      <p>This code expires in <strong>10 minutes</strong>.</p>
-      <p style="margin-top:24px;color:#6b7280;font-size:13px">
-        If you didn't request this, you can safely ignore this email.
-      </p>
+      <div style="padding: 32px; text-align: center; line-height: 1.6;">
+        <h2 style="color: #0891b2; margin-top: 0; font-size: 20px;">Verify Your Email</h2>
+        <p>Use the following one-time password (OTP) to complete your registration. This code is valid for <strong>10 minutes</strong>.</p>
+        <div style="font-size: 36px; font-weight: 700; letter-spacing: 6px; color: #0891b2; background-color: #f0fdfa; padding: 20px; border-radius: 12px; margin: 24px 0; border: 2px dashed #0891b2; display: inline-block;">
+          {otp_code}
+        </div>
+        <p style="font-size: 14px; color: #6b7280;">If you didn't request this, you can safely ignore this email.</p>
+        <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 32px 0;" />
+        <p style="font-size: 13px; color: #0891b2; font-weight: 600;">Stay Secure. Always Check the URL.</p>
+      </div>
+      <div style="background-color: #f9fafb; padding: 20px; text-align: center; font-size: 12px; color: #9ca3af;">
+        <p style="margin: 0;">&copy; {datetime.utcnow().year} CheckMyURL Security. All rights reserved.</p>
+        <p style="margin: 4px 0 0;">This is an automated security notification.</p>
+      </div>
     </div>
     """
 
     try:
         from utils.mailer import send_email
         send_email(
-            subject="Your CYBERSHIELD Registration OTP",
+            subject="[OTP] Verify your CheckMyURL registration",
             to_email=email,
             body_text=body_text,
             body_html=body_html,
             mail_username=mail_user,
+            from_name="CheckMyURL Security"
         )
+
     except Exception as e:
         current_app.logger.error(f"Failed to send OTP email to {email}: {e}")
         return jsonify({"error": f"Failed to send OTP: {str(e)}"}), 500

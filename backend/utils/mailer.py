@@ -22,6 +22,7 @@ def send_email(
     body_html: str,
     mail_username: str | None = None,
     mail_password: str | None = None,
+    from_name: str = "CheckMyURL Security",
     **_kwargs,
 ):
     """
@@ -31,13 +32,14 @@ def send_email(
     ----------
     subject      : Email subject line.
     to_email     : Recipient email address.
-    body_text    : Plain-text body (unused by SendGrid but kept for API compat).
+    body_text    : Plain-text body.
     body_html    : HTML body.
     mail_username: Sender email address (falls back to MAIL_USERNAME env var).
                    Must be a verified sender on your SendGrid account.
-    mail_password: Ignored — kept for backward compatibility with callers.
+    mail_password: Ignored — kept for backward compatibility.
+    from_name    : Friendly name shown to the recipient.
     """
-    from_email = mail_username or os.getenv("MAIL_USERNAME", "")
+    sender_email = mail_username or os.getenv("MAIL_USERNAME", "")
     api_key = os.getenv("SENDGRID_API_KEY", "")
 
     if not api_key:
@@ -46,11 +48,14 @@ def send_email(
             "Add it to your Render environment variables."
         )
 
-    if not from_email:
+    if not sender_email:
         raise RuntimeError(
             "No sender email specified. Set MAIL_USERNAME env var "
             "to the email address you verified on SendGrid."
         )
+
+    # Use a tuple (email, name) for from_email to set a friendly display name
+    from_email = (sender_email, from_name)
 
     message = Mail(
         from_email=from_email,
@@ -58,6 +63,10 @@ def send_email(
         subject=subject,
         html_content=body_html,
     )
+    
+    # Add a Reply-To header to improve trust signals
+    message.reply_to = sender_email
+
 
     try:
         sg = SendGridAPIClient(api_key)

@@ -731,25 +731,41 @@ def forgot_password():
     frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")  # default to Vite port
     reset_link = f"{frontend_url}/reset-password/{token}"
 
-    body_text = f"To reset your password, click the link:\n{reset_link}\n\nThis link expires in 1 hour."
+    body_text = f"Hello,\n\nTo reset your CheckMyURL password, please click the link below:\n{reset_link}\n\nThis link will expire in 1 hour for your security.\n\nIf you did not request this, you can safely ignore this email.\n\nBest regards,\nThe CheckMyURL Team"
     body_html = f"""
-    <div style="font-family:sans-serif;max-width:480px;margin:auto">
-      <h2 style="color:#0891b2">CYBERSHIELD Password Reset</h2>
-      <p>Click the button below to reset your password. This link expires in <strong>1 hour</strong>.</p>
-      <a href="{reset_link}" style="display:inline-block;padding:12px 24px;background:#0891b2;color:#fff;border-radius:8px;text-decoration:none;font-weight:bold">Reset Password</a>
-      <p style="margin-top:24px;color:#6b7280;font-size:13px">If you didn't request this, you can safely ignore this email.</p>
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 550px; margin: 0 auto; color: #1f2937; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+      <div style="background-color: #0891b2; padding: 24px; text-align: center;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;">CheckMyURL</h1>
+      </div>
+      <div style="padding: 32px; line-height: 1.6;">
+        <h2 style="color: #0891b2; margin-top: 0; font-size: 20px;">Password Reset Request</h2>
+        <p>We received a request to reset the password for your CheckMyURL account. Click the button below to proceed:</p>
+        <div style="text-align: center; margin: 32px 0;">
+          <a href="{reset_link}" style="display: inline-block; padding: 14px 28px; background-color: #0891b2; color: #ffffff; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">Reset My Password</a>
+        </div>
+        <p style="font-size: 14px; color: #6b7280;">This link will expire in <strong>1 hour</strong>. If the button doesn't work, copy and paste this URL into your browser:</p>
+        <p style="font-size: 13px; color: #0891b2; word-break: break-all;">{reset_link}</p>
+        <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 32px 0;" />
+        <p style="font-size: 13px; color: #6b7280; margin-bottom: 0;">If you didn't request a password reset, you can safely ignore this email. Your password will not change until you access the link above and create a new one.</p>
+      </div>
+      <div style="background-color: #f9fafb; padding: 20px; text-align: center; font-size: 12px; color: #9ca3af;">
+        <p style="margin: 0;">&copy; {datetime.utcnow().year} CheckMyURL Security. All rights reserved.</p>
+        <p style="margin: 4px 0 0;">This is an automated security notification.</p>
+      </div>
     </div>
     """
 
     try:
         from utils.mailer import send_email
         send_email(
-            subject="CYBERSHIELD Password Reset",
+            subject="[Action Required] Reset your CheckMyURL password",
             to_email=email,
             body_text=body_text,
             body_html=body_html,
             mail_username=mail_user,
+            from_name="CheckMyURL Security"
         )
+
     except Exception as e:
         app.logger.error(f"Failed to send reset email to {email}: {e}")
         return jsonify({"error": f"Failed to send email: {str(e)}"}), 500
